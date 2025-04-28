@@ -1,0 +1,346 @@
+\documentclass[10pt,aspectratio=32]{beamer}
+
+\usepackage{tcolorbox}
+\tcbuselibrary{most}
+\usepackage{minted}
+\usepackage{charter}
+\usepackage{cleveref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+\usepackage{fontawesome}
+\usepackage{tikz}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{hypothesis}{Hypothesis}
+
+
+% Define styles for prompt and response
+\tcbset{
+    prompt/.style={colback=blue!5!white, colframe=blue!75!black, width=\textwidth, boxrule=0.3mm,title=Prompt},
+    response/.style={colback=green!5!white, colframe=green!75!black, width=\textwidth, boxrule=0.3mm,title=Response}
+}
+\tcbset{enhanced,attach boxed title to top left={xshift=-2mm,yshift=-2mm},coltitle=black,boxed title style={size=small,colback=white},left=3pt,right=3pt}
+
+\newtcbox{\highlight}{on line,
+    arc=0pt,
+    colframe=yellow!50, % Border color
+    colback=yellow!50, % Background color
+    boxrule=0.0pt, % Border thickness
+    boxsep=0pt, % Remove padding inside the box
+    left=1pt, right=1pt, top=2pt, bottom=2pt % Minimal margins
+}
+
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{bibliography item}{\insertbiblabel}
+\setbeamertemplate{footline}{
+    \leavevmode%
+    \hbox{%
+      \begin{beamercolorbox}[wd=.8\paperwidth,ht=2.25ex,dp=1ex,left]{title in head/foot}%
+        \hspace{0.5cm}MSV Lab @ PKU
+      \end{beamercolorbox}%
+      \begin{beamercolorbox}[wd=.2\paperwidth,ht=2.25ex,dp=1ex,right]{title in head/foot}%
+        \usebeamercolor[fg]{frame number}\insertframenumber{} / \inserttotalframenumber\hspace{0.5cm}
+      \end{beamercolorbox}
+    }
+    \vskip0pt%
+}
+
+\title{Does LLM-Generated Code Resonate?}
+\author{Sergey Mechtaev}
+\institute{Peking University}
+\date{2025}
+
+\begin{document}
+
+\frame[plain]{\titlepage}
+
+\begin{frame}[fragile]
+  \frametitle{Preliminaries}
+  \begin{columns}[t]
+    \column{0.43\textwidth}
+    \begin{itemize}
+    \item $R$ are natural language (NL) requirements;
+    \item $m$ is an LLM, $m(\cdot \mid R)$ is a distribution of programs;
+    \item Programs $p \sim m(\cdot \mid R)$ sampled based on requirements are functions $$A_1 \times \cdots \times A_n \to B$$ where $A_1, \cdots, A_n$ are input domains, $B$ is the output domain.
+    \end{itemize}
+    \column{0.52\textwidth}
+    \begin{itemize}
+    \item the semantics of NL requirement $\llbracket \cdot \rrbracket : \mathrm{NL} \to 2^{A_1 \times \cdots \times A_n \times B}$ is a specification implicitly defined by these requirements, e.g.
+      \begin{align*}
+        &\llbracket ``the\ division\ function" \rrbracket =\\
+        &\quad\{ (2, 2, 1), (6, 2, 3), \cdots \}.
+      \end{align*}
+    \item a program $p \sim m(\cdot \mid R)$ is \emph{correct} iff
+      \begin{align*}
+        \forall\ &a_1\in A_1,\ \cdots, a_n\in A_n\\
+        &(a_1^i, \cdots, a_n^i, p(a_1^i, \cdots, a_n^i)) \in \llbracket R \rrbracket.
+      \end{align*}
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Exactness of Requirements}
+  \begin{definition}[Exact Requirements]
+    Requirements are \emph{exact} if the corresponding specification is a function. Otherwise, they are \emph{inexact}.
+  \end{definition}
+  \begin{example}[Inexact Requirements]
+    These requirements permit multiple outputs for the same input:
+      \begin{align*}
+        \llbracket ``return&\ a\ positive\ element\ of\ a\ given\ set" \rrbracket =\\
+        \quad\{\ &(\{1, -1, 3\}, {\color{red} 1}),\\
+        \quad&(\{1, -1, 3\}, {\color{red} 3}), \cdots \}.
+      \end{align*}
+  \end{example}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Reliability of LLM-Generated Code}
+  \begin{columns}
+    \column{0.48\textwidth}
+    LLMs make mistakes, e.g. hallucinate~\cite{liu2024exploring}, which results in incorrect programs, i.e.
+    \begin{align*}
+      \exists &a_1, \cdots, a_n.\\
+              &(a_1, \cdots, a_n, p(a_1, \cdots, a_n)) \notin \llbracket R \rrbracket.
+    \end{align*}
+    \textbf{Challenge}: how to automatically catch mistakes without explicit $\llbracket R \rrbracket$?
+    \column{0.48\textwidth}
+    {\scriptsize
+      % Prompt box
+    \begin{tcolorbox}[prompt,title=Prompt]
+        You are given a positive integer array `nums`. Return the total frequencies of elements in `nums` such that those elements all have the maximum frequency.
+    \end{tcolorbox}
+    % Response box
+    \begin{tcolorbox}[response]
+      \begin{minted}[escapeinside=||]{python}
+def count(nums):
+  freq = Counter(nums)
+  max = freq.values()
+  count = len([
+   k for k, v in
+   freq.items()
+    if v == max
+  ])
+  return |\highlight{count}| # missing `* max`
+      \end{minted}
+    \end{tcolorbox}
+    }
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Previous Work: Consistency-Based}
+  \begin{definition}
+    Programs $p_1$ and $p_2$ are equivalent ($p_1 \equiv p_2$) iff $$\forall a_1\in A_1,\cdots,a_n\in A_n.\ p_1(a_1,\cdots,a_n) = p_2(a_1,\cdots,a_n).$$
+  \end{definition}
+  \textbf{CodeT}~\cite{chen2022codet} partitions samples into equivalence classes:
+  \begin{columns}
+    \column{0.48\textwidth}
+    \begin{center}
+  \begin{tikzpicture}[level distance=10mm,sibling distance=5mm]
+  \node {$m(\cdot \mid R)$} [grow=down]
+    child          { node (p2) {\color{red}$p_1$} }
+    child          { node (p2) {\color{red}$p_2$} }
+    child          { node {\color{blue}$p_3$} }
+    child          { node (p4) {\color{red}$p_4$} }
+    child[missing] { node {} }
+    child          { node {\color{teal}$p_k$} };
+  \end{tikzpicture}
+    \end{center}
+    \column{0.48\textwidth}
+  \begin{align*}
+  {\color{red}p_1} &\equiv {\color{red}p_2} \equiv {\color{red}p_4} \equiv \cdots\\
+  {\color{blue}p_3} &\equiv \cdots\\
+  {\color{teal}p_k} &\equiv \cdots
+  \end{align*}
+  \end{columns}
+  \vspace{2mm}
+  Then, it selects a sample, say, $p_1$, if $[p_1]$ is the largest equivalence class.\\[0.2cm]
+  \textbf{Limitations:}
+  \begin{itemize}
+  \item LLMs consistently make the same mistakes.
+  \item The method does not work for inexact requirements.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Previous Work: Confidence-Based}
+  \begin{columns}
+    \column{0.48\textwidth}
+    Measure confidence of an LLM response through token probabilities or verbalized self-ask~\cite{spiess2024calibration}.\\[0.3cm]
+    \textbf{Problem:} Confidence measures weakly correlate with correctness.
+    \column{0.48\textwidth}
+    {\scriptsize
+      % Prompt box
+      \begin{tcolorbox}[prompt,title=Prompt]
+Implement a Fibonacci function in Python and print how confident you are about its correctness (from 0\% to 100\%).
+      \end{tcolorbox}
+      % Response box
+      \begin{tcolorbox}[response]
+        \begin{minted}[escapeinside=||]{python}
+def fibonacci(n):
+    if n == 0:
+        return 0
+    elif n == 1:
+        return 1
+    a, b = 0, 1
+    for _ in range(2, n + 1):
+        a, b = b, a + b
+    return b          
+        \end{minted}
+Confidence: 99\%. The 1\% uncertainty accounts for potential uncaught edge cases.
+      \end{tcolorbox}
+    }
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Previous Work: Assertion-Based}
+  \begin{columns}
+    \column{0.48\textwidth}
+    Sample both programs and assertions specifying the expected output~\cite{key2022toward}.\\[0.3cm]
+    \textbf{Problem:} an implementation is often the shortest description of the expected output, therefore the assertion may contain the same bugs.
+    \column{0.48\textwidth}
+    {\scriptsize
+      % Prompt box
+      \begin{tcolorbox}[prompt,title=Prompt]
+Function $F(n)$ computes the $n$-th Fibonacci number. Implement a predicate in Python that checks for a given $n$ if the output of $F$ is correct.
+    \end{tcolorbox}
+    % Response box
+      \begin{tcolorbox}[response]
+        \begin{minted}[escapeinside=||]{python}
+def correct_fib(n):
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+
+def is_fib_correct(n, F):
+    try:
+        return F(n) == |\highlight{correct\_fib(n)}|
+    except:
+        return False
+        \end{minted}
+    \end{tcolorbox}
+    }
+  \end{columns}
+\end{frame}
+
+\begin{frame}{New Idea: Resonance}
+  \begin{itemize}
+  \item Sample a target program alongside a family of \emph{resonator} programs, i.e. programs with deliberately altered semantics, possibly implementing different algorithms.
+  \item Check \emph{a resonance property}, a hyperproperty of the resonators and the target program that provably holds only if either all programs correctly implement their requirements, or all programs wrongly implement their requirements.
+  \item If the property holds, then the target program \emph{resonates}, i.e. it is either correct, or has a \emph{sympathetic fault}, i.e. a fault that matches the faults of the resonators.
+  \end{itemize}
+  \textbf{Challenge:} design a family of resonators, and a corresponding resonance property, that minimize the likelihood of sympathetic faults.
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Trivial Resonance Properties}
+  \begin{proposition}[Resonance Generalizes Consistency]
+    Let $R$ be exact requirements, $p \sim m(\cdot \mid R)$ be the target function, and the resonator $r \sim m(\cdot \mid R)$ is generated based on the same requirements. Then, the following is a resonance property: $$p \equiv r.$$
+  \end{proposition}
+  \begin{proposition}[Inversion-Based Resonance]
+    Let $R$ be exact requirements, such that $\llbracket R \rrbracket$ is a bijection, $p \sim m(\cdot \mid R)$ be the target function, and the resonator $r$ is generated based on the specification $\{(y, x) \mid (x, y) \in \llbracket R \rrbracket\}$. Then, the following is a resonance property: $$r \circ p \equiv \mathrm{id}.$$
+  \end{proposition}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Inversion-Based Resonance (Non-Bijective Case)}
+  \begin{proposition}
+    Let $R$ be exact requirements, $p \sim m(\cdot \mid R)$ be the target function, and the resonator $r$ is generated based on the specification $$\Bigl\{ (y, \{ x \mid (x, y)\in \llbracket R \rrbracket \})\ \Big|\ (\cdot, y) \in \llbracket R \rrbracket \Bigl\}.$$ Then, the following is a resonance property: $$\forall (\cdot, y) \in \llbracket R \rrbracket.\ p(r(y)) = \{y\}\wedge \forall (x, \cdot) \in \llbracket R \rrbracket.\ x \in r(p(x)).$$
+  \end{proposition}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Limitations of Inversion-Based Resonators}
+  \begin{columns}[t]
+    \column{0.48\textwidth}
+    Inefficient for large preimages.
+    {\scriptsize
+    % Prompt box
+      \begin{tcolorbox}[prompt,title=Prompt]
+Implement a Python function that for a boolean 'found' enumerates all pairs of a list and an integer such that the list contains the integer iff the boolean is true.
+      \end{tcolorbox}
+    % Response box
+      \begin{tcolorbox}[response]
+        \begin{minted}[escapeinside=||]{python}
+def enumerate_pairs(found):
+  max_list=3
+  max_int=3
+  pairs = []
+  ints = range(max_int + 1)
+  for l in range(max_list + 1):
+    for lst in product(ints, repeat=l):
+      lst = list(lst)
+        for num in ints:
+          if (num in lst) == found:
+            pairs.append(
+              (lst.copy(), num))
+  return pairs
+        \end{minted}
+    \end{tcolorbox}
+    }    
+    \column{0.48\textwidth}
+    Implemented by enumerating inputs of the forward function.
+    {\scriptsize
+      % Prompt box
+      \begin{tcolorbox}[prompt,title=Prompt]
+Implement a Python function that for a given Fibinacci number n returns its index in the sequence.
+    \end{tcolorbox}
+    % Response box
+      \begin{tcolorbox}[response]
+        \begin{minted}[escapeinside=||]{python}
+def find_fibonacci_index(n):
+    if n < 0:
+        return -1
+    if n == 0:
+        return 0
+    if n == 1:
+        return 1
+
+    a, b = 1, 1
+    index = 2
+    while b < n:
+        a, b = b, a + b
+        index += 1
+    return index if b == n else -1
+        \end{minted}
+    \end{tcolorbox}
+    }
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Partial Inversion}
+  \begin{definition}
+    Given a specification $S \subset A_1 \times A_2 \times \cdots \times A_n \times B$, its \emph{partial inversion} w.r.t. $i$-th argument is a specification $$S^i \subset A_1 \times \cdots A_{i-1} \times \mathbf{B} \times A_{i-1} \times \cdots \times A_n \times \mathbf{2^{A_i}}$$ s.t. $(a_1, \cdots, a_n, b) \in S$ iff $(a_1, \cdots, a_{i-1}, b, a_{i+1}, \cdots, a_n, a_i) \in S^i.$
+  \end{definition}
+  \begin{example}
+    Assume a specification is a function $f : \mathbb{N} \times \mathbb{N} \to \mathbb{N}$ defined as $f(x, y) = x \mod y.$ Its partial inverse w.r.t. the first argument is $g(z, y) = \{i*y + z\}_{i\in\mathbb{N}}.$
+  \end{example}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Partial Inversion Based Resonance (Bijective Case)}
+  \begin{proposition}
+    Let $R$ be exact requirements, defining a bijective specification over two arguments, $p \sim m(\cdot \mid R)$ be the target function, and the resonator $r$ is a partial inversion w.r.t. to the first argument. Then, the following is a resonance property: $$\forall (x, y,\cdot)\ \in \llbracket R \rrbracket.\ f(r(f(x,y),y), y) = f(x,y) \wedge r(f(x,y),y) = x.$$
+  \end{proposition}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{TODO}
+  \begin{itemize}
+  \item Partial inversion based resonance for non-bijective case.
+  \item Handling inexact requirements.
+  \item Handling large or infinite domains.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{References}
+  \bibliographystyle{unsrt}
+  \bibliography{bibliography.bib}
+\end{frame}
+
+\end{document}
