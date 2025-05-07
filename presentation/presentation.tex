@@ -330,13 +330,59 @@ def find_fibonacci_index(n):
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{TODO}
+  \frametitle{Partial Inversion Based Resonance (Non-Bijective Case)}
+  \begin{proposition}
+    Let $R$ be exact requirements, defining a specification over two arguments, $p \sim m(\cdot \mid R)$ be the target function, and the resonator $r$ is a partial inversion w.r.t. to the first argument. Then, the following is a resonance property: $$\forall (x, y,\cdot)\ \in \llbracket R \rrbracket.\ f(r(f(x,y),y), y) = \{f(x,y)\} \wedge x\in r(f(x,y),y).$$
+  \end{proposition}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Challenge: Infinite Input Domains}
+A partial inversion has to return all possible inputs that would produce a given output, otherwise the check $x\in r(f(x,y),y)$ will fail. Such inversion is often impossible to implement, e.g. inverting \texttt{contains(list, element)}:
+    {\scriptsize
+      % Prompt box
+    \begin{tcolorbox}[prompt,title=Prompt]
+Write a Python function that, given a list if integers, and a boolean value "include", returns all elements that are in the list if "include" is true, and all possible elements that are not in the list if "include" is false.
+    \end{tcolorbox}
+    % Response box
+    \begin{tcolorbox}[response]
+      \begin{minted}[escapeinside=||]{python}
+def filter_elements(lst, include):
+    if include:
+        return lst.copy()
+    else:
+        if not lst:
+            return []
+        minval = min(lst)
+        maxval = max(lst)
+        # DeepSeek-v3 assumes a subset of input domain:
+        possible_elements = |\highlight{set(range(minval, maxval + 1))}|
+        elements_not_in_list = list(possible_elements - set(lst))
+        return elements_not_in_list
+      \end{minted}
+    \end{tcolorbox}
+    }
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Challenge: Inexact Requirements}
+  If the requirements are inexact, then the check $f(r(f(x,y),y), y) = \{f(x,y)\}$ may fail. For example, for the problem description\\[0.2cm]
+  \begin{quote}
+    Implement a function that returns the list of all positive values stored in the nodes of a given graph.
+  \end{quote}\\[0.2cm]
+  $f$ may assume an implementation that traverses the graph in the depth-first search order, and $r$ may assume an implementation that traverses the graph in the breadth-first search order. Although both are valid solutions, the order of the elements in the output list will be different.
+\end{frame}
+
+
+\begin{frame}[fragile]
+  \frametitle{Prototype Implementation \& Initial Experiments}
   \begin{itemize}
-  \item Partial inversion based resonance for non-bijective case.
-  \item Handling inexact requirements.
-  \item Handling large or infinite domains.
+  \item Given requirements $R$ from LiveCodeBench, automatically transform them into requirements $R^{-1}_i$ that specify a partial inversion w.r.t. the $i$-th argument, using, for example, few-shot learning.
+  \item Generate programs and resonators for a subset of problems in LiveCodeBench.
+  \item Use a random testing method to automatically check resonance properties. Analyze the results to see if these properties help to uncover subtle bugs in the generated code.
   \end{itemize}
 \end{frame}
+
 
 \begin{frame}[allowframebreaks]{References}
   \bibliographystyle{unsrt}
