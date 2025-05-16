@@ -315,7 +315,7 @@ def find_fibonacci_index(n):
 
 \begin{frame}{Partial Inversion}
   \begin{definition}
-    Given a specification $S \subset A_1 \times A_2 \times \cdots \times A_n \times B$, its \emph{partial inversion} w.r.t. $i$-th argument is a specification $$S^i \subset A_1 \times \cdots A_{i-1} \times \mathbf{B} \times A_{i-1} \times \cdots \times A_n \times \mathbf{2^{A_i}}$$ s.t. $(a_1, \cdots, a_n, b) \in S$ iff $(a_1, \cdots, a_{i-1}, b, a_{i+1}, \cdots, a_n, a_i) \in S^i.$
+    Given a specification $S \subset A_1 \times A_2 \times \cdots \times A_n \times B$, its \emph{partial inversion} w.r.t. the $i$-th argument is a specification $$S^{-1}_i \subset A_1 \times \cdots A_{i-1} \times \mathbf{B} \times A_{i-1} \times \cdots \times A_n \times \mathbf{A_i}$$ s.t. $(a_1, \cdots, a_n, b) \in S$ iff $(a_1, \cdots, a_{i-1}, b, a_{i+1}, \cdots, a_n, a_i) \in S^{-1}_i.$
   \end{definition}
   \begin{example}
     Assume a specification is a function $f : \mathbb{N} \times \mathbb{N} \to \mathbb{N}$ defined as $f(x, y) = x \mod y.$ Its partial inverse w.r.t. the first argument is $g(z, y) = \{i*y + z\}_{i\in\mathbb{N}}.$
@@ -335,6 +335,7 @@ def find_fibonacci_index(n):
     Let $R$ be exact requirements, defining a specification over two arguments, $p \sim m(\cdot \mid R)$ be the target function, and the resonator $r$ is a partial inversion w.r.t. to the first argument. Then, the following is a resonance property: $$\forall (x, y,\cdot)\ \in \llbracket R \rrbracket.\ f(r(f(x,y),y), y) = \{f(x,y)\} \wedge x\in r(f(x,y),y).$$
   \end{proposition}
 \end{frame}
+
 
 \begin{frame}[fragile]
   \frametitle{Challenge: Infinite Input Domains}
@@ -362,6 +363,38 @@ def filter_elements(lst, include):
       \end{minted}
     \end{tcolorbox}
     }
+\end{frame}
+
+
+\begin{frame}[fragile]
+  \frametitle{Solution: Explicitly Restrict The Domain}
+    {\scriptsize
+      % Prompt box
+    \begin{tcolorbox}[prompt,title=Prompt]
+Write a Python function that, given a list if integers, and a boolean value "include", returns all elements that are in the list if "include" is true, and all possible elements \highlight{between -1000 and 1000} that are not in the list if "include" is false.
+    \end{tcolorbox}
+    % Response box
+    \begin{tcolorbox}[response]
+      \begin{minted}[escapeinside=||]{python}
+def filter_elements(int_list, include):
+    possible_integers = set(range(-1000, 1001))
+
+    if include:
+        return int_list
+    else:
+        missing_integers = list(possible_integers - set(int_list))
+        return missing_integers
+      \end{minted}
+    \end{tcolorbox}
+    }
+\end{frame}
+
+\begin{frame}{Partial Inversion with Restricted Domain}
+  \begin{definition}
+    Given a specification $S \subset A_1 \times A_2 \times \cdots \times A_n \times B$, its \emph{partial inversion} w.r.t. the $i$-th argument restricted to a subdomain $D \subset A_i$ is a specification $$S^{-1}_{i,D} \subset A_1 \times \cdots A_{i-1} \times \mathbf{B} \times A_{i-1} \times \cdots \times A_n \times \mathbf{D}$$ s.t. $(a_1, \cdots, a_n, b) \in S \wedge a_i\in D$ iff $(a_1, \cdots, a_{i-1}, b, a_{i+1}, \cdots, a_n, a_i) \in S^{-1}_{i,D}.$
+  \end{definition}
+  \vspace{1cm}
+  Note: the resonance property will be checked only on the subdomain $D$.
 \end{frame}
 
 \begin{frame}[fragile]
