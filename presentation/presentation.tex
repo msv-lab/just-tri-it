@@ -57,34 +57,64 @@
 \frame[plain]{\titlepage}
 
 \begin{frame}[fragile]
-  \frametitle{Preliminaries}
+  \frametitle{Preliminaries: Code Generation}
   \begin{columns}[t]
-    \column{0.43\textwidth}
+    \column{0.48\textwidth}
     \begin{itemize}
     \item $R$ are natural language (NL) requirements;
     \item $m$ is an LLM, $m(\cdot \mid R)$ is a distribution of programs;
     \item Programs $p \sim m(\cdot \mid R)$ sampled based on requirements are functions $$A_1 \times \cdots \times A_n \to B$$ where $A_1, \cdots, A_n$ are input domains, $B$ is the output domain.
     \end{itemize}
-    \column{0.52\textwidth}
-    \begin{itemize}
-    \item the semantics of NL requirement $\llbracket \cdot \rrbracket : \mathrm{NL} \to 2^{A_1 \times \cdots \times A_n \times B}$ is a specification implicitly defined by these requirements, e.g.
-      \begin{align*}
-        &\llbracket ``the\ division\ function" \rrbracket =\\
-        &\quad\{ (2, 2, 1), (6, 2, 3), \cdots \}.
-      \end{align*}
-    \item a program $p \sim m(\cdot \mid R)$ is \emph{correct} iff
-      \begin{align*}
-        \forall\ &a_1\in A_1,\ \cdots, a_n\in A_n\\
-        &(a_1^i, \cdots, a_n^i, p(a_1^i, \cdots, a_n^i)) \in \llbracket R \rrbracket.
-      \end{align*}
-    \end{itemize}
+    \column{0.48\textwidth}
+    {\scriptsize
+      % Prompt box
+    \begin{tcolorbox}[prompt,title=Prompt]
+      Implement a function \mintinline{python}{f(n: int) -> int} that computes the n-th Fibonacci number.
+    \end{tcolorbox}
+    % Response box
+    \begin{tcolorbox}[response]
+      \begin{minted}[escapeinside=||]{python}
+def f(n: int) -> int:
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+      \end{minted}
+    \end{tcolorbox}
+    }
   \end{columns}
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Exactness of Requirements}
-  \begin{definition}[Exact Requirements]
-    Requirements are \emph{exact} if the corresponding specification is a function. Otherwise, they are \emph{inexact}.
+  \frametitle{Preliminaries: Specification}
+  The semantics of NL requirement $\llbracket \cdot \rrbracket : \mathrm{NL} \to 2^{A_1 \times \cdots \times A_n \times B}$ is a specification implicitly defined by these requirements, e.g.
+  \begin{align*}
+    &\llbracket ``the\ division\ function" \rrbracket =\\
+    &\quad\{ (2, 2, 1), (6, 2, 3), \cdots \}.
+  \end{align*}  
+  \begin{columns}[t]
+    \column{0.48\textwidth}
+    A program $p \sim m(\cdot \mid R)$ is \emph{correct} iff
+    \begin{align*}
+      \forall\ &a_1\in A_1,\ \cdots, a_n\in A_n.\\
+      &(a_1^i, \cdots, a_n^i, p(a_1^i, \cdots, a_n^i)) \in \llbracket R \rrbracket,
+    \end{align*}
+    denoted as $\llbracket R \rrbracket \vdash p.$ 
+    \column{0.48\textwidth}
+    It is \emph{incorrect} iff
+    \begin{align*}
+      \exists &a_1\in A_1,\ \cdots, a_n\in A_n.\\
+              &(a_1, \cdots, a_n, p(a_1, \cdots, a_n)) \notin \llbracket R \rrbracket,
+    \end{align*}
+    denoted as $\llbracket R \rrbracket \nvdash p.$ 
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}[fragile]
+  \frametitle{Exactness of Requirements/Specifications}
+  \begin{definition}[Exact Specification]
+    A specification is \emph{exact} if it is a function. Otherwise, it is \emph{inexact}.
   \end{definition}
   \begin{example}[Inexact Requirements]
     These requirements permit multiple outputs for the same input:
@@ -97,14 +127,20 @@
 \end{frame}
 
 \begin{frame}[fragile]
+  \frametitle{Describing Specifications}
+
+  Assume a specification can be expressed in natural language using $$\llparenthesis \cdot \rrparenthesis : 2^{A_1 \times \cdots \times A_n \times B} \to \mathrm{NL},$$ e.g.
+  \begin{align*}
+    &\llparenthesis\,\{\,(0, 1), (1, 2), (2, 3), \cdots \,\}\,\rrparenthesis = \\
+    &\quad\quad``increment\ a\ given\ number"
+      \end{align*}  
+\end{frame}
+
+\begin{frame}[fragile]
   \frametitle{Reliability of LLM-Generated Code}
   \begin{columns}
     \column{0.48\textwidth}
-    LLMs make mistakes, e.g. hallucinate~\cite{liu2024exploring}, which results in incorrect programs, i.e.
-    \begin{align*}
-      \exists &a_1, \cdots, a_n.\\
-              &(a_1, \cdots, a_n, p(a_1, \cdots, a_n)) \notin \llbracket R \rrbracket.
-    \end{align*}
+    LLMs make mistakes, e.g. hallucinate~\cite{liu2024exploring}, which results in incorrect programs.\\[0.3cm]
     \textbf{Challenge}: how to automatically catch mistakes without explicit $\llbracket R \rrbracket$?
     \column{0.48\textwidth}
     {\scriptsize
@@ -201,7 +237,7 @@ Confidence: 99\%. The 1\% uncertainty accounts for potential uncaught edge cases
   \begin{columns}
     \column{0.48\textwidth}
     Sample both programs and assertions specifying the expected output~\cite{key2022toward}.\\[0.3cm]
-    \textbf{Problem:} an implementation is often the shortest description of the expected output, therefore the assertion may contain the same bugs.
+    \textbf{Problem:} an implementation may be the shortest description of the expected output, therefore the assertion may contain the same bugs.
     \column{0.48\textwidth}
     {\scriptsize
       % Prompt box
@@ -230,27 +266,34 @@ def is_fib_correct(n, F):
 
 \begin{frame}{New Idea: Resonance}
   \begin{itemize}
-  \item Sample a target program alongside a family of \emph{resonator} programs, i.e. programs with deliberately altered semantics, possibly implementing different algorithms.
-  \item Check \emph{a resonance property}, a hyperproperty of the resonators and the target program that provably holds only if either all programs correctly implement their requirements, or all programs wrongly implement their requirements.
-  \item If the property holds, then the target program \emph{resonates}, i.e. it is either correct, or has a \emph{sympathetic fault}, i.e. a fault that matches the faults of the resonators.
+  \item Sample several \emph{resonator} programs with deliberately altered requirements.
+  \item Check their \emph{resonance property} that provably holds iff either all programs correctly implement their requirements, or all programs wrongly implement their requirements.
+  \item If the programs \emph{resonate}, then they are either correct, or have \emph{sympathetic faults}, i.e. low-probability faults that cancel each other out.
   \end{itemize}
-  \textbf{Challenge:} design a family of resonators, and a corresponding resonance property, that minimize the likelihood of sympathetic faults.
+  \begin{definition}
+    Let $r_1 \sim m(\cdot \mid R_1), \cdots, r_n \sim m(\cdot \mid R_n)$ be resonators. A hyperproperty $\phi$ over $r_1, \cdots, r_n$ is a resonance property iff it holds only when either all programs are correct or all programs are incorrect: $$\phi[r_1, \cdots, r_n] \Leftrightarrow \bigwedge_i \llbracket R_i \rrbracket \vdash r_i \vee \bigwedge_i \llbracket R_i \rrbracket \nvdash r_i.$$
+  \end{definition}
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Trivial Resonance Properties}
+  \frametitle{Consistency is Trivial Resonance Property}
   \begin{proposition}[Resonance Generalizes Consistency]
-    Let $R$ be exact requirements, $p \sim m(\cdot \mid R)$ be the target function, and the resonator $r \sim m(\cdot \mid R)$ is generated based on the same requirements. Then, the following is a resonance property: $$p \equiv r.$$
+    Let $R$ be exact requirements, and $r_1, r_2 \sim m(\cdot \mid R)$ be resonators generated based on these requirements. Then, the following is a resonance property: $$r_1 \equiv r_2.$$
   \end{proposition}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Inversion-Based Resonance Properties}
   \begin{proposition}[Inversion-Based Resonance]
-    Let $R$ be exact requirements, such that $\llbracket R \rrbracket$ is a bijection, $p \sim m(\cdot \mid R)$ be the target function, and the resonator $r$ is generated based on the specification $\{(y, x) \mid (x, y) \in \llbracket R \rrbracket\}$. Then, the following is a resonance property: $$r \circ p \equiv \mathrm{id}.$$
+    Let $R$ be exact requirements, such that $\llbracket R \rrbracket$ is a bijection, $f \sim m(\cdot \mid R)$ and $g \sim m(\cdot \mid R^{-1})$ be resonators, and $$R^{-1} \triangleq \llparenthesis\, \{(y, x) \mid (x, y) \in \llbracket R \rrbracket\}\,\rrparenthesis$$ are inverse requirements. Then, the following is a resonance property: $$f \circ g \equiv \mathrm{id}.$$
   \end{proposition}
+  \textbf{Hypothesis:} inversion-based resonance reduces sympathetic bugs compared to the standard consistency, because $f$ and $g$ require different algorithms.
 \end{frame}
 
 \begin{frame}[fragile]
   \frametitle{Inversion-Based Resonance (Non-Bijective Case)}
   \begin{proposition}
-    Let $R$ be exact requirements, $p \sim m(\cdot \mid R)$ be the target function, and the resonator $r$ is generated based on the specification $$\Bigl\{ (y, \{ x \mid (x, y)\in \llbracket R \rrbracket \})\ \Big|\ (\cdot, y) \in \llbracket R \rrbracket \Bigl\}.$$ Then, the following is a resonance property: $$\forall (\cdot, y) \in \llbracket R \rrbracket.\ p(r(y)) = \{y\}\wedge \forall (x, \cdot) \in \llbracket R \rrbracket.\ x \in r(p(x)).$$
+   Let $R$ be exact requirements, $f \sim m(\cdot \mid R)$ and $g \sim m(\cdot \mid \llparenthesis\,\mathrm{Inv}\,\rrparenthesis)$ be resonators where $$\mathrm{Inv} \triangleq \Bigl\{ (y, \{ x \mid (x, y)\in \llbracket R \rrbracket \})\ \Big|\ (\cdot, y) \in \llbracket R \rrbracket \Bigl\}$$ specifies to return all inputs that would produce a given output according to the original requirements. Then, the following is a resonance property: $$\forall (\cdot, y) \in \llbracket R \rrbracket.\ f(g(y)) = \{y\}\wedge \forall (x, \cdot) \in \llbracket R \rrbracket.\ x \in g(f(x)).$$
   \end{proposition}
 \end{frame}
 
@@ -258,7 +301,7 @@ def is_fib_correct(n, F):
   \frametitle{Limitations of Inversion-Based Resonators}
   \begin{columns}[t]
     \column{0.48\textwidth}
-    Inefficient for large preimages.
+    Large or infinite preimages.
     {\scriptsize
     % Prompt box
       \begin{tcolorbox}[prompt,title=Prompt]
@@ -325,21 +368,21 @@ def find_fibonacci_index(n):
 \begin{frame}[fragile]
   \frametitle{Partial Inversion Based Resonance (Bijective Case)}
   \begin{proposition}
-    Let $R$ be exact requirements, defining a bijective specification over two arguments, $p \sim m(\cdot \mid R)$ be the target function, and the resonator $r$ is a partial inversion w.r.t. to the first argument. Then, the following is a resonance property: $$\forall (x, y,\cdot)\ \in \llbracket R \rrbracket.\ f(r(f(x,y),y), y) = f(x,y) \wedge r(f(x,y),y) = x.$$
+    Let $R$ be exact requirements, defining a bijective specification over two arguments, $f \sim m(\cdot \mid R)$ and $g \sim m(\cdot \mid \llparenthesis\, \llbracket R \rrbracket^{-1}_1 \,\rrparenthesis)$ be resonators. Then, the following is a resonance property: $$\forall (x, y,\cdot)\ \in \llbracket R \rrbracket.\ g(f(x,y),y) = x.$$
   \end{proposition}
 \end{frame}
 
 \begin{frame}[fragile]
   \frametitle{Partial Inversion Based Resonance (Non-Bijective Case)}
   \begin{proposition}
-    Let $R$ be exact requirements, defining a specification over two arguments, $p \sim m(\cdot \mid R)$ be the target function, and the resonator $r$ is a partial inversion w.r.t. to the first argument. Then, the following is a resonance property: $$\forall (x, y,\cdot)\ \in \llbracket R \rrbracket.\ f(r(f(x,y),y), y) = \{f(x,y)\} \wedge x\in r(f(x,y),y).$$
+    Let $R$ be exact requirements, defining a specification over two arguments, $f \sim m(\cdot \mid R)$ and $g \sim m(\cdot \mid \llparenthesis\,\mathrm{Inv}_1\,\rrparenthesis)$ be resonators where $$\mathrm{Inv}_1 \triangleq \Bigl\{ (z, y, \{ x \mid (x, y, z)\in \llbracket R \rrbracket \})\ \Big|\ (\cdot, y, z) \in \llbracket R \rrbracket \Bigl\}$$ specifies to return all values of the first arguments that would produce a given output when used with a given second argument according to the original requirements. Then, the following is a resonance property: $$\forall (x, y,\cdot)\ \in \llbracket R \rrbracket.\ f(g(f(x,y),y), y) = \{f(x,y)\} \wedge x\in g(f(x,y),y).$$
   \end{proposition}
 \end{frame}
 
 
 \begin{frame}[fragile]
   \frametitle{Challenge: Infinite Input Domains}
-A partial inversion has to return all possible inputs that would produce a given output, otherwise the check $x\in r(f(x,y),y)$ will fail. Such inversion is often impossible to implement, e.g. inverting \texttt{contains(list, element)}:
+The introduced partial inversion has to return all possible inputs producing a given output, otherwise the check $x\in g(f(x,y),y)$ will fail. Such inversion is often impossible to implement, e.g. inverting \texttt{contains(list, element)}:
     {\scriptsize
       % Prompt box
     \begin{tcolorbox}[prompt,title=Prompt]
@@ -367,7 +410,7 @@ def filter_elements(lst, include):
 
 
 \begin{frame}[fragile]
-  \frametitle{Solution: Explicitly Restrict The Domain}
+  \frametitle{Solution 1: Explicitly Restrict The Domain}
     {\scriptsize
       % Prompt box
     \begin{tcolorbox}[prompt,title=Prompt]
@@ -399,23 +442,12 @@ def filter_elements(int_list, include):
 
 \begin{frame}[fragile]
   \frametitle{Challenge: Inexact Requirements}
-  If the requirements are inexact, then the check $f(r(f(x,y),y), y) = \{f(x,y)\}$ may fail. For example, for the problem description\\[0.2cm]
+  If the requirements are inexact, then the check $f(g(f(x,y),y), y) = \{f(x,y)\}$ may fail. For example, for the problem description\\[0.2cm]
   \begin{quote}
     Implement a function that returns the list of all positive values stored in the nodes of a given graph.
   \end{quote}\\[0.2cm]
-  $f$ may assume an implementation that traverses the graph in the depth-first search order, and $r$ may assume an implementation that traverses the graph in the breadth-first search order. Although both are valid solutions, the order of the elements in the output list will be different.
+  $f$ may assume an implementation that traverses the graph in the depth-first search order, and $g$ may assume an implementation that traverses the graph in the breadth-first search order. Although both are valid solutions, the order of elements in the output list will be different.
 \end{frame}
-
-
-\begin{frame}[fragile]
-  \frametitle{Prototype Implementation \& Initial Experiments}
-  \begin{itemize}
-  \item Given requirements $R$ from LiveCodeBench, automatically transform them into requirements $R^{-1}_i$ that specify a partial inversion w.r.t. the $i$-th argument, using, for example, few-shot learning.
-  \item Generate programs and resonators for a subset of problems in LiveCodeBench.
-  \item Use a random testing method to automatically check resonance properties. Analyze the results to see if these properties help to uncover subtle bugs in the generated code.
-  \end{itemize}
-\end{frame}
-
 
 \begin{frame}[allowframebreaks]{References}
   \bibliographystyle{unsrt}
