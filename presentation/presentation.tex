@@ -97,7 +97,7 @@ def f(n: int) -> int:
     A program $p \sim m(\cdot \mid R)$ is \emph{correct} iff
     \begin{align*}
       \forall\ &a_1\in A_1,\ \cdots, a_n\in A_n.\\
-      &(a_1^i, \cdots, a_n^i, p(a_1^i, \cdots, a_n^i)) \in \llbracket R \rrbracket,
+      &(a_1, \cdots, a_n, p(a_1, \cdots, a_n)) \in \llbracket R \rrbracket,
     \end{align*}
     denoted as $\llbracket R \rrbracket \vdash p.$ 
     \column{0.48\textwidth}
@@ -129,7 +129,7 @@ def f(n: int) -> int:
 \begin{frame}[fragile]
   \frametitle{Describing Specifications}
 
-  Assume a specification can be expressed in natural language using $$\llparenthesis \cdot \rrparenthesis : 2^{A_1 \times \cdots \times A_n \times B} \to \mathrm{NL},$$ e.g.
+  Assume any specification can be expressed in natural language using $$\llparenthesis \cdot \rrparenthesis : 2^{A_1 \times \cdots \times A_n \times B} \to \mathrm{NL},$$ e.g.
   \begin{align*}
     &\llparenthesis\,\{\,(0, 1), (1, 2), (2, 3), \cdots \,\}\,\rrparenthesis = \\
     &\quad\quad``increment\ a\ given\ number"
@@ -167,7 +167,7 @@ def count(nums):
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Previous Work: Consistency-Based}
+  \frametitle{Previous Work: Consistency}
   \begin{definition}
     Programs $p_1$ and $p_2$ are equivalent ($p_1 \equiv p_2$) iff $$\forall a_1\in A_1,\cdots,a_n\in A_n.\ p_1(a_1,\cdots,a_n) = p_2(a_1,\cdots,a_n).$$
   \end{definition}
@@ -202,7 +202,7 @@ def count(nums):
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Previous Work: Confidence-Based}
+  \frametitle{Previous Work: Confidence}
   \begin{columns}
     \column{0.48\textwidth}
     Measure confidence of an LLM response through token probabilities or verbalized self-ask~\cite{spiess2024calibration}.\\[0.3cm]
@@ -233,12 +233,44 @@ Confidence: 99\%. The 1\% uncertainty accounts for potential uncaught edge cases
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Previous Work: Assertion-Based}
+  \frametitle{Previous Work: Assertions}
   \begin{columns}
     \column{0.48\textwidth}
-    Sample both programs and assertions specifying the expected output~\cite{key2022toward}.\\[0.3cm]
-    \textbf{Problem:} an implementation may be the shortest description of the expected output, therefore the assertion may contain the same bugs.
+    Sample both programs and assertions specifying the expected output~\cite{key2022toward}, i.e. executable predicates directly capturing $\llbracket R \rrbracket$.\\[0.3cm]
+    
+    \textbf{Intuition:} for some problems, it is easier to check correctness of an output than to compute it.
     \column{0.48\textwidth}
+    {\scriptsize
+      % Prompt box
+      \begin{tcolorbox}[prompt,title=Prompt]
+The function \mintinline{python}{s(l: list) -> list} sorts the list in non-descending order. Create a predicate that checks, for a given l, if s(l) returns a correct output.
+    \end{tcolorbox}
+    % Response box
+      \begin{tcolorbox}[response]
+        \begin{minted}[escapeinside=||]{python}
+def is_sorted_correctly(l: list) -> bool:
+    sorted_l = s(l)
+    if Counter(l) != Counter(sorted_l):
+        return False
+    for i in range(len(sorted_l) - 1):
+        if sorted_l[i] > sorted_l[i + 1]:
+            return False
+    return True          
+        \end{minted}
+    \end{tcolorbox}
+    }
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Problems with Assertions}
+  \begin{columns}
+    \column{0.52\textwidth}
+    \begin{itemize}
+    \item For some problems, an implementation is the simplest description of the expected output.
+    \item Given a function $f:X\to Y$ implementing $R$ and a predicate $p: X \times Y \to \{0,1\}$ implementing $\widetilde{R}$ (requirements for an assertion that checks $R$), we only have a weak guarantee that $$\forall x\in X.\ p(x, f(x))$$ implies $$\llbracket \widetilde{R} \rrbracket\vdash p \Rightarrow \llbracket R \rrbracket\vdash f.$$
+    \end{itemize}
+    \column{0.46\textwidth}
     {\scriptsize
       % Prompt box
       \begin{tcolorbox}[prompt,title=Prompt]
@@ -448,6 +480,11 @@ def filter_elements(int_list, include):
   \end{quote}\\[0.2cm]
   $f$ may assume an implementation that traverses the graph in the depth-first search order, and $g$ may assume an implementation that traverses the graph in the breadth-first search order. Although both are valid solutions, the order of elements in the output list will be different.
 \end{frame}
+
+
+Implement a Python predicate sp(G, N1, N1, P) checks that P is a correct output for the inputs G, N1, N2 according to the requrements:
+
+Given a graph G defined as a list of edges, and two nodes N1 and N2, find the shortest path between N1 and N2.
 
 \begin{frame}[allowframebreaks]{References}
   \bibliographystyle{unsrt}
