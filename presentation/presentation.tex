@@ -47,7 +47,16 @@
     \vskip0pt%
 }
 
-\title{Does LLM-Generated Code Resonate?}
+% https://tex.stackexchange.com/questions/22252/how-to-typeset-function-restrictions
+\newcommand\restr[2]{{% we make the whole thing an ordinary symbol
+  \left.\kern-\nulldelimiterspace % automatically resize the bar with \right
+  #1 % the function
+  \littletaller % pretend it's a little taller at normal size
+  \right|_{#2} % this is the delimiter
+  }}
+\newcommand{\littletaller}{\mathchoice{\vphantom{\big|}}{}{}{}}
+
+\title{Reliable Code Generation with LLMs\\ via Resonance Check}
 \author{Sergey Mechtaev}
 \institute{Peking University}
 \date{2025}
@@ -87,11 +96,13 @@ def f(n: int) -> int:
 
 \begin{frame}[fragile]
   \frametitle{Preliminaries: Specification}
-  The semantics of NL requirement $\llbracket \cdot \rrbracket : \mathrm{NL} \to 2^{A_1 \times \cdots \times A_n \times B}$ is a specification implicitly defined by these requirements, e.g.
+  The semantics of NL requirement $\llbracket \cdot \rrbracket : \mathrm{NL} \to 2^{A_1 \times \cdots \times A_n \times B}$ is a specification implicitly defined by these requirements, e.g. $$\llbracket ``multiple\ two\ numbers" \rrbracket = \{ (2, 2, 4), (2, 3, 6), \cdots \}.$$
+  For simplicity, assume that all inputs and outputs are valid and useful:
   \begin{align*}
-    &\llbracket ``the\ division\ function" \rrbracket =\\
-    &\quad\{ (2, 2, 1), (6, 2, 3), \cdots \}.
-  \end{align*}  
+    &\forall a_1\in A_1,\ \cdots, a_n\in A_n\ \exists b\in B.\ (a_1, \cdots, a_n, b) \in \llbracket R \rrbracket\\
+    &\forall b\in B\ \exists a_1\in A_1,\ \cdots, a_n\in A_n.\ (a_1, \cdots, a_n, b) \in \llbracket R \rrbracket
+  \end{align*}
+  \vspace{-3mm}
   \begin{columns}[t]
     \column{0.48\textwidth}
     A program $p \sim m(\cdot \mid R)$ is \emph{correct} iff
@@ -303,63 +314,106 @@ def is_fib_correct(n, F):
   \item If the programs \emph{resonate}, then they are either correct, or have \emph{sympathetic faults}, i.e. low-probability faults that cancel each other out.
   \end{itemize}
   \begin{definition}
-    Let $r_1 \sim m(\cdot \mid R_1), \cdots, r_n \sim m(\cdot \mid R_n)$ be resonators. A hyperproperty $\phi$ over $r_1, \cdots, r_n$ is a resonance property iff it holds only when either all programs are correct or all programs are incorrect: $$\phi[r_1, \cdots, r_n] \Leftrightarrow \bigwedge_i \llbracket R_i \rrbracket \vdash r_i \vee \bigwedge_i \llbracket R_i \rrbracket \nvdash r_i.$$
+    Let $r_1 \sim m(\cdot \mid R_1), \cdots, r_n \sim m(\cdot \mid R_n)$ be resonators. A hyperproperty $\phi$ over $r_1, \cdots, r_n$ is a resonance property if it holds iff either all programs are correct or all programs are incorrect: $$\phi[r_1, \cdots, r_n] \Leftrightarrow \bigwedge_i \llbracket R_i \rrbracket \vdash r_i \vee \bigwedge_i \llbracket R_i \rrbracket \nvdash r_i.$$
   \end{definition}
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Consistency is Trivial Resonance Property}
+  \frametitle{Consistency is A Trivial Resonance Property}
   \begin{proposition}[Resonance Generalizes Consistency]
-    Let $R$ be exact requirements, and $r_1, r_2 \sim m(\cdot \mid R)$ be resonators generated based on these requirements. Then, the following is a resonance property: $$r_1 \equiv r_2.$$
+    Let $R$ be requirements, and $r_1, r_2 \sim m(\cdot \mid R)$ be resonators generated based on these requirements. Then, the following is a resonance property: $$r_1 \equiv r_2.$$
   \end{proposition}
+  \textbf{Problems:}
+  \begin{itemize}
+  \item sympathetic faults are high-probability, because LLMs consistently make the same mistakes.
+  \item likely to fail for correct programs when the requirements are inexact.
+  \end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Inversion-Based Resonance Properties}
-  \begin{proposition}[Inversion-Based Resonance]
-    Let $R$ be exact requirements, such that $\llbracket R \rrbracket$ is a bijection, $f \sim m(\cdot \mid R)$ and $g \sim m(\cdot \mid R^{-1})$ be resonators, and $$R^{-1} \triangleq \llparenthesis\, \{(y, x) \mid (x, y) \in \llbracket R \rrbracket\}\,\rrparenthesis$$ are inverse requirements. Then, the following is a resonance property: $$f \circ g \equiv \mathrm{id}.$$
+  \frametitle{Better Resonance Properties}
+  To account for different types of specifications, check several resonance properties in the order of raising complexity and generality:\\[0.2cm]
+  \begin{itemize}
+  \item FOR-INV: Forward function + (Partial) Inverse
+  \item FOR-FIB: Forward function + (Partial) Fiber function
+  \item COR-FIB: Correspondence function + (Partial) Fiber function
+  \item VAL-FIB: Validator function + Its (Partial) Fiber function
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{FOR-INV Resonance Property}
+  \begin{definition}[Inverse Specification]
+    Let $S\subset A\times B$ be a specification. Its inverse is
+    $S^{-1} \triangleq \{(b, a) \mid (b, a) \in S\}.$ Similarly, the inverse of requirements $R$ is $R^{-1} \triangleq \llparenthesis\ \llbracket R \rrbracket^{-1}\rrparenthesis$. For multi-argument functions, the inverse should produce a tuple as the output.
+  \end{definition}
+  \begin{proposition}[FOR-INV]
+    Let $R$ be requirements, $f: A\to B \sim m(\cdot \mid R)$ and $g: B\to A \sim m(\cdot \mid R^{-1})$ be resonators. The following is a resonance property: $$g \circ f \equiv \mathrm{id_A} \wedge f \circ g \equiv \mathrm{id_B}.$$
   \end{proposition}
   \textbf{Hypothesis:} inversion-based resonance reduces sympathetic bugs compared to the standard consistency, because $f$ and $g$ require different algorithms.
+  \textbf{Problem:} likely to fail if $\llbracket R \rrbracket$ is not a bijection.
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Inversion-Based Resonance (Non-Bijective Case)}
-  \begin{proposition}
-   Let $R$ be exact requirements, $f \sim m(\cdot \mid R)$ and $g \sim m(\cdot \mid \llparenthesis\,\mathrm{Inv}\,\rrparenthesis)$ be resonators where $$\mathrm{Inv} \triangleq \Bigl\{ (y, \{ x \mid (x, y)\in \llbracket R \rrbracket \})\ \Big|\ (\cdot, y) \in \llbracket R \rrbracket \Bigl\}$$ specifies to return all inputs that would produce a given output according to the original requirements. Then, the following is a resonance property: $$\forall (\cdot, y) \in \llbracket R \rrbracket.\ f(g(y)) = \{y\}\wedge \forall (x, \cdot) \in \llbracket R \rrbracket.\ x \in g(f(x)).$$
-  \end{proposition}
+  \frametitle{Liberal Resonance Property}
+  \textbf{Problem:} it might be too expensive to check the right inverse property $f \circ g \equiv \mathrm{id}_B$ on the entire set $B$.\\[0.2cm]
+  \textbf{Idea:} since not all resonators are equally important, we can weaken the property to make it easier to check.\\
+  \begin{definition}[Liberal FOR-INV]
+    Let $R$ be requirements, $f: A\to B \sim m(\cdot \mid R)$ and $g: B\to A \sim m(\cdot \mid R^{-1})$ be resonators. The left inverse property $$g \circ f \equiv \mathrm{id_A}$$ is not a resonance property since, although it checks $f$, it captures the behavior of $g$ only on the range of $f$. We call it a liberal resonance property.
+  \end{definition}
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Limitations of Inversion-Based Resonators}
+  \frametitle{Limitations of FOR-INV}
   \begin{columns}[t]
     \column{0.48\textwidth}
-    Large or infinite preimages.
     {\scriptsize
     % Prompt box
       \begin{tcolorbox}[prompt,title=Prompt]
-Implement a Python function that for a boolean 'found' enumerates all pairs of a list and an integer such that the list contains the integer iff the boolean is true.
+Implement \mintinline{python}{f(i: int) -> int} that returns a number greater than i by at most 2.
       \end{tcolorbox}
     % Response box
       \begin{tcolorbox}[response]
         \begin{minted}[escapeinside=||]{python}
-def enumerate_pairs(found):
-  max_list=3
-  max_int=3
-  pairs = []
-  ints = range(max_int + 1)
-  for l in range(max_list + 1):
-    for lst in product(ints, repeat=l):
-      lst = list(lst)
-        for num in ints:
-          if (num in lst) == found:
-            pairs.append(
-              (lst.copy(), num))
-  return pairs
+def f(i: int) -> int:
+  return i+1
         \end{minted}
     \end{tcolorbox}
     }    
     \column{0.48\textwidth}
-    Implemented by enumerating inputs of the forward function.
+    {\scriptsize
+    % Prompt box
+      \begin{tcolorbox}[prompt,title=Prompt]
+Implement \mintinline{python}{g(i: int) -> int} that returns a number smaller than i by at most 2.
+      \end{tcolorbox}
+    % Response box
+      \begin{tcolorbox}[response]
+        \begin{minted}[escapeinside=||]{python}
+def g(i: int) -> int:
+  return i-2
+        \end{minted}
+    \end{tcolorbox}
+    }
+  \end{columns}
+  \vspace{0.5cm}
+  Independently generated forward and backward functions for inexact requirements may not match. \textbf{Note:} the generation must be independent to reduce the chance of sympathetic faults.
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{FOR-FIB Resonance Property}
+  \begin{definition}[Fiber Specification]
+    Let $S\subset A\times B$ be a specification. Its fiber function specification is $$S^{\succ} \triangleq \Bigl\{ (b, \{ a \mid (a, b)\in S \})\ \Big|\ (\cdot, b) \in S \Bigl\}.$$ Given requirements $R$, the requirements for a fiber function are $R^{\succ} \triangleq \llparenthesis\ \llbracket R \rrbracket^{\succ}\rrparenthesis$.
+  \end{definition}
+  \begin{proposition}[Liberal FOR-FIB]
+   Let $R$ be requirements, $f: A\to B \sim m(\cdot \mid R)$ and $g: B\to 2^A \sim m(\cdot \mid R^{\succ})$ be resonators. The following is a liberal resonance property: $$\forall b \in B.\ f(g(b)) = \{b\}\wedge \forall a \in A.\ a \in g(f(a)),$$ since it checks for the exhaustiveness of fibers only on the range of $f$.
+  \end{proposition}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Limitations of Inverse and Fiber Resonators}
+  \begin{columns}[t]
+    \column{0.48\textwidth}
+    Inverse functions may enumerate inputs of the forward function.
     {\scriptsize
       % Prompt box
       \begin{tcolorbox}[prompt,title=Prompt]
@@ -385,36 +439,85 @@ def find_fibonacci_index(n):
         \end{minted}
     \end{tcolorbox}
     }
+    \column{0.48\textwidth}
+    Hard to compute fibers for multi-arguments functions.
+    {\scriptsize
+    % Prompt box
+      \begin{tcolorbox}[prompt,title=Prompt]
+Implement a Python function that for a boolean 'found' enumerates all pairs of a list and an integer such that the list contains the integer iff the boolean is true.
+      \end{tcolorbox}
+    % Response box
+      \begin{tcolorbox}[response]
+        \begin{minted}[escapeinside=||]{python}
+def enumerate_pairs(found):
+  max_list=3
+  max_int=3
+  pairs = []
+  ints = range(max_int + 1)
+  for l in range(max_list + 1):
+    for lst in product(ints, repeat=l):
+      lst = list(lst)
+        for num in ints:
+          if (num in lst) == found:
+            pairs.append(
+              (lst.copy(), num))
+  return pairs
+        \end{minted}
+    \end{tcolorbox}
+    }    
   \end{columns}
 \end{frame}
 
-\begin{frame}{Partial Inversion}
+\begin{frame}{Partial Inverses and Fiber Functions}
   \begin{definition}
-    Given a specification $S \subset A_1 \times A_2 \times \cdots \times A_n \times B$, its \emph{partial inversion} w.r.t. the $i$-th argument is a specification $$S^{-1}_i \subset A_1 \times \cdots A_{i-1} \times \mathbf{B} \times A_{i-1} \times \cdots \times A_n \times \mathbf{A_i}$$ s.t. $(a_1, \cdots, a_n, b) \in S$ iff $(a_1, \cdots, a_{i-1}, b, a_{i+1}, \cdots, a_n, a_i) \in S^{-1}_i.$
+    Given a specification $S \subset A_1 \times A_2 \times \cdots \times A_n \times B$, its \emph{partial inversion} w.r.t. the $i$-th argument is a specification $$S^{-1}_i \subset A_1 \times \cdots A_{i-1} \times \mathbf{B} \times A_{i-1} \times \cdots \times A_n \times \mathbf{A_i}$$ s.t. $(a_1, \cdots, a_n, b) \in S$ iff $(a_1, \cdots, a_{i-1}, b, a_{i+1}, \cdots, a_n, a_i) \in S^{-1}_i.$ Partial fiber functions are defined respectfully.
   \end{definition}
   \begin{example}
-    Assume a specification is a function $f : \mathbb{N} \times \mathbb{N} \to \mathbb{N}$ defined as $f(x, y) = x \mod y.$ Its partial inverse w.r.t. the first argument is $g(z, y) = \{i*y + z\}_{i\in\mathbb{N}}.$
+    Assume a specification is a function $f : \mathbb{N} \times \mathbb{N} \to \mathbb{N}$ defined as $f(x, y) = x \mod y.$ A possible partial inverse w.r.t. the first argument is $g(z, y) = y + z$; the partial fiber function is $g(z, y) = \{i*y + z\}_{i\in\mathbb{N}}.$
   \end{example}
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Partial Inversion Based Resonance (Bijective Case)}
+  \frametitle{FOR-INV with Partial Inverses}
   \begin{proposition}
-    Let $R$ be exact requirements, defining a bijective specification over two arguments, $f \sim m(\cdot \mid R)$ and $g \sim m(\cdot \mid \llparenthesis\, \llbracket R \rrbracket^{-1}_1 \,\rrparenthesis)$ be resonators. Then, the following is a resonance property: $$\forall (x, y,\cdot)\ \in \llbracket R \rrbracket.\ g(f(x,y),y) = x.$$
+    Let $R$ be requirements specifying functions over two arguments, $f \sim m(\cdot \mid R)$ and $g \sim m(\cdot \mid R^{-1}_1)$ be resonators. The following is a liberal resonance property (checks $g$ on a subdomain): $$\forall (x, y,\cdot)\ \in \llbracket R \rrbracket.\ g(f(x,y),y) = x.$$
   \end{proposition}
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Partial Inversion Based Resonance (Non-Bijective Case)}
+  \frametitle{FOR-FIB with Partial Fiber Functions}
   \begin{proposition}
-    Let $R$ be exact requirements, defining a specification over two arguments, $f \sim m(\cdot \mid R)$ and $g \sim m(\cdot \mid \llparenthesis\,\mathrm{Inv}_1\,\rrparenthesis)$ be resonators where $$\mathrm{Inv}_1 \triangleq \Bigl\{ (z, y, \{ x \mid (x, y, z)\in \llbracket R \rrbracket \})\ \Big|\ (\cdot, y, z) \in \llbracket R \rrbracket \Bigl\}$$ specifies to return all values of the first arguments that would produce a given output when used with a given second argument according to the original requirements. Then, the following is a resonance property: $$\forall (x, y,\cdot)\ \in \llbracket R \rrbracket.\ f(g(f(x,y),y), y) = \{f(x,y)\} \wedge x\in g(f(x,y),y).$$
+    Let $R$ be requirements, defining a specification over two arguments, $f \sim m(\cdot \mid R)$ and $g \sim m(\cdot \mid R_1^{\succ})$ be resonators. Then, the following is a liberal resonance property (checks $g$ on a subdomain): $$\forall (x, y,\cdot)\ \in \llbracket R \rrbracket.\ f(g(f(x,y),y), y) = \{f(x,y)\} \wedge x\in g(f(x,y),y).$$
   \end{proposition}
 \end{frame}
 
+\begin{frame}[fragile]
+  \frametitle{Challenge: Inexact Requirements}
+  If the requirements are inexact, then the check $f(g(f(x,y),y), y) = \{f(x,y)\}$ may fail. For example, for the problem description\\[0.2cm]
+  \begin{quote}
+    Implement a function that returns the list of all positive values stored in the nodes of a given graph.
+  \end{quote}\\[0.2cm]
+  $f$ may assume an implementation that traverses the graph in the depth-first search order, and $g$ may assume an implementation that traverses the graph in the breadth-first search order. Although both are valid solutions, the order of elements in the output list will be different.
+\end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Challenge: Infinite Input Domains}
-The introduced partial inversion has to return all possible inputs producing a given output, otherwise the check $x\in g(f(x,y),y)$ will fail. Such inversion is often impossible to implement, e.g. inverting \texttt{contains(list, element)}:
+  \frametitle{COR-FIB Resonance Property}
+  \begin{definition}[Correspondence Functions]
+    Given a specification $S \subset A_1 \times A_2 \times \cdots \times A_n \times B$, its \emph{correspondence} function specification is $S^{\prec} \subset A_1 \times \cdots \times A_n \times 2^B$ s.t. $$S^{\prec} \triangleq \Bigl\{ (a_1,\cdots, a_n,\ \{ b \mid (a_1,\cdots, a_n, b)\in S \})\ \Big|\ (a_1,\cdots, a_n, \cdot) \in S \Bigl\}.$$ Given $R$, the requirements for a correspondence function are $R^{\prec} \triangleq \llparenthesis\ \llbracket R \rrbracket^{\prec}\rrparenthesis$.
+  \end{definition}
+  \begin{proposition}[COR-FIB]
+    Let $R$ be requirements, $f: A\to 2^B \sim m(\cdot \mid R^{\prec})$ and $g: B\to 2^A \sim m(\cdot \mid R^{\succ})$ be resonators. The following is a resonance property:
+    \begin{align*}
+      &\forall b \in B.\ (g(b) = g(f(g(b))) \wedge b \in f(g(b)) \wedge \forall a', a''\in g(b).\ f(a') = f(a''))\ \wedge\\ &\forall a \in A.\ (f(a) = f(g(f(a))) \wedge a \in g(f(a)) \wedge \forall b', b''\in f(a).\ g(b') = g(b'')).
+    \end{align*}
+  \end{proposition}
+  \vspace{-3mm}
+  \textbf{Note:} this property assumes that there is a one-to-one correspondence between equivalence classes of inputs and outputs.
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Challenge: Infinite Images and Fibers}
+The introduced fiber and correspondence functions have to be exhaustive. This is often impossible, e.g. inverting \texttt{contains(list, element)}:
     {\scriptsize
       % Prompt box
     \begin{tcolorbox}[prompt,title=Prompt]
@@ -440,51 +543,22 @@ def filter_elements(lst, include):
     }
 \end{frame}
 
-
 \begin{frame}[fragile]
-  \frametitle{Solution 1: Explicitly Restrict The Domain}
-    {\scriptsize
-      % Prompt box
-    \begin{tcolorbox}[prompt,title=Prompt]
-Write a Python function that, given a list if integers, and a boolean value "include", returns all elements that are in the list if "include" is true, and all possible elements \highlight{between -1000 and 1000} that are not in the list if "include" is false.
-    \end{tcolorbox}
-    % Response box
-    \begin{tcolorbox}[response]
-      \begin{minted}[escapeinside=||]{python}
-def filter_elements(int_list, include):
-    possible_integers = set(range(-1000, 1001))
-
-    if include:
-        return int_list
-    else:
-        missing_integers = list(possible_integers - set(int_list))
-        return missing_integers
-      \end{minted}
-    \end{tcolorbox}
-    }
-\end{frame}
-
-\begin{frame}{Partial Inversion with Restricted Domain}
-  \begin{definition}
-    Given a specification $S \subset A_1 \times A_2 \times \cdots \times A_n \times B$, its \emph{partial inversion} w.r.t. the $i$-th argument restricted to a subdomain $D \subset A_i$ is a specification $$S^{-1}_{i,D} \subset A_1 \times \cdots A_{i-1} \times \mathbf{B} \times A_{i-1} \times \cdots \times A_n \times \mathbf{D}$$ s.t. $(a_1, \cdots, a_n, b) \in S \wedge a_i\in D$ iff $(a_1, \cdots, a_{i-1}, b, a_{i+1}, \cdots, a_n, a_i) \in S^{-1}_{i,D}.$
+  \frametitle{VAL-FIB Resonance Property}
+  \begin{definition}[Validator Functions]
+    Given a specification $S \subset A_1 \times A_2 \times \cdots \times A_n \times B$, its \emph{validator} function specification is $\widetilde{S} \subset A_1 \times \cdots \times A_n \times B \times \{0,1\}$ s.t.
+    \begin{align*}
+      \widetilde{S} \triangleq &\{ (a_1,\cdots, a_n, b, 1)\ |\ (a_1,\cdots, a_n, b) \in S \}\ \wedge\\
+      &\{ (a_1,\cdots, a_n, b, 0)\ |\ (a_1,\cdots, a_n, b) \notin S \}.
+    \end{align*}
+    Given $R$, the requirements for a validator function are $\widetilde{R} \triangleq \llparenthesis\ \widetilde{\llbracket R \rrbracket}\ \rrparenthesis$.
   \end{definition}
-  \vspace{1cm}
-  Note: the resonance property will be checked only on the subdomain $D$.
+  \begin{definition}[VAL-FIB]
+    VAL-FIB for $R$ is FOR-FIB for $\widetilde{R}$.
+  \end{definition}
+  \vspace{0.4cm}
+  \textbf{Note}: this is for infinite images, but small input domains.
 \end{frame}
-
-\begin{frame}[fragile]
-  \frametitle{Challenge: Inexact Requirements}
-  If the requirements are inexact, then the check $f(g(f(x,y),y), y) = \{f(x,y)\}$ may fail. For example, for the problem description\\[0.2cm]
-  \begin{quote}
-    Implement a function that returns the list of all positive values stored in the nodes of a given graph.
-  \end{quote}\\[0.2cm]
-  $f$ may assume an implementation that traverses the graph in the depth-first search order, and $g$ may assume an implementation that traverses the graph in the breadth-first search order. Although both are valid solutions, the order of elements in the output list will be different.
-\end{frame}
-
-
-Implement a Python predicate sp(G, N1, N1, P) checks that P is a correct output for the inputs G, N1, N2 according to the requrements:
-
-Given a graph G defined as a list of edges, and two nodes N1 and N2, find the shortest path between N1 and N2.
 
 \begin{frame}[allowframebreaks]{References}
   \bibliographystyle{unsrt}
