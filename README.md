@@ -22,6 +22,14 @@ Additionally, to replicate the experiment, it is sufficient to provide:
 
 - The commit hash of your LLM cache
 
+## Managing cache
+
+Cache can be downloaded from
+
+    https://github.com/msv-lab/VibeRate-cache-USER/archive/COMMIT.zip
+
+where `USER` can be `yihan`, `haotian`, `sijie`, `sergey`.
+
 ## Experimental data
 
 Everything that is not trivially derivable from LLM cache, should be stored in https://github.com/msv-lab/VibeRate-data
