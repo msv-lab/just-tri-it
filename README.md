@@ -21,3 +21,7 @@ Any experiment should be reproducible if the following pieces of information are
 Additionally, to replicate the experiment, it is sufficient to provide:
 
 - The commit hash of your LLM cache
+
+## Experimental data
+
+Everything that is not trivially derivable from LLM cache, should be stored in https://github.com/msv-lab/VibeRate-data
