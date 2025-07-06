@@ -1,0 +1,14 @@
+\frametitle{VAL-FIB Resonance Property}
+  \begin{definition}[Validator Functions]
+    Given a specification $S \subset A_1 \times A_2 \times \cdots \times A_n \times B$, its \emph{validator} function specification is $\widetilde{S} \subset A_1 \times \cdots \times A_n \times B \times \{0,1\}$ s.t.
+    \begin{align*}
+      \widetilde{S} \triangleq &\{ (a_1,\cdots, a_n, b, 1)\ |\ (a_1,\cdots, a_n, b) \in S \}\ \wedge\\
+      &\{ (a_1,\cdots, a_n, b, 0)\ |\ (a_1,\cdots, a_n, b) \notin S \}.
+    \end{align*}
+    Given $R$, the requirements for a validator function are $\widetilde{R} \triangleq \llparenthesis\ \widetilde{\llbracket R \rrbracket}\ \rrparenthesis$.
+  \end{definition}
+  \begin{definition}[VAL-FIB]
+    VAL-FIB for $R$ is FOR-FIB for $\widetilde{R}$.
+  \end{definition}
+  \vspace{0.4cm}
+  \textbf{Note}: this is for infinite images, but small input domains.

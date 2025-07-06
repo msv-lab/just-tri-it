@@ -1,0 +1,27 @@
+\begin{thebibliography}{1}
+
+\bibitem{liu2024exploring}
+Fang Liu, Yang Liu, Lin Shi, Houkun Huang, Ruifeng Wang, Zhen Yang, Li~Zhang,
+  Zhongqi Li, and Yuchi Ma.
+\newblock Exploring and evaluating hallucinations in llm-powered code
+  generation.
+\newblock {\em arXiv preprint arXiv:2404.00971}, 2024.
+
+\bibitem{chen2022codet}
+Bei Chen, Fengji Zhang, Anh Nguyen, Daoguang Zan, Zeqi Lin, Jian-Guang Lou, and
+  Weizhu Chen.
+\newblock Codet: Code generation with generated tests.
+\newblock {\em arXiv preprint arXiv:2207.10397}, 2022.
+
+\bibitem{spiess2024calibration}
+Claudio Spiess, David Gros, Kunal~Suresh Pai, Michael Pradel, Md~Rafiqul~Islam
+  Rabin, Amin Alipour, Susmit Jha, Prem Devanbu, and Toufique Ahmed.
+\newblock Calibration and correctness of language models for code.
+\newblock {\em arXiv preprint arXiv:2402.02047}, 2024.
+
+\bibitem{key2022toward}
+Darren Key, Wen-Ding Li, and Kevin Ellis.
+\newblock Toward trustworthy neural program synthesis.
+\newblock {\em arXiv preprint arXiv:2210.00848}, 2022.
+
+\end{thebibliography}
