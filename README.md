@@ -11,6 +11,16 @@ Supported options are
 - `--cache-root DIR` to set LLM cache (default: `~/.viberate_cache/`)
 - `--no-cache` to disable cache
 
+To run the demo, execute
+
+    python demo.py --input-file PROBLEM_DESCRIPTION
+
+For example
+
+    python demo.py --input-file test_prob3.md
+
+Supported options are identical to those listed above.
+
 ## Reproducibility
 
 Any experiment should be reproducible if the following pieces of information are provided:

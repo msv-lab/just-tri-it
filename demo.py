@@ -29,6 +29,12 @@ def parse_args():
         action="store_true",
         help="Disable cache"
     )
+    parser.add_argument(
+        "--input-file",
+        type=str,
+        required=True,
+        help="Input file containing the problem description"
+    )
     return parser.parse_args()
 
 
@@ -42,7 +48,7 @@ def gen_resonator(model, description, number):
     return code_lst
 
 
-def main1(model, description, n1, n2, n3, n4):
+def main_for_inv(model, description, n1, n2):
     # forward resonator
     print("generating forward resonator:")
     for_code_lst = gen_resonator(model, description, n1)
@@ -65,43 +71,15 @@ def main1(model, description, n1, n2, n3, n4):
                 code_decision.append(for_code_lst[i])
                 break
                 # unfinished: means this i-th forward resonator is right
-
     if code_decision:
         print("decision: selection")
         return "selection", code_decision
-
-    # check forward-fiber
-    # fiber resonator
-    print("generating fiber resonator:")
-    fiber_des = re_des.gen_fiber_des(model, description)
-    print(f"the fiber des is: {fiber_des}")
-    print("already generated inverse description")
-    fiber_code_lst = gen_resonator(model, fiber_des, n3)
-    print(fiber_code_lst)
-    return
-
-    des_a = ""  # unfinished
-    cur_test_a = check_property.generate_tests(model, des_a)
-    des_b = ""  # unfinished
-    cur_test_b = check_property.generate_tests(model, des_b)
-    code_decision = []
-    for i in range(n1):
-        for j in range(n3):
-            print(f"checking for forward resonator {i} and inverse resonator {j}")
-            if (check_property.check_for_fib_r(cur_test_b, for_code_lst[i], fiber_code_lst[j])
-                    and check_property.check_for_fib_l(cur_test_a, for_code_lst[i], fiber_code_lst[j])):
-                print("find one")
-                code_decision.append(for_code_lst[i])
-                break
-                # unfinished: means this i-th forward resonator is right
-
-    if code_decision:
-        print("decision: selection")
-        return "selection", code_decision
+    else:
+        print("decision: abstention")
+        return "abstention", None
 
 
-
-def main(model, description, n1, n2, n3, n4):
+def main_for_fib(model, description, n1, n3):
     # forward resonator
     print("generating forward resonator:")
     for_code_lst = gen_resonator(model, description, n1)
@@ -127,22 +105,29 @@ def main(model, description, n1, n2, n3, n4):
                 code_decision.append(for_code_lst[i])
                 break
                 # unfinished: means this i-th forward resonator is right
-
     if code_decision:
         print("decision: selection")
         return "selection", code_decision
+    else:
+        print("decision: abstention")
+        return "abstention", None
 
 
 if __name__ == "__main__":
     args = parse_args()
     model_name = "gpt-4o"
     chosen_model = AI302(model_name, 1.0)
+
     if not args.no_cache:
         if args.cache_root:
             chosen_model = Cached(chosen_model, Path(args.cache_root))
         else:
             chosen_model = Cached(chosen_model, Path.home() / ".viberate_cache")
-    with open('test_prob3.md', 'r', encoding='utf-8') as f:
+
+    with open(args.input_file, 'r', encoding='utf-8') as f:
         des = f.read()
-    print(main(chosen_model, des, 5, 5, 5, 5))
-    
+
+    n1, n2, n3, n4 = 5, 5, 5, 5
+    if main_for_inv(chosen_model, des, n1, n2)[1] is None:
+        print("check for-inv failed, then check for-fib")
+        print(main_for_fib(chosen_model, des, n1, n3))
