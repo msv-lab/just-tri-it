@@ -1,4 +1,4 @@
-from viberate.programs import Signature
+from viberate.program import Signature
 import ast
 
 

@@ -1,6 +1,10 @@
 import re
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type, retry_if_result
 
+from viberate.program import Signature, Parameter
+from viberate.llm import extract_answer
+
+
 PROMPT_INV = """
 Any programming competition problem can be viewed as implementing a mapping algorithm. A problem described in natural language (let's call it R) defines a mapping f: A → B (where f is assumed to be an injection). Now I need your help with a task: Rewrite R into its inverse requirement, i.e., produce the natural language description of the inverse mapping g: B → A.
 
@@ -64,3 +68,19 @@ def gen_fiber_des(model, description):
     pattern = r'^New requirement:\s*(.*)$'
     match = re.match(pattern, response[0], re.DOTALL)
     return match.group(1) if match else None
+
+
+def inverse_signature(sig):
+    assert len(sig.params) == 1
+    return Signature(sig.name + "_inv", [Parameter("x", sig.return_type)], sig.params[0].type)
+
+
+def inverse_requirements(model, signature, requirements):
+    inverted_sig = inverse_signature(signature)
+    PROMPT = f"""
+Rewrite the problem below to require implementing the inverted function {inverted_sig} instead of {signature}. Enclose the new problem in <answer> tags.
+
+Problem:
+{requirements}
+    """
+    return extract_answer(model.sample(PROMPT)[0])

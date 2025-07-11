@@ -1,10 +1,17 @@
 import argparse
+import sys
 from pathlib import Path
 
-import viberate.check_property as check_property
-import viberate.re_des as re_des
+
 from viberate.llm import Cached, AI302, extract_code
-from viberate.programs import Signature
+import viberate.checker as checker
+import viberate.requirements as re_des
+from viberate.program import Signature
+from viberate.coder import generate_programs
+from viberate.executor import Executor, Success
+from viberate.tester import generate_tests
+from viberate.utils import print_hr
+
 
 PROMPT_CODE = '''
 You are an expert competitive programmer.
@@ -53,42 +60,33 @@ def gen_resonator(model, description, number):
     return code_lst
 
 
-def main_for_inv(test_venv, model, description, n1, n2):
-    # forward resonator
-    print("generating forward resonator:")
-    for_code_lst = gen_resonator(model, description, n1)
-
-    # sig = Signature.from_requirements(model, description)
-    # print(sig.pretty_print())
-    # exit(1)
-
-    # check forward-inverse
-    # inverse resonator
-    print("generating inverse resonator:")
-    inverse_des = re_des.gen_inverse_des(model, description)
-    print(f"the inverse des is: {inverse_des}")
-    print("already generated inverse description")
-    inv_code_lst = gen_resonator(model, inverse_des, n2)
-
-    cur_test = check_property.generate_tests(model, description)
-    code_decision = []
-    for i in range(n1):
-        for j in range(n2):
-            print(f"checking for forward resonator {i} and inverse resonator {j}")
-            if check_property.check_for_inv(test_venv, cur_test, for_code_lst[i], inv_code_lst[j]):
-                print("find one")
-                code_decision.append(for_code_lst[i])
-                break
-                # unfinished: means this i-th forward resonator is right
-    if code_decision:
-        print("decision: selection")
-        return "selection", code_decision
-    else:
-        print("decision: abstention")
-        return "abstention", None
+def main_for_inv(executor, model, req, n1, n2):
+    sig = Signature.from_requirements(model, req)
+    forward_programs = list(generate_programs(model, sig, req, n1))
+    inverse_sig = re_des.inverse_signature(sig)
+    inverse_req = re_des.inverse_requirements(model, sig, req)
+    print(f"the inverse description is: {inverse_req}")
+    inverse_programs = list(generate_programs(model, inverse_sig, inverse_req, n2))
+    test_inputs = generate_tests(model, req)
+    resonating_pairs = []
+    for forward in forward_programs:
+        for inverse in inverse_programs:
+            resonate = True
+            for test_input in test_inputs:
+                forward_outcome = executor.run(forward, [test_input])
+                match forward_outcome:
+                    case Success(forward_output):
+                        inverse_outcome = executor.run(inverse, [forward_output])
+                        match forward_outcome:
+                            case Success(inverse_output):
+                                if test_input != inverse_output:
+                                    resonate = False
+            if resonate:
+                resonating_pairs.append((forward, inverse))
+    return resonating_pairs
 
 
-def main_for_fib(test_venv, main_for_fib, model, description, n1, n3):
+def main_for_fib(test_venv, model, description, n1, n3):
     # forward resonator
     print("generating forward resonator:")
     for_code_lst = gen_resonator(model, description, n1)
@@ -100,16 +98,16 @@ def main_for_fib(test_venv, main_for_fib, model, description, n1, n3):
     fiber_code_lst = gen_resonator(model, fiber_des, n3)
     print(fiber_code_lst)
 
-    cur_test_a = check_property.generate_tests(model, description)
+    cur_test_a = generate_tests(model, description)
     print(cur_test_a)
-    cur_test_b = check_property.generate_tests(model, fiber_des)
+    cur_test_b = generate_tests(model, fiber_des)
     print(cur_test_b)
     code_decision = []
     for i in range(n1):
         for j in range(n3):
             print(f"checking for forward resonator {i} and inverse resonator {j}")
-            if (check_property.check_for_fib_l(test_venv, cur_test_b, for_code_lst[i], fiber_code_lst[j])
-                    and check_property.check_for_fib_r(test_venv, cur_test_a, for_code_lst[i], fiber_code_lst[j])):
+            if (checker.check_for_fib_l(test_venv, cur_test_b, for_code_lst[i], fiber_code_lst[j])
+                    and checker.check_for_fib_r(test_venv, cur_test_a, for_code_lst[i], fiber_code_lst[j])):
                 print("find one")
                 code_decision.append(for_code_lst[i])
                 break
@@ -134,14 +132,23 @@ def main():
             chosen_model = Cached(chosen_model, Path.home() / ".viberate_cache")
 
     test_venv = Path(args.test_venv)
+    executor = Executor(test_venv)
 
     with open(args.input_file, 'r', encoding='utf-8') as f:
         des = f.read()
 
     n1, n2, n3, n4 = 5, 5, 5, 5
-    if main_for_inv(test_venv, chosen_model, des, n1, n2)[1] is None:
-        print("check for-inv failed, then check for-fib")
-        print(main_for_fib(test_venv, main_for_fib, chosen_model, des, n1, n3))
+    resonating = main_for_inv(executor, chosen_model, des, n1, n2)
+    if len(resonating) > 0:
+        print_hr()
+        print(resonating[0][0].code, file=sys.stderr)
+        print_hr()        
+        print(resonating[0][1].code, file=sys.stderr)
+        print("SELECTED")
+    else:
+        print("ABSTAIN")
+
+    # print(main_for_fib(test_venv, chosen_model, des, n1, n3))
 
 if __name__ == "__main__":
     main()

@@ -4,7 +4,7 @@ from pathlib import Path
 import subprocess
 from tempfile import TemporaryDirectory
 
-from viberate.programs import Program
+from viberate.program import Program
 
 
 @dataclass
@@ -40,7 +40,7 @@ def test_harness(p: Program, input_file: Path, output_file: Path):
     return f"""
 import pickle
 if __name__ == '__main__':
-    with open('{str(intput_file)}', 'rb') as f:
+    with open('{str(input_file)}', 'rb') as f:
         input = pickle.load(f)
     report = dict()
     try:
@@ -58,11 +58,11 @@ if __name__ == '__main__':
 
 class Executor:
 
-    def __init__(test_venv: Path):
+    def __init__(self, test_venv: Path):
         self.test_venv = test_venv
 
-    def run(p: Program, inputs: list[Any]) -> Outcome:
-        with TemporaryDirectory as tmp:
+    def run(self, p: Program, inputs: list[any]) -> Outcome:
+        with TemporaryDirectory() as tmp:
             exec_dir = Path(tmp)
             input_file = exec_dir / 'input.pkl'
             with input_file.open('wb') as f:
@@ -71,7 +71,7 @@ class Executor:
             source_code = p.code + "\n" + test_harness(p, input_file, output_file)
             (exec_dir / 'code.py').write_text(source_code)
             try:
-                interpreter = str(test_venv / 'bin' / 'python')
+                interpreter = str((self.test_venv / 'bin' / 'python').resolve())
                 result = subprocess.run(
                     [interpreter, 'code.py'],
                     cwd=exec_dir,
@@ -89,7 +89,7 @@ class Executor:
                     if report['status'] == 'success':
                         return Success(report['value'])
                     else:
-                        assert report['status'] = 'error'
+                        assert report['status'] == 'error'
                         return Error(report['error_type'], report['error_message'])
                 
             except subprocess.TimeoutExpired:
