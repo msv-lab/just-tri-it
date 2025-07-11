@@ -19,6 +19,10 @@ Run unit tests with
 
     uv run pytest
 
+Run linter:
+
+    uv run ruff check .
+
 ## Usage
 
 To run the demo, execute

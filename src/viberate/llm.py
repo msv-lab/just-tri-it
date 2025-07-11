@@ -83,7 +83,7 @@ class AI302:
         }
 
         responses = []
-        for i in range(0, k):
+        for _ in range(0, k):
             response = requests.request("POST", url, headers=headers, data=payload)
             responses.append(json.loads(response.text)["choices"][0]["message"]["content"])
 

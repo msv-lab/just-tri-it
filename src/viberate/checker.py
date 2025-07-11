@@ -2,10 +2,10 @@ import sys
 
 from viberate.program import Signature
 from viberate.coder import generate_programs
-from viberate.executor import Executor, Success
+from viberate.executor import Success
 from viberate.tester import generate_tests
 from viberate.requirements import inverse_signature, inverse_requirements, fiber_signature, fiber_requirements
-from viberate.utils import print_hr, print_annotated_hr
+from viberate.utils import print_annotated_hr
 
 
 def check_for_inv(executor, forward, inverse, forward_inputs):
@@ -14,7 +14,7 @@ def check_for_inv(executor, forward, inverse, forward_inputs):
         match forward_outcome:
             case Success(forward_output):
                 inverse_outcome = executor.run(inverse, [forward_output])
-                match forward_outcome:
+                match inverse_outcome:
                     case Success(inverse_output):
                         if forward_input != inverse_output:
                             return False

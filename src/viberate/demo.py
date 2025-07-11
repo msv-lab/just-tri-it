@@ -3,9 +3,9 @@ import sys
 from pathlib import Path
 
 
-from viberate.llm import Cached, AI302, extract_code
+from viberate.llm import Cached, AI302
 from viberate.checker import select_for_inv, select_for_fib_lib
-from viberate.utils import print_hr, print_annotated_hr
+from viberate.utils import print_annotated_hr
 from viberate.executor import Executor
 
 
