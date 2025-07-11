@@ -2,7 +2,7 @@ from pathlib import Path
 import argparse
 import os
 
-from llm import Cached, AI302, extract_answer, extract_code
+from viberate.llm import Cached, AI302, extract_answer, extract_code
 
 
 def parse_args():

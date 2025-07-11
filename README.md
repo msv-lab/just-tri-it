@@ -19,7 +19,7 @@ When runnnig the project for the first time, please create an environment for te
 
 To run the project, execute
 
-    uv run main.py OPTIONS
+    uv run viberate OPTIONS
     
 Supported options are
 
@@ -28,11 +28,11 @@ Supported options are
 
 To run the demo, execute
 
-    python demo.py --input-file PROBLEM_DESCRIPTION
+    uv run demo --input-file PROBLEM_DESCRIPTION
 
 For example
 
-    python demo.py --input-file test_prob3.md
+    uv run demo --input-file examples/test_prob3.md
 
 Supported options are identical to those listed above.
 

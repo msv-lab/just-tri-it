@@ -7,4 +7,13 @@ requires-python = ">=3.12"
 dependencies = [
     "mistletoe>=1.4.0",
     "requests>=2.32.4",
+    "tenacity>=9.1.2",
 ]
+
+[project.scripts]
+viberate = "viberate.main:main"
+demo = "viberate.demo:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -1,10 +1,9 @@
 import argparse
 from pathlib import Path
 
-import check_property
-import re_des
-import llm
-from llm import Cached, AI302
+import viberate.check_property as check_property
+import viberate.re_des as re_des
+from viberate.llm import Cached, AI302, extract_code
 
 PROMPT_CODE = '''
 You are an expert competitive programmer.
@@ -43,7 +42,7 @@ def gen_resonator(model, description, number):
     response = model.sample(prompt, number)
     code_lst = []
     for ge_code in response:
-        code_lst.append(llm.extract_code(ge_code))
+        code_lst.append(extract_code(ge_code))
     print(code_lst)
     return code_lst
 
@@ -113,7 +112,7 @@ def main_for_fib(model, description, n1, n3):
         return "abstention", None
 
 
-if __name__ == "__main__":
+def main():
     args = parse_args()
     model_name = "gpt-4o"
     chosen_model = AI302(model_name, 1.0)
@@ -131,3 +130,6 @@ if __name__ == "__main__":
     if main_for_inv(chosen_model, des, n1, n2)[1] is None:
         print("check for-inv failed, then check for-fib")
         print(main_for_fib(chosen_model, des, n1, n3))
+
+if __name__ == "__main__":
+    main()
