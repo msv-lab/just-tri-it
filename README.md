@@ -1,6 +1,21 @@
 # VibeRate
 
+This project aims to detect hallucinations in LLM-genarated code using resonance check.
+
+## Preliminaries
+
 Set your 302.ai API key using the environment variable `AI302_API_KEY`.
+
+The project uses uv to manage dependencies.
+
+When runnnig the project for the first time, please create an environment for testing generated programs:
+
+    uv venv --no-project --seed --python 3.13 test_venv
+    source test_venv/bin/activate
+    pip install -r test_requirements.txt
+    deactivate
+
+## Usage
 
 To run the project, execute
 
