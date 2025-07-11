@@ -4,6 +4,7 @@ from pathlib import Path
 import viberate.check_property as check_property
 import viberate.re_des as re_des
 from viberate.llm import Cached, AI302, extract_code
+from viberate.programs import Signature
 
 PROMPT_CODE = '''
 You are an expert competitive programmer.
@@ -56,6 +57,10 @@ def main_for_inv(test_venv, model, description, n1, n2):
     # forward resonator
     print("generating forward resonator:")
     for_code_lst = gen_resonator(model, description, n1)
+
+    # sig = Signature.from_requirements(model, description)
+    # print(sig.pretty_print())
+    # exit(1)
 
     # check forward-inverse
     # inverse resonator

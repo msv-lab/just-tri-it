@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 import ast
 
+from viberate.llm import extract_code
+
 
 @dataclass
 class Parameter:
@@ -9,6 +11,7 @@ class Parameter:
 
     def pretty_print(self):
         return self.name + f": {self.type}"
+
 
 @dataclass
 class Signature:
@@ -20,7 +23,7 @@ class Signature:
         params_str = ', '.join(p.pretty_print() for p in self.params)
         return f"def {self.name}({params_str}) -> {self.return_type}"
 
-    @staticmethod        
+    @staticmethod
     def from_function_ast(fn_ast):
         params = []
         for arg in fn_ast.args.args:
@@ -32,6 +35,22 @@ class Signature:
             raise ValueError("Function lacks return type annotation")
         return_type = ast.unparse(fn_ast.returns)
         return Signature(fn_ast.name, params, return_type)
+
+    @staticmethod
+    def from_requirements(model, req):
+        PROMPT = f"""
+For the problem below, write a Python function signature with:
+- Descriptive parameter names
+- Type annotations for all parameters
+- Specified return type
+
+Return only the function definition (with 'pass' as the body) inside a Markdown code block.
+
+Problem:
+{req}
+"""
+        code = extract_code(model.sample(PROMPT)[0])
+        return Signature.from_function_ast(ast.parse(code).body[0])
 
 
 @dataclass    
