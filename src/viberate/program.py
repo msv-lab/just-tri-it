@@ -57,4 +57,3 @@ Problem:
 class Program:
     signature: Signature
     code: str
-    

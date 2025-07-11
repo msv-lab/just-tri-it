@@ -11,7 +11,6 @@ dependencies = [
 ]
 
 [project.scripts]
-viberate = "viberate.main:main"
 demo = "viberate.demo:main"
 
 [build-system]

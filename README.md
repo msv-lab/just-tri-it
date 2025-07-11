@@ -21,15 +21,6 @@ Run unit tests with
 
 ## Usage
 
-To run the project, execute
-
-    uv run viberate OPTIONS
-    
-Supported options are
-
-- `--cache-root DIR` to set LLM cache (default: `~/.viberate_cache/`)
-- `--no-cache` to disable cache
-
 To run the demo, execute
 
     uv run demo --test-venv TESTING_ENVIRONMENT --input-file PROBLEM_DESCRIPTION
@@ -38,7 +29,10 @@ For example
 
     uv run demo --test-venv test_venv/ --input-file examples/test_prob3.md
 
-Supported options are identical to those listed above.
+Supported options are
+
+- `--cache-root DIR` to set LLM cache (default: `~/.viberate_cache/`)
+- `--no-cache` to disable cache
 
 ## Reproducibility
 
