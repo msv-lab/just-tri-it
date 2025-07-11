@@ -34,6 +34,11 @@ def parse_args():
         required=True,
         help="Input file containing the problem description"
     )
+    parser.add_argument(
+        "--test-venv",
+        type=str,
+        help="Set virtual environment for testing generated programs."
+    )
     return parser.parse_args()
 
 
@@ -47,7 +52,7 @@ def gen_resonator(model, description, number):
     return code_lst
 
 
-def main_for_inv(model, description, n1, n2):
+def main_for_inv(test_venv, model, description, n1, n2):
     # forward resonator
     print("generating forward resonator:")
     for_code_lst = gen_resonator(model, description, n1)
@@ -65,7 +70,7 @@ def main_for_inv(model, description, n1, n2):
     for i in range(n1):
         for j in range(n2):
             print(f"checking for forward resonator {i} and inverse resonator {j}")
-            if check_property.check_for_inv(cur_test, for_code_lst[i], inv_code_lst[j]):
+            if check_property.check_for_inv(test_venv, cur_test, for_code_lst[i], inv_code_lst[j]):
                 print("find one")
                 code_decision.append(for_code_lst[i])
                 break
@@ -78,7 +83,7 @@ def main_for_inv(model, description, n1, n2):
         return "abstention", None
 
 
-def main_for_fib(model, description, n1, n3):
+def main_for_fib(test_venv, main_for_fib, model, description, n1, n3):
     # forward resonator
     print("generating forward resonator:")
     for_code_lst = gen_resonator(model, description, n1)
@@ -98,8 +103,8 @@ def main_for_fib(model, description, n1, n3):
     for i in range(n1):
         for j in range(n3):
             print(f"checking for forward resonator {i} and inverse resonator {j}")
-            if (check_property.check_for_fib_l(cur_test_b, for_code_lst[i], fiber_code_lst[j])
-                    and check_property.check_for_fib_r(cur_test_a, for_code_lst[i], fiber_code_lst[j])):
+            if (check_property.check_for_fib_l(test_venv, cur_test_b, for_code_lst[i], fiber_code_lst[j])
+                    and check_property.check_for_fib_r(test_venv, cur_test_a, for_code_lst[i], fiber_code_lst[j])):
                 print("find one")
                 code_decision.append(for_code_lst[i])
                 break
@@ -123,13 +128,15 @@ def main():
         else:
             chosen_model = Cached(chosen_model, Path.home() / ".viberate_cache")
 
+    test_venv = Path(args.test_venv)
+
     with open(args.input_file, 'r', encoding='utf-8') as f:
         des = f.read()
 
     n1, n2, n3, n4 = 5, 5, 5, 5
-    if main_for_inv(chosen_model, des, n1, n2)[1] is None:
+    if main_for_inv(test_venv, chosen_model, des, n1, n2)[1] is None:
         print("check for-inv failed, then check for-fib")
-        print(main_for_fib(chosen_model, des, n1, n3))
+        print(main_for_fib(test_venv, main_for_fib, chosen_model, des, n1, n3))
 
 if __name__ == "__main__":
     main()

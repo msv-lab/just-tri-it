@@ -28,11 +28,11 @@ Supported options are
 
 To run the demo, execute
 
-    uv run demo --input-file PROBLEM_DESCRIPTION
+    uv run demo --test-venv TESTING_ENVIRONMENT --input-file PROBLEM_DESCRIPTION
 
 For example
 
-    uv run demo --input-file examples/test_prob3.md
+    uv run demo --test-venv test_venv/ --input-file examples/test_prob3.md
 
 Supported options are identical to those listed above.
 
