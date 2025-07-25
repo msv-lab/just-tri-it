@@ -6,7 +6,8 @@ def generate_programs(model, sig: Signature, requirements: str, k=1) -> list[Pro
     PROMPT = f""" 
 Write a Python function {sig.pretty_print()} to solve the following
 problem.  Include all necessary imports. Put the complete code inside
-a Markdown code block.
+a Markdown code block. Please generate the program by implementing only the function, 
+without using if __name__ == "__main__": or any code outside the function.
 
 Problem:
 {requirements}

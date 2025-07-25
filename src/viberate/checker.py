@@ -4,66 +4,134 @@ from viberate.program import Signature
 from viberate.coder import generate_programs
 from viberate.executor import Success
 from viberate.tester import generate_tests
-from viberate.requirements import inverse_signature, inverse_requirements, fiber_signature, fiber_requirements
+from viberate.requirements import inverse_requirements_old, inverse_signature, inverse_requirements, fiber_signature, fiber_requirements, fiber_requirements_old
 from viberate.utils import print_annotated_hr
+from viberate.logic import test_for_inv_property, test_for_fib_property
 
 
-def check_for_inv(executor, forward, inverse, forward_inputs):
+def check_for_inv(executor, forward, inverse, forward_inputs, arg_index):
     for forward_input in forward_inputs:
-        forward_outcome = executor.run(forward, [forward_input])
+        forward_outcome = executor.run(forward, forward_input)
         match forward_outcome:
             case Success(forward_output):
-                inverse_outcome = executor.run(inverse, [forward_output])
+                args = [forward_output] + forward_input[:arg_index] + forward_input[arg_index+1:]
+                inverse_outcome = executor.run(inverse, args)
                 match inverse_outcome:
                     case Success(inverse_output):
-                        if forward_input != inverse_output:
+                        if forward_input[arg_index] != inverse_output:
+                            print(f"Expected:{forward_input[arg_index]}, Actual:{inverse_output}")
                             return False
+                    case _:
+                        print("Facing error or panic or timeout!")
+                        return False
+            case _:
+                print("Facing error or panic or timeout!")
+                return False
     return True
 
 
 def select_for_inv(executor, model, req, n1, n2):
+    # generate forward signature and programs
     sig = Signature.from_requirements(model, req)
+    print_annotated_hr("Signature")
+    print(sig, file=sys.stderr)
     forward_programs = list(generate_programs(model, sig, req, n1))
-    inverse_sig = inverse_signature(sig)
-    inverse_req = inverse_requirements(model, sig, req)
+
+    inverse_sig = inverse_signature(model, sig, req)
+    print_annotated_hr("Inverse signature")
+    print(inverse_sig, file=sys.stderr)
+
+    # generate inverse requirements
+    if len(sig.params) == 1:
+        inverse_req = inverse_requirements_old(model, sig, inverse_sig, req)
+    else:
+        inverse_req = inverse_requirements(model, sig, inverse_sig, req)
     print_annotated_hr("Inverse requirements")
     print(inverse_req, file=sys.stderr)
+
+    # generate inverse programs and tests
     inverse_programs = list(generate_programs(model, inverse_sig, inverse_req, n2))
-    forward_inputs = generate_tests(model, req)
+    forward_inputs = generate_tests(model, req, sig)
+    print_annotated_hr("Forward tests")
+    print(forward_inputs, file=sys.stderr)
+
+    print(sig.inverse_index)
+    # check for every pair (unfinished!)
     resonating_pairs = []
     for forward in forward_programs:
         for inverse in inverse_programs:
-            if check_for_inv(executor, forward, inverse, forward_inputs):
+            # if check_for_inv(executor, forward, inverse, forward_inputs, sig.inverse_index):
+            #     resonating_pairs.append((forward, inverse))
+            if test_for_inv_property(executor, forward, inverse, len(sig.params), forward_inputs, sig.inverse_index):
                 resonating_pairs.append((forward, inverse))
     return resonating_pairs
 
 
-def check_for_fib_lib(executor, forward, fiber, fiber_inputs):
-    for fiber_input in fiber_inputs:
-        fiber_outcome = executor.run(fiber, [fiber_input])
-        match fiber_outcome:
-            case Success(fiber_outputs):
-                for fiber_output in fiber_outputs:
-                    forward_outcome = executor.run(forward, [fiber_output])
-                    match forward_outcome:
-                        case Success(forward_output):
-                            if forward_output != fiber_input:
-                                return False
+def check_for_fib_lib(executor, forward, fiber, forward_inputs, arg_index):
+    for forward_input in forward_inputs:
+        forward_outcome = executor.run(forward, forward_input)  # calculate f(a)
+        match forward_outcome:
+            case Success(forward_output):
+                fiber_outcome = executor.run(fiber, [forward_output] + forward_input[:arg_index]
+                                             + forward_input[arg_index+1:])
+                # calculate g(f(a),a1,...,ai-1,ai+1,...,an) --> List
+                match fiber_outcome:
+                    case Success(fiber_outputs):
+                        if forward_input[arg_index] not in fiber_outputs:
+                            # check the right of the formula
+                            print(f"{forward_input[arg_index]} didn't appear in {fiber_outputs}")
+                            return False
+                        for fiber_output in fiber_outputs:
+                            reorg_forward_input = forward_input[:arg_index] + forward_input[arg_index+1:]
+                            reorg_forward_input.insert(arg_index, fiber_output)
+                            forward_outcome_2 = executor.run(forward, reorg_forward_input)  # calculate f(g(f(a),...),...)
+                            match forward_outcome_2:
+                                case Success(forward_output_2):
+                                    if forward_output_2 != forward_output:
+                                        print(f"Expected:{forward_output}, Actual:{forward_output_2}")
+                                        return False
+                                case _:
+                                    print("Facing error or panic or timeout!")
+                                    return False
+                    case _:
+                        print("Facing error or panic or timeout!")
+                        return False
+            case _:
+                print("Facing error or panic or timeout!")
+                return False
     return True
 
 
 def select_for_fib_lib(executor, model, req, n1, n2):
+    # generate forward signature and programs
     sig = Signature.from_requirements(model, req)
+    print_annotated_hr("Signature")
+    print(sig, file=sys.stderr)
     forward_programs = list(generate_programs(model, sig, req, n1))
-    fiber_sig = fiber_signature(sig)
-    fiber_req = fiber_requirements(model, sig, req)
+
+    fiber_sig = fiber_signature(model, sig, req)
+    print_annotated_hr("Fiber signature")
+    print(fiber_sig, file=sys.stderr)
+
+    # generate fiber requirements and programs
+    if len(sig.params) == 1:
+        fiber_req = fiber_requirements_old(model, sig, fiber_sig, req)
+    else:
+        fiber_req = fiber_requirements(model, sig, fiber_sig, req)
     print_annotated_hr("Fiber requirements")
     print(fiber_req, file=sys.stderr)
     fiber_programs = list(generate_programs(model, fiber_sig, fiber_req, n2))
-    fiber_inputs = generate_tests(model, fiber_req)
+
+    # generate input tests
+    forward_inputs = generate_tests(model, req, sig)
+    print_annotated_hr("Fiber tests (for forward func)")
+    print(forward_inputs, file=sys.stderr)
+
     resonating_pairs = []
     for forward in forward_programs:
         for fiber in fiber_programs:
-            if check_for_fib_lib(executor, forward, fiber, fiber_inputs):
+            # if check_for_fib_lib(executor, forward, fiber, forward_inputs, sig.inverse_index):
+            #     resonating_pairs.append((forward, fiber))
+            if test_for_fib_property(executor, forward, fiber, len(sig.params), forward_inputs, sig.inverse_index):
                 resonating_pairs.append((forward, fiber))
-    return resonating_pairs
+    return resonating_pairs  # unfinished!
