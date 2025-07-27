@@ -107,3 +107,14 @@ Problem:
     """
     return extract_answer(model.sample(PROMPT)[0])
 
+
+def fiber_requirements_wo_example(model, signature, fiber_sig, requirements):
+    PROMPT = f"""
+Rewrite the given problem, which requires implementing the function {signature}, so that it requires implementing the function {fiber_sig} instead. The new function should return the list of **all** possible inputs of the {signature.inverse_index}th argument that produce that output. 
+The revised problem does not need to include specific examples. Enclose your rewritten problem in <answer> tags.
+
+Problem:
+{requirements}
+    """
+    return extract_answer(model.sample(PROMPT)[0])
+

@@ -71,7 +71,7 @@ class Executor:
             source_code = p.code + "\n" + test_harness(p, input_file, output_file)
             (exec_dir / 'code.py').write_text(source_code)
             try:
-                interpreter = str((self.test_venv / 'bin' / 'python').resolve())
+                interpreter = str(self.test_venv.resolve() / 'bin' / 'python')
                 result = subprocess.run(
                     [interpreter, 'code.py'],
                     cwd=exec_dir,

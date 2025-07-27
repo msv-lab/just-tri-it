@@ -55,11 +55,12 @@ def select_for_inv(executor, model, req, n1, n2):
     print_annotated_hr("Forward tests")
     print(forward_inputs, file=sys.stderr)
 
-    print(sig.inverse_index)
     # check for every pair (unfinished!)
     resonating_pairs = []
-    for forward in forward_programs:
-        for inverse in inverse_programs:
+    for for_index, forward in enumerate(forward_programs):
+        for inv_index, inverse in inverse_programs:
+            print_annotated_hr(f"testing forward {for_index} and inverse {inv_index}")
+            print(inverse, file=sys.stderr)
             # if check_for_inv(executor, forward, inverse, forward_inputs, sig.inverse_index):
             #     resonating_pairs.append((forward, inverse))
             if test_for_inv_property(executor, forward, inverse, len(sig.params), forward_inputs, sig.inverse_index):
@@ -91,12 +92,15 @@ def check_for_fib_lib(executor, forward, fiber, forward_inputs, arg_index):
                                         print(f"Expected:{forward_output}, Actual:{forward_output_2}")
                                         return False
                                 case _:
+                                    print(forward_outcome_2)
                                     print("Facing error or panic or timeout!")
                                     return False
                     case _:
+                        print(fiber_outcome)
                         print("Facing error or panic or timeout!")
                         return False
             case _:
+                print(forward_outcome)
                 print("Facing error or panic or timeout!")
                 return False
     return True
@@ -128,8 +132,10 @@ def select_for_fib_lib(executor, model, req, n1, n2):
     print(forward_inputs, file=sys.stderr)
 
     resonating_pairs = []
-    for forward in forward_programs:
-        for fiber in fiber_programs:
+    for for_index, forward in enumerate(forward_programs):
+        for fib_index, fiber in enumerate(fiber_programs):
+            print_annotated_hr(f"testing forward {for_index} and fiber {fib_index}")
+            print(fiber, file=sys.stderr)
             # if check_for_fib_lib(executor, forward, fiber, forward_inputs, sig.inverse_index):
             #     resonating_pairs.append((forward, fiber))
             if test_for_fib_property(executor, forward, fiber, len(sig.params), forward_inputs, sig.inverse_index):

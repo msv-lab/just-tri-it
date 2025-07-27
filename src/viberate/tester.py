@@ -47,7 +47,7 @@ Focus on maximizing coverage of edge behaviors, special cases, and typical scena
 
 You don't need to provide the expected outputs. Only provide test cases, no explanations needed.
 
-Please format the inputs as follows:
+Please format the inputs strictly as follows:
 
 # **Input 1**
 ```
@@ -68,7 +68,7 @@ Now, here is the problem description and function signature:
     response = model.sample(PROMPT)
     pattern = r"# \*\*Input \d+\*\*\n```(.*?)```"
     matches = re.findall(pattern, response[0], re.DOTALL)
-    print(response)
+    # print(response)
     input_list = [eval(block.strip()) for block in matches]
     return input_list
 

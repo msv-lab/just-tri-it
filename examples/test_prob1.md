@@ -32,7 +32,7 @@ Output a single integer — the **n-th Fibonacci number modulo 10^9 + 7**.
 55
 ```
 
-**Note:**
+**Note**
 
 * Since **n** can be large, make sure your solution is efficient enough to handle large inputs within reasonable time and memory limits.
 * Use fast algorithms like matrix exponentiation or iterative dynamic programming to compute the answer efficiently.

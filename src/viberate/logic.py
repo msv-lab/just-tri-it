@@ -147,6 +147,7 @@ class FuncList:
     name: str
     index: int
     args: List['Term']
+    enum_arg: 'Term'
 
 
 Term = Union[Var, Const, Func, FuncList]
@@ -198,7 +199,7 @@ Formula = Union[
 
 @dataclass
 class Interpretation:
-    domain: Set[tuple[Any, ...]]
+    domain: Set[tuple[Any, ...]] | List[tuple[Any, ...]]
     consts: Dict[str, Any]
     funcs: Dict[str, tuple[int, Callable[..., Any]]]
     preds: Dict[str, tuple[int, Callable[..., bool]]]
@@ -213,26 +214,33 @@ def eval_term(term: Term, interp: Interpretation, env: Dict[str, Any]) -> Any:
         case Func(name, args):
             arity, f = interp.funcs[name]
             argvals = [eval_term(arg, interp, env) for arg in args]
+            print("run " + name + " argvals are")
+            print(argvals)
             if len(argvals) != arity:
                 raise ValueError(f"Function {name} expects {arity} arguments")
             outcome = f(argvals)
             # return outcome
             match outcome:
                 case Success(output):
+                    print("answer")
+                    print(output)
                     return output
                 case _:
                     print("Facing error or panic or timeout!")
+                    print(outcome)
                     return False
-        case FuncList(name, index, args):
-            answer = set()
-            all_ele = eval_term(args[index], interp, env)
-            for ele in all_ele:
+        case FuncList(name, index, args, enum_arg):
+            answer = []
+            enum_ele = eval_term(enum_arg, interp, env)
+            print(enum_ele)
+            for ele in enum_ele:
                 new_args = args.copy()
                 new_args[index] = Var("temp")
                 new_env = env.copy()
                 new_env["temp"] = ele
                 outcome = eval_term(Func(name, new_args), interp, new_env)
-                answer.add(outcome)
+                if outcome not in answer:
+                    answer.append(outcome)
             return answer
 
 
@@ -243,9 +251,10 @@ def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any
         case Pred(name, args):
             arity, p = interp.preds[name]
             argvals = [eval_term(arg, interp, env) for arg in args]
-            print(argvals)
+            print(name, argvals)
             if len(argvals) != arity:
                 raise ValueError(f"Predicate {name} expects {arity} arguments")
+            print(p(*argvals))
             return p(*argvals)
         case Not(operand):
             return not is_formula_true(operand, interp, env)
@@ -269,6 +278,7 @@ def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any
                     return False
             return True
         case Exists(var, body):
+            # unfinished
             for d in interp.domain:
                 new_env = env.copy()
                 new_env[var.name] = d
@@ -350,7 +360,7 @@ def test_for_inv_property_demo(arity=2, inverse_index=0):
 
 
 def test_for_inv_property(executor, forward, inverse, arity, generated_inputs, inverse_index):
-    generated_inputs = set(tuple(sublist) for sublist in generated_inputs)
+    generated_inputs = list(tuple(sublist) for sublist in generated_inputs)
     interp = Interpretation(
         domain=generated_inputs,
         # generated_inputs,
@@ -378,7 +388,7 @@ def test_for_inv_property(executor, forward, inverse, arity, generated_inputs, i
 
 def square(inputs):
     x = inputs[0]
-    return x*x
+    return x * x
 
 
 def inverse_square(inputs):
@@ -389,44 +399,8 @@ def inverse_square(inputs):
         return [math.sqrt(x), -math.sqrt(x)]
 
 
-def test_for_fib_property_demo(arity=1, inverse_index=0):
-    generated_inputs = {
-        (5,), (3,)
-    }
-    interp = Interpretation(
-        domain=generated_inputs,
-        consts={},
-        funcs={
-            "f": (arity, square),
-            "g": (arity, inverse_square)
-        },
-        preds={
-            "Equals": (2, lambda x, y: x == y),
-            "Includes": (2, lambda x, y: x in y)
-        }
-    )
-    all_arg = []
-    for i in range(arity):
-        all_arg.append(Var(f"x_{i}"))
-    new_arg = all_arg[:inverse_index] + all_arg[inverse_index + 1:]
-    formula = ForAll(VarList("all_x", all_arg),
-                     And(
-                         Pred("Includes", [
-                             Var(f"x_{inverse_index}"),  # x_i
-                             Func("g", [Func("f", all_arg.copy())] + new_arg.copy())  # g(...)
-                         ]),
-                         Pred("Equals", [
-                            Func("f", all_arg.copy()),
-                            FuncList("f", 0, [Func("g", [Func("f", all_arg.copy())] + new_arg.copy())] + new_arg.copy())
-                         ])
-                     )
-                     )
-    return is_formula_true(formula, interp, {})
-
-
 def test_for_fib_property(executor, forward, fiber, arity, generated_inputs, inverse_index):
-    generated_inputs = set(tuple(sublist) for sublist in generated_inputs)
-    print(generated_inputs)
+    generated_inputs = list(tuple(sublist) for sublist in generated_inputs)
     interp = Interpretation(
         domain=generated_inputs,
         consts={},
@@ -436,8 +410,8 @@ def test_for_fib_property(executor, forward, fiber, arity, generated_inputs, inv
         },
         preds={
             "Equals": (2, lambda x, y: x == y),
-            "Equals_set": (2, lambda x, y: {x} == y),
-            "Includes": (2, lambda x, y: x in y)
+            "Equals_set": (2, lambda x, y: [x] == y),
+            "Includes": (2, lambda x, y: x in y if isinstance(y, Iterable) else False)
         }
     )
     all_arg = []
@@ -451,8 +425,9 @@ def test_for_fib_property(executor, forward, fiber, arity, generated_inputs, inv
                              Func("g", [Func("f", all_arg.copy())] + new_arg.copy())  # g(...)
                          ]),
                          Pred("Equals_set", [
-                            Func("f", all_arg.copy()),
-                            FuncList("f", 0, [Func("g", [Func("f", all_arg.copy())] + new_arg.copy())] + new_arg.copy())
+                             Func("f", all_arg.copy()),
+                             FuncList("f", inverse_index, all_arg.copy(), Func("g", [Func("f", all_arg.copy())]
+                                                                               + new_arg.copy()))
                          ])
                      )
                      )
