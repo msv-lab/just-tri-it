@@ -58,7 +58,7 @@ def select_for_inv(executor, model, req, n1, n2):
     # check for every pair (unfinished!)
     resonating_pairs = []
     for for_index, forward in enumerate(forward_programs):
-        for inv_index, inverse in inverse_programs:
+        for inv_index, inverse in enumerate(inverse_programs):
             print_annotated_hr(f"testing forward {for_index} and inverse {inv_index}")
             print(inverse, file=sys.stderr)
             # if check_for_inv(executor, forward, inverse, forward_inputs, sig.inverse_index):
