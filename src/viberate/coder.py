@@ -1,8 +1,10 @@
+from typing import Iterable
+
 from viberate.llm import extract_code
 from viberate.program import Signature, Program
 
 
-def generate_programs(model, sig: Signature, requirements: str, k=1) -> list[Program]:
+def generate_programs(model, sig: Signature, requirements: str) -> Iterable[Program]:
     PROMPT = f""" 
 Write a Python function {sig.pretty_print()} to solve the following
 problem.  Include all necessary imports. Put the complete code inside
@@ -14,7 +16,7 @@ for the output format in the problem description, please be sure to format it co
 Problem:
 {requirements}
 """
-    for s in model.sample(PROMPT, k):
+    for s in model.sample(PROMPT):
         yield Program(sig, extract_code(s))
 
 

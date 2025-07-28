@@ -50,7 +50,7 @@ class Signature:
             Function signature:
             {new_sig.pretty_print()}
             """
-            inverse_index = int(temp_dict[extract_answer(model.sample(PROMPT_INDEX)[0])])
+            inverse_index = int(temp_dict[extract_answer(next(model.sample(PROMPT_INDEX)))])
         new_sig.inverse_index = inverse_index
         return new_sig
 
@@ -75,8 +75,8 @@ class Signature:
         Problem:
         {req}
         """
-        code = extract_code(model.sample(PROMPT_CODE)[0])
-        return_name = extract_answer(model.sample(PROMPT_NAME)[0])
+        code = extract_code(next(model.sample(PROMPT_CODE)))
+        return_name = extract_answer(next(model.sample(PROMPT_NAME)))
         return Signature.from_function_ast(model, req, ast.parse(code).body[0], return_name)
 
 
