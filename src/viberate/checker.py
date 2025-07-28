@@ -6,7 +6,16 @@ from viberate.program import Signature
 from viberate.coder import generate_programs
 from viberate.executor import Success
 from viberate.tester import generate_tests
-from viberate.requirements import inverse_requirements_old, inverse_signature, inverse_requirements, fiber_signature, fiber_requirements, fiber_requirements_old
+from viberate.requirements import (
+    NamedReturnSignature,
+    choose_parameter_to_invert,
+    inverse_requirements_old,
+    inverse_signature,
+    inverse_requirements,
+    fiber_signature,
+    fiber_requirements,
+    fiber_requirements_old
+)
 from viberate.utils import print_annotated_hr
 from viberate.logic import test_for_inv_property, test_for_fib_property
 
@@ -35,24 +44,30 @@ def check_for_inv(executor, forward, inverse, forward_inputs, arg_index):
 def select_for_inv(executor, model, req, n1, n2):
     # generate forward signature and programs
     sig = Signature.from_requirements(model, req)
+    sig = NamedReturnSignature.from_requirements(model, sig, req)
     print_annotated_hr("Signature")
-    print(sig, file=sys.stderr)
+    print(sig.pretty_print(), file=sys.stderr)
     forward_programs = list(islice(generate_programs(model, sig, req), n1))
 
-    inverse_sig = inverse_signature(model, sig, req)
-    print_annotated_hr("Inverse signature")
-    print(inverse_sig, file=sys.stderr)
+    if len(sig.params) == 1:
+        inverse_index = 0
+    else:
+        inverse_index = choose_parameter_to_invert(model, sig, req)
 
-    # generate inverse requirements
+    inverse_sig = inverse_signature(model, sig, inverse_index, req)
+    print_annotated_hr(f"Inverse signature wrt {inverse_index}")
+    print(inverse_sig.pretty_print(), file=sys.stderr)
+        
     if len(sig.params) == 1:
         inverse_req = inverse_requirements_old(model, sig, inverse_sig, req)
     else:
-        inverse_req = inverse_requirements(model, sig, inverse_sig, req)
+        inverse_req = inverse_requirements(model, sig, inverse_sig, inverse_index, req)
     print_annotated_hr("Inverse requirements")
     print(inverse_req, file=sys.stderr)
 
     # generate inverse programs and tests
     inverse_programs = list(islice(generate_programs(model, inverse_sig, inverse_req), n2))
+
     forward_inputs = generate_tests(model, req, sig)
     print_annotated_hr("Forward tests")
     print(forward_inputs, file=sys.stderr)
@@ -65,7 +80,7 @@ def select_for_inv(executor, model, req, n1, n2):
             print(inverse, file=sys.stderr)
             # if check_for_inv(executor, forward, inverse, forward_inputs, sig.inverse_index):
             #     resonating_pairs.append((forward, inverse))
-            if test_for_inv_property(executor, forward, inverse, len(sig.params), forward_inputs, sig.inverse_index):
+            if test_for_inv_property(executor, forward, inverse, len(sig.params), forward_inputs, inverse_index):
                 resonating_pairs.append((forward, inverse))
     return resonating_pairs
 
@@ -109,23 +124,29 @@ def check_for_fib_lib(executor, forward, fiber, forward_inputs, arg_index):
 
 
 def select_for_fib_lib(executor, model, req, n1, n2):
-    # generate forward signature and programs
     sig = Signature.from_requirements(model, req)
+    sig = NamedReturnSignature.from_requirements(model, sig, req)
     print_annotated_hr("Signature")
-    print(sig, file=sys.stderr)
+    print(sig.pretty_print(), file=sys.stderr)
+
     forward_programs = list(islice(generate_programs(model, sig, req), n1))
 
-    fiber_sig = fiber_signature(model, sig, req)
-    print_annotated_hr("Fiber signature")
-    print(fiber_sig, file=sys.stderr)
+    if len(sig.params) == 1:
+        inverse_index = 0
+    else:
+        inverse_index = choose_parameter_to_invert(model, sig, req)
 
-    # generate fiber requirements and programs
+    fiber_sig = fiber_signature(model, sig, inverse_index, req)
+    print_annotated_hr(f"Fiber signature wrt {inverse_index}")
+    print(fiber_sig.pretty_print(), file=sys.stderr)
+        
     if len(sig.params) == 1:
         fiber_req = fiber_requirements_old(model, sig, fiber_sig, req)
     else:
-        fiber_req = fiber_requirements(model, sig, fiber_sig, req)
+        fiber_req = fiber_requirements(model, sig, fiber_sig, inverse_index, req)
     print_annotated_hr("Fiber requirements")
     print(fiber_req, file=sys.stderr)
+
     fiber_programs = list(islice(generate_programs(model, fiber_sig, fiber_req), n2))
 
     # generate input tests
@@ -138,8 +159,8 @@ def select_for_fib_lib(executor, model, req, n1, n2):
         for fib_index, fiber in enumerate(fiber_programs):
             print_annotated_hr(f"testing forward {for_index} and fiber {fib_index}")
             print(fiber, file=sys.stderr)
-            # if check_for_fib_lib(executor, forward, fiber, forward_inputs, sig.inverse_index):
+            # if check_for_fib_lib(executor, forward, fiber, forward_inputs, inverse_index):
             #     resonating_pairs.append((forward, fiber))
-            if test_for_fib_property(executor, forward, fiber, len(sig.params), forward_inputs, sig.inverse_index):
+            if test_for_fib_property(executor, forward, fiber, len(sig.params), forward_inputs, inverse_index):
                 resonating_pairs.append((forward, fiber))
     return resonating_pairs  # unfinished!
