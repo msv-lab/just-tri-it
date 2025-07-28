@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Self
 import ast
 
-from viberate.llm import extract_code, extract_answer
+from viberate.llm import extract_code
 
 
 @dataclass

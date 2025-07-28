@@ -44,7 +44,7 @@ class Cached:
     _base_samplers = dict()
 
     def sample(self, prompt: str) -> Iterator[str]:
-        if not prompt in Cached._base_samplers:
+        if prompt not in Cached._base_samplers:
             Cached._base_samplers[prompt] = self.llm.sample(prompt)
         return Cached._LazyCachedSampler(self, prompt)
 
