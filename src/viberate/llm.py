@@ -1,62 +1,95 @@
 import os
 import hashlib
 from pathlib import Path
-from typing import List
+from typing import Iterator, Optional
 import requests
 import json
 import mistletoe
 
 
+class ReplicationCacheMiss(Exception):
+    "Raised when a cache miss occurs during replication"
+    pass
+
+
 class Cached:
-    def __init__(self, llm, cache_root: Path):
+    '''This decorator caches responses from an LLM by storing them in
+    a specified directory. The primary behavioral difference between a
+    non-cached and a cached LLM is as follows:
+
+    - For a non-cached LLM, every call to `sample` generates a new
+      infinite sequence of responses.
+    - For a cached LLM, every call to `sample` returns the same
+      infinite sequence of responses for the same prompt.
+
+    The `replication` argument controls the behavior when a cache
+    miss occurs:
+    - If `replication` is `False`, the system queries the LLM to
+      generate a response.
+    - If `replication` is `True`, the system raises the exception
+      ReplicationCacheMiss instead of querying the LLM.
+
+    `alias` is useful when different providers use different names for
+    the same LLM, or the name contains symbols that cannot be used in
+    filesystem paths.
+    '''
+    def __init__(self, llm, cache_root: Path, replication: bool = False, alias: str = None):
         self.llm = llm
-        self.model_name = llm.model_name
-        self.temperature = llm.temperature
-        self.cache_root = cache_root
+        if alias is not None:
+            self.model_dir = cache_root / f"{alias}_{llm.temperature}"
+        else:
+            self.model_dir = cache_root / f"{llm.model_name}_{llm.temperature}"
+        self.replication = replication
+
+    _base_samplers = dict()
+
+    def sample(self, prompt: str) -> Iterator[str]:
+        if not prompt in Cached._base_samplers:
+            Cached._base_samplers[prompt] = self.llm.sample(prompt)
+        return Cached._LazyCachedSampler(self, prompt)
 
     @staticmethod        
     def prompt_id(prompt: str) -> str:
         return hashlib.sha256(prompt.encode()).hexdigest()
 
-    def _sample_dir(self, prompt: str) -> Path:
-        subdir = f"{self.model_name}_{self.temperature}"
-        return self.cache_root / subdir / Cached.prompt_id(prompt)
+    class _LazyCachedSampler():
 
-    def _read_cached_samples(self, prompt: str) -> List[str]:
-        dir_ = self._sample_dir(prompt)
-        if not dir_.exists():
-            return []
-        cached = []
-        i = 0
-        while True:
-            fname = dir_ / f"{i}.md"
+        def __init__(self, base, prompt):
+            self.base = base
+            self.prompt = prompt
+            self.index = 0
+
+        def __iter__(self):
+            return self
+
+        def _read_cached_sample(self, prompt: str, i: int) -> Optional[str]:
+            d = self.base.model_dir / Cached.prompt_id(prompt)
+            if not d.exists():
+                return None
+            fname = d / f"{i}.md"
             if fname.exists():
                 with open(fname, "r", encoding="utf-8") as f:
-                    cached.append(f.read())
-                i += 1
+                    return f.read()
             else:
-                break
-        return cached
+                return None
 
-    def _write_samples(self, prompt: str, samples: List[str], offset: int = 0):
-        d = self._sample_dir(prompt)
-        os.makedirs(d, exist_ok=True)
-        for idx, sample in enumerate(samples):
-            fname = d / f"{offset+idx}.md"
+        def _write_sample(self, prompt: str, sample: str, i: int):
+            d = self.base.model_dir / Cached.prompt_id(prompt)
+            os.makedirs(d, exist_ok=True)
+            fname = d / f"{i}.md"
             with open(fname, "w", encoding="utf-8") as f:
                 f.write(sample)
+        
+        def __next__(self):
+            sample = self._read_cached_sample(self.prompt, self.index)
+            if sample is None:
+                if self.base.replication:
+                    raise ReplicationCacheMiss()
+                sample = next(Cached._base_samplers[self.prompt])
+                self._write_sample(self.prompt, sample, self.index)
+            self.index += 1
+            return sample
 
-    def sample(self, prompt: str, k: int = 1) -> List[str]:
-        cached = self._read_cached_samples(prompt)
-        n_cached = len(cached)
-        missing = max(k - n_cached, 0)
-
-        new_samples = []
-        if missing > 0:
-            new_samples = self.llm.sample(prompt, missing)
-            self._write_samples(prompt, new_samples, offset=n_cached)
-
-        return cached[:k] + new_samples
 
 class AI302:
 
@@ -64,7 +97,7 @@ class AI302:
         self.model_name = model_name
         self.temperature = temperature
 
-    def sample(self, prompt, k=1):
+    def sample(self, prompt):
         url = "https://api.302.ai/v1/chat/completions"
 
         payload = json.dumps({
@@ -82,12 +115,22 @@ class AI302:
             'Content-Type': 'application/json'
         }
 
-        responses = []
-        for _ in range(0, k):
-            response = requests.request("POST", url, headers=headers, data=payload)
-            responses.append(json.loads(response.text)["choices"][0]["message"]["content"])
+        while True:
+            raw_response = requests.request("POST", url, headers=headers, data=payload)
+            yield json.loads(raw_response.text)["choices"][0]["message"]["content"]
 
-        return responses
+
+class MockModel:
+    def __init__(self, response):
+        self.response = response
+        self.queries = 0
+        self.model_name = "mock-model"
+        self.temperature = 1.0
+
+    def sample(self, prompt):
+        while True:
+            self.queries += 1
+            yield self.response
 
 
 class DataExtractionFailure(Exception):

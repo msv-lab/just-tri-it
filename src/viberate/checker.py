@@ -1,5 +1,7 @@
 import sys
 
+from itertools import islice
+
 from viberate.program import Signature
 from viberate.coder import generate_programs
 from viberate.executor import Success
@@ -35,7 +37,7 @@ def select_for_inv(executor, model, req, n1, n2):
     sig = Signature.from_requirements(model, req)
     print_annotated_hr("Signature")
     print(sig, file=sys.stderr)
-    forward_programs = list(generate_programs(model, sig, req, n1))
+    forward_programs = list(islice(generate_programs(model, sig, req), n1))
 
     inverse_sig = inverse_signature(model, sig, req)
     print_annotated_hr("Inverse signature")
@@ -50,7 +52,7 @@ def select_for_inv(executor, model, req, n1, n2):
     print(inverse_req, file=sys.stderr)
 
     # generate inverse programs and tests
-    inverse_programs = list(generate_programs(model, inverse_sig, inverse_req, n2))
+    inverse_programs = list(islice(generate_programs(model, inverse_sig, inverse_req), n2))
     forward_inputs = generate_tests(model, req, sig)
     print_annotated_hr("Forward tests")
     print(forward_inputs, file=sys.stderr)
@@ -111,7 +113,7 @@ def select_for_fib_lib(executor, model, req, n1, n2):
     sig = Signature.from_requirements(model, req)
     print_annotated_hr("Signature")
     print(sig, file=sys.stderr)
-    forward_programs = list(generate_programs(model, sig, req, n1))
+    forward_programs = list(islice(generate_programs(model, sig, req), n1))
 
     fiber_sig = fiber_signature(model, sig, req)
     print_annotated_hr("Fiber signature")
@@ -124,7 +126,7 @@ def select_for_fib_lib(executor, model, req, n1, n2):
         fiber_req = fiber_requirements(model, sig, fiber_sig, req)
     print_annotated_hr("Fiber requirements")
     print(fiber_req, file=sys.stderr)
-    fiber_programs = list(generate_programs(model, fiber_sig, fiber_req, n2))
+    fiber_programs = list(islice(generate_programs(model, fiber_sig, fiber_req), n2))
 
     # generate input tests
     forward_inputs = generate_tests(model, req, sig)

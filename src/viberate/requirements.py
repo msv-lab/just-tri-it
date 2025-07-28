@@ -20,7 +20,7 @@ def inverse_signature(model, sig, req):
     # Problem:
     # {req}
     # """
-    # new_name = extract_answer(model.sample(PROMPT_NAME)[0])  # sig.name + "_inv_param_" + str(sig.inverse_index)
+    # new_name = extract_answer(next(model.sample(PROMPT_NAME)))  # sig.name + "_inv_param_" + str(sig.inverse_index)
     # new_sig.name = new_name
     return new_sig
 
@@ -44,7 +44,7 @@ output. Enclose your rewritten problem in <answer> tags.
 Problem:
 {requirements}
     """
-    return extract_answer(model.sample(PROMPT)[0])
+    return extract_answer(next(model.sample(PROMPT)))
 
 
 def inverse_requirements(model, signature, inverted_sig, requirements):
@@ -55,7 +55,7 @@ Enclose your rewritten problem in <answer> tags.
 Problem:
 {requirements}
     """
-    return extract_answer(model.sample(PROMPT)[0])
+    return extract_answer(next(model.sample(PROMPT)))
 
 
 def fiber_signature_old(sig):
@@ -78,7 +78,7 @@ def fiber_signature(model, sig, req):
     #     Problem:
     #     {req}
     #     """
-    # new_name = extract_answer(model.sample(PROMPT_NAME)[0])
+    # new_name = extract_answer(next(model.sample(PROMPT_NAME)))
     # new_sig.name = new_name
     return new_sig
 
@@ -94,7 +94,7 @@ output. Enclose your rewritten problem in <answer> tags.
 Problem:
 {requirements}
     """
-    return extract_answer(model.sample(PROMPT)[0])
+    return extract_answer(next(model.sample(PROMPT)))
 
 
 def fiber_requirements(model, signature, fiber_sig, requirements):
@@ -105,7 +105,7 @@ Enclose your rewritten problem in <answer> tags.
 Problem:
 {requirements}
     """
-    return extract_answer(model.sample(PROMPT)[0])
+    return extract_answer(next(model.sample(PROMPT)))
 
 
 def fiber_requirements_wo_example(model, signature, fiber_sig, requirements):
@@ -116,5 +116,5 @@ The revised problem does not need to include specific examples. Enclose your rew
 Problem:
 {requirements}
     """
-    return extract_answer(model.sample(PROMPT)[0])
+    return extract_answer(next(model.sample(PROMPT)))
 

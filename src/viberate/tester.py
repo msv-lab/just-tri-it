@@ -29,9 +29,9 @@ Please follow the following format.
 Now I will give you the problem description:
 {req}
 """
-    response = model.sample(PROMPT)
+    response = next(model.sample(PROMPT))
     pattern = r"# \*\*Input \d+\*\*\n```(.*?)```"
-    matches = re.findall(pattern, response[0], re.DOTALL)
+    matches = re.findall(pattern, response, re.DOTALL)
     input_list = [block.strip() for block in matches]
     return input_list
 
@@ -65,9 +65,9 @@ Now, here is the problem description and function signature:
 # **Function Signature**:
 {sig}
 """
-    response = model.sample(PROMPT)
+    response = next(model.sample(PROMPT))
     pattern = r"# \*\*Input \d+\*\*\n```(.*?)```"
-    matches = re.findall(pattern, response[0], re.DOTALL)
+    matches = re.findall(pattern, response, re.DOTALL)
     # print(response)
     input_list = [eval(block.strip()) for block in matches]
     return input_list
