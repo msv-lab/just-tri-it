@@ -19,9 +19,10 @@ Run unit tests with
 
     uv run pytest
 
-Run linter:
+Run linter and type checker:
 
     uv run ruff check .
+    uvx mypy src/
 
 ## Usage
 

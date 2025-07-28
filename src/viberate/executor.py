@@ -3,13 +3,14 @@ from dataclasses import dataclass
 from pathlib import Path
 import subprocess
 from tempfile import TemporaryDirectory
+from typing import Any
 
 from viberate.program import Program
 
 
 @dataclass
 class Success:
-    output: any
+    output: Any
 
 
 @dataclass
@@ -61,7 +62,7 @@ class Executor:
     def __init__(self, test_venv: Path):
         self.test_venv = test_venv
 
-    def run(self, p: Program, inputs: list[any]) -> Outcome:
+    def run(self, p: Program, inputs: list[Any]) -> Outcome:
         with TemporaryDirectory() as tmp:
             exec_dir = Path(tmp)
             input_file = exec_dir / 'input.pkl'

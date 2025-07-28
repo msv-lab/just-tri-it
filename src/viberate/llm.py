@@ -1,7 +1,7 @@
 import os
 import hashlib
 from pathlib import Path
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Any
 import requests
 import json
 import mistletoe
@@ -33,7 +33,7 @@ class Cached:
     the same LLM, or the name contains symbols that cannot be used in
     filesystem paths.
     '''
-    def __init__(self, llm, cache_root: Path, replication: bool = False, alias: str = None):
+    def __init__(self, llm, cache_root: Path, replication: bool = False, alias: Optional[str] = None):
         self.llm = llm
         if alias is not None:
             self.model_dir = cache_root / f"{alias}_{llm.temperature}"
@@ -41,7 +41,7 @@ class Cached:
             self.model_dir = cache_root / f"{llm.model_name}_{llm.temperature}"
         self.replication = replication
 
-    _base_samplers = dict()
+    _base_samplers: dict[str, Any] = dict()
 
     def sample(self, prompt: str) -> Iterator[str]:
         if prompt not in Cached._base_samplers:

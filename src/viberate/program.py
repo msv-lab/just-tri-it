@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Self
 import ast
 
 from viberate.llm import extract_code
@@ -25,7 +24,7 @@ class Signature:
         return f"def {self.name}({params_str}) -> {self.return_type}"
 
     @staticmethod
-    def from_function_ast(fn_ast) -> Self:
+    def from_function_ast(fn_ast) -> 'Signature':
         params = []
         temp_dict = {}
         for index, arg in enumerate(fn_ast.args.args):
@@ -40,7 +39,7 @@ class Signature:
         return Signature(fn_ast.name, params, return_type)
 
     @staticmethod
-    def from_requirements(model, req) -> Self:
+    def from_requirements(model, req) -> 'Signature':
         PROMPT_CODE = f"""
         For the problem below, write a Python function signature with:
         - Descriptive parameter names

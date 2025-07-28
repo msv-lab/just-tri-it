@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Self
 
 from viberate.program import Signature, Parameter
 from viberate.llm import extract_answer
@@ -10,7 +9,7 @@ class NamedReturnSignature(Signature):
     return_name: str
 
     @staticmethod
-    def from_requirements(model, sig: Signature, req: str) -> Self:
+    def infer_name(model, sig: Signature, req: str) -> 'NamedReturnSignature':
         PROMPT = f""" For the problem below, name its return value
         descriptively using Python's snake_case naming convention.
         Enclose the name in <answer> tags.

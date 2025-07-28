@@ -44,7 +44,7 @@ def check_for_inv(executor, forward, inverse, forward_inputs, arg_index):
 def select_for_inv(executor, model, req, n1, n2):
     # generate forward signature and programs
     sig = Signature.from_requirements(model, req)
-    sig = NamedReturnSignature.from_requirements(model, sig, req)
+    sig = NamedReturnSignature.infer_name(model, sig, req)
     print_annotated_hr("Signature")
     print(sig.pretty_print(), file=sys.stderr)
     forward_programs = list(islice(generate_programs(model, sig, req), n1))
@@ -125,7 +125,7 @@ def check_for_fib_lib(executor, forward, fiber, forward_inputs, arg_index):
 
 def select_for_fib_lib(executor, model, req, n1, n2):
     sig = Signature.from_requirements(model, req)
-    sig = NamedReturnSignature.from_requirements(model, sig, req)
+    sig = NamedReturnSignature.infer_name(model, sig, req)
     print_annotated_hr("Signature")
     print(sig.pretty_print(), file=sys.stderr)
 
