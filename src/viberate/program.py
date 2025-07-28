@@ -22,7 +22,7 @@ class Signature:
 
     def pretty_print(self):
         params_str = ', '.join(p.pretty_print() for p in self.params)
-        return f"def {self.name}({params_str}) -> {self.return_type}:"
+        return f"def {self.name}({params_str}) -> {self.return_type}"
 
     @staticmethod
     def from_function_ast(fn_ast) -> Self:
