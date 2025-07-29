@@ -37,7 +37,9 @@ For example
 Supported options are
 
 - `--cache-root DIR` to set LLM cache (default: `~/.viberate_cache/`)
+- `--export-cache DIR` to explore all cached samples used during the run to a different directory
 - `--no-cache` to disable cache
+- `--replicate` to use only cache; fail in case of cache misses
 
 ## Reproducibility
 

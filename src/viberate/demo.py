@@ -14,23 +14,33 @@ def parse_args():
     parser.add_argument(
         "--cache-root",
         type=str,
-        help="Set LLM cache root directory (default: ~/.viberate_cache/)"
+        help="Set LLM cache root directory (default: ~/.viberate_cache/)."
     )
     parser.add_argument(
         "--no-cache",
         action="store_true",
-        help="Disable cache"
+        help="Disable cache."
+    )
+    parser.add_argument(
+        "--replicate",
+        action="store_true",
+        help="Use cache only."
     )
     parser.add_argument(
         "--input-file",
         type=str,
         required=True,
-        help="Input file containing the problem description"
+        help="Input file containing the problem description."
     )
     parser.add_argument(
         "--test-venv",
         type=str,
         help="Set virtual environment for testing generated programs."
+    )
+    parser.add_argument(
+        "--export-cache",
+        type=str,
+        help="Explore all responsed generated during the run."
     )
     return parser.parse_args()
 
@@ -42,10 +52,19 @@ def main():
 
     if not args.no_cache:
         if args.cache_root:
-            chosen_model = Cached(chosen_model, Path(args.cache_root))
+            cache_root = Path(args.cache_root)
         else:
-            chosen_model = Cached(chosen_model, Path.home() / ".viberate_cache")
+            cache_root = Path.home() / ".viberate_cache"
+        if args.replicate:
+            chosen_model = Cached(chosen_model, cache_root, replication=True)
+        else:
+            chosen_model = Cached(chosen_model, cache_root)
 
+    if not args.no_cache and args.export_cache:
+        export_root = Path(args.export_cache)
+        export_root.mkdir(parents=True, exist_ok=True)
+        chosen_model.start_slicing(export_root)
+            
     test_venv = Path(args.test_venv)
     executor = Executor(test_venv)
 

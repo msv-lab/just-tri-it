@@ -36,12 +36,23 @@ class Cached:
     def __init__(self, llm, cache_root: Path, replication: bool = False, alias: Optional[str] = None):
         self.llm = llm
         if alias is not None:
-            self.model_dir = cache_root / f"{alias}_{llm.temperature}"
+            self.alias = alias
         else:
-            self.model_dir = cache_root / f"{llm.model_name}_{llm.temperature}"
+            self.alias = llm.model_name
         self.replication = replication
+        self.cache_root = cache_root
+        self.cache_export_root = None
+
+    def _model_dir(self, root: Path):
+        return root / f"{self.alias}_{self.llm.temperature}"
 
     _base_samplers: dict[str, Any] = dict()
+
+    def start_slicing(self, d: Path):
+        self.cache_export_root = d
+
+    def stop_slicing(self):
+        self.cache_export_root = None
 
     def sample(self, prompt: str) -> Iterator[str]:
         if prompt not in Cached._base_samplers:
@@ -62,8 +73,8 @@ class Cached:
         def __iter__(self):
             return self
 
-        def _read_cached_sample(self, prompt: str, i: int) -> Optional[str]:
-            d = self.base.model_dir / Cached.prompt_id(prompt)
+        def _read_cached_sample(self, root: Path, prompt: str, i: int) -> Optional[str]:
+            d = self.base._model_dir(root) / Cached.prompt_id(prompt)
             if not d.exists():
                 return None
             fname = d / f"{i}.md"
@@ -73,20 +84,25 @@ class Cached:
             else:
                 return None
 
-        def _write_sample(self, prompt: str, sample: str, i: int):
-            d = self.base.model_dir / Cached.prompt_id(prompt)
+        def _write_sample(self, root: Path, prompt: str, sample: str, i: int):
+            d = self.base._model_dir(root) / Cached.prompt_id(prompt)
             os.makedirs(d, exist_ok=True)
             fname = d / f"{i}.md"
             with open(fname, "w", encoding="utf-8") as f:
                 f.write(sample)
         
         def __next__(self):
-            sample = self._read_cached_sample(self.prompt, self.index)
+            sample = self._read_cached_sample(self.base.cache_root, self.prompt, self.index)
             if sample is None:
                 if self.base.replication:
-                    raise ReplicationCacheMiss()
+                    raise ReplicationCacheMiss(Cached.prompt_id(self.prompt))
                 sample = next(Cached._base_samplers[self.prompt])
-                self._write_sample(self.prompt, sample, self.index)
+                self._write_sample(self.base.cache_root, self.prompt, sample, self.index)
+            if self.base.cache_export_root is not None:
+                self._write_sample(self.base.cache_export_root,
+                                   self.prompt,
+                                   sample,
+                                   self.index)
             self.index += 1
             return sample
 
