@@ -86,5 +86,6 @@ def main():
     else:
         print("Result: abstain")
 
+
 if __name__ == "__main__":
     main()

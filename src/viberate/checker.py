@@ -3,9 +3,9 @@ import sys
 from itertools import islice
 
 from viberate.program import Signature
-from viberate.coder import generate_programs
+from viberate.coder import Vanilla
 from viberate.executor import Success
-from viberate.tester import generate_tests
+from viberate.input_generator import generate_inputs
 from viberate.requirements import (
     choose_parameter_to_invert,
     inverse_requirements,
@@ -13,6 +13,7 @@ from viberate.requirements import (
     Requirements
 )
 from viberate.utils import print_annotated_hr
+from viberate.llm import LLM
 from viberate.logic import test_for_inv_property, test_for_fib_property
 
 
@@ -72,22 +73,22 @@ def check_for_fib_lib(executor, forward, fiber, forward_inputs, arg_index):
     return True
 
 
-def select(executor, model, req: Requirements, n1: int, n2: int):
-    forward_programs = islice(generate_programs(model, req), n1)
+def select(executor, model: LLM, req: Requirements, n1: int, n2: int):
+    forward_programs = islice(Vanilla().generate(model, req), n1)
 
     inverse_index = choose_parameter_to_invert(model, req)
 
     inverse_req = inverse_requirements(model, req, inverse_index)
     print_annotated_hr("Inverse requirements")
     print(inverse_req, file=sys.stderr)
-    inverse_programs = islice(generate_programs(model, inverse_req), n2)
+    inverse_programs = islice(Vanilla().generate(model, inverse_req), n2)
 
     fiber_req = fiber_requirements(model, req, inverse_index)
     print_annotated_hr("Fiber requirements")
     print(fiber_req, file=sys.stderr)
-    fiber_programs = list(islice(generate_programs(model, fiber_req), n2))
+    fiber_programs = list(islice(Vanilla().generate(model, fiber_req), n2))
 
-    forward_inputs = generate_tests(model, req)
+    forward_inputs = generate_inputs(model, req)
     print_annotated_hr("Forward tests")
     print(forward_inputs, file=sys.stderr)
 

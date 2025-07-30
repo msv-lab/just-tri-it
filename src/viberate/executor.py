@@ -5,7 +5,8 @@ import subprocess
 from tempfile import TemporaryDirectory
 from typing import Any
 
-from viberate.program import Program
+from viberate.program import Program, Test, ExpectedOutput, Assertion
+from viberate.utils import panic
 
 
 @dataclass
@@ -31,7 +32,20 @@ class Timeout:
     pass
 
 
-type Outcome = Success | Error | Panic | Timeout
+type ExecutionOutcome = Success | Error | Panic | Timeout
+
+
+@dataclass
+class Pass:
+    pass
+    
+
+@dataclass
+class Fail:
+    pass
+
+
+type TestOutcome = Pass | Fail | Error | Panic | Timeout
 
 
 EXECUTION_TIMEOUT_SECONDS = 2
@@ -62,7 +76,7 @@ class Executor:
     def __init__(self, test_venv: Path):
         self.test_venv = test_venv
 
-    def run(self, p: Program, inputs: list[Any]) -> Outcome:
+    def run(self, p: Program, inputs: list[Any]) -> ExecutionOutcome:
         with TemporaryDirectory() as tmp:
             exec_dir = Path(tmp)
             input_file = exec_dir / 'input.pkl'
@@ -95,3 +109,18 @@ class Executor:
                 
             except subprocess.TimeoutExpired:
                 return Timeout()
+
+    def run_test(self, p: Program, t: Test) -> TestOutcome:
+        execution_outcome = self.run(p, t.inputs)
+        match execution_outcome:
+            case Success(actual):
+                match t.oracle:
+                    case ExpectedOutput(expected):
+                        if actual == expected:
+                            return Pass()
+                        else:
+                            return Fail()
+                    case Assertion():
+                        panic("test assertions are not suppported")
+            case _:
+                return execution_outcome

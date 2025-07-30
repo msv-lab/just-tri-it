@@ -1,0 +1,33 @@
+[
+    {
+        "id": "0000",
+        "requirements": {
+            "signature": "f(n: int) -> int",
+            "description": "implement a Fibonacci function"
+        },
+        "tests": [
+            {
+                "inputs": [1],
+                "oracle": {
+                    "type": "expected_output",
+                    "value": 1
+                }
+            },
+            {
+                "inputs": [3],
+                "oracle": {
+                    "type": "expected_output",
+                    "value": 2
+                }
+            },
+            {
+                "inputs": [6],
+                "oracle": {
+                    "type": "expected_output",
+                    "value": 8
+                }
+            }
+        ],
+        "metadata": { }
+    }
+]

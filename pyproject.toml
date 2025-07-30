@@ -8,10 +8,13 @@ dependencies = [
     "mistletoe>=1.4.0",
     "requests>=2.32.4",
     "numpy>=1.26.0",
+    "jsonlines>=4.0.0",
 ]
 
 [project.scripts]
 demo = "viberate.demo:main"
+benchmark = "viberate.benchmark:main"
+preprocess_lcb = "viberate.preprocess_lcb:main"
 
 [build-system]
 requires = ["hatchling"]

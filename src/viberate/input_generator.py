@@ -26,7 +26,7 @@ def value_is_too_large(data, int_bound, seq_bound):
     return False
 
 
-def generate_tests(model, req):
+def generate_inputs(model, req):
     PROMPT = f""" Given a problem description and the function
     signature, create a set of test inputs to thoroughly cover all key
     functionalities and aspects of the problem. The inputs should be
@@ -55,5 +55,3 @@ def generate_tests(model, req):
     input_list = [eval(block.strip()) for block in matches]
     input_list = [i for i in input_list if not value_is_too_large(i, 10000, 10)]
     return input_list
-
-

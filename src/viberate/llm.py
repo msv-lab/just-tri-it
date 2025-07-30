@@ -1,10 +1,18 @@
 import os
 import hashlib
 from pathlib import Path
-from typing import Iterator, Optional, Any
-import requests
+from typing import Iterable, Optional, Any
+from abc import ABC, abstractmethod
 import json
+
+import requests
 import mistletoe
+
+
+class LLM(ABC):
+    @abstractmethod
+    def sample(self, prompt: str) -> Iterable[str]:
+        pass
 
 
 class ReplicationCacheMiss(Exception):
@@ -12,7 +20,7 @@ class ReplicationCacheMiss(Exception):
     pass
 
 
-class Cached:
+class Cached(LLM):
     '''This decorator caches responses from an LLM by storing them in
     a specified directory. The primary behavioral difference between a
     non-cached and a cached LLM is as follows:
@@ -54,7 +62,7 @@ class Cached:
     def stop_slicing(self):
         self.cache_export_root = None
 
-    def sample(self, prompt: str) -> Iterator[str]:
+    def sample(self, prompt: str) -> Iterable[str]:
         if prompt not in Cached._base_samplers:
             Cached._base_samplers[prompt] = self.llm.sample(prompt)
         return Cached._LazyCachedSampler(self, prompt)
@@ -107,13 +115,13 @@ class Cached:
             return sample
 
 
-class AI302:
+class AI302(LLM):
 
     def __init__(self, model_name, temperature):
         self.model_name = model_name
         self.temperature = temperature
 
-    def sample(self, prompt):
+    def sample(self, prompt: str) -> Iterable[str]:
         url = "https://api.302.ai/v1/chat/completions"
 
         payload = json.dumps({
@@ -136,14 +144,14 @@ class AI302:
             yield json.loads(raw_response.text)["choices"][0]["message"]["content"]
 
 
-class MockModel:
+class MockModel(LLM):
     def __init__(self, response):
         self.response = response
         self.queries = 0
         self.model_name = "mock-model"
         self.temperature = 1.0
 
-    def sample(self, prompt):
+    def sample(self, prompt: str) -> Iterable[str]:
         while True:
             self.queries += 1
             yield self.response

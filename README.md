@@ -26,22 +26,40 @@ Run linter and type checker:
 
 ## Usage
 
-To run the demo, execute
+VibeRate provides multiple tools to execute.
+
+### Demo
+
+The goal of the demo tool is to demonstrate how the approach works, and make small experiments
+
+To run a demo, execute
 
     uv run demo --test-venv TESTING_ENVIRONMENT --input-file PROBLEM_DESCRIPTION
 
 For example
 
-    uv run demo --test-venv test_venv/ --input-file examples/test_prob3.md
+    uv run demo --test-venv test_venv/ --input-file examples/test_prob1.md
 
-Supported options are
+### Benchmarking
+
+The goal of the benchmarking tool is to benchmark various tool configurations on various code generation datasets and compute comprehensive statistics.
+
+To run a benchmark, execute
+
+    uv run benchmark --test-venv TESTING_ENVIRONMENT --dataset DATASET [ --task TASK_ID ] --config TOOL_CONFIG --model MODEL
+
+For example
+
+    uv run benchmark --test-venv test_venv/ --dataset datasets/test.json --config Vanilla --model gpt-4o
+
+## Reproducibility
+
+VibeRate's tools provide the following options to manage LLM cache:
 
 - `--cache-root DIR` to set LLM cache (default: `~/.viberate_cache/`)
 - `--export-cache DIR` to explore all cached samples used during the run to a different directory
 - `--no-cache` to disable cache
 - `--replicate` to use only cache; fail in case of cache misses
-
-## Reproducibility
 
 Any experiment should be reproducible if the following pieces of information are provided:
 
@@ -51,8 +69,6 @@ Any experiment should be reproducible if the following pieces of information are
 Additionally, to replicate the experiment, it is sufficient to provide:
 
 - The commit hash of your LLM cache
-
-## Managing cache
 
 Cache can be downloaded from
 

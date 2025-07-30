@@ -4,6 +4,7 @@ import sys
 from viberate.program import Signature, Parameter
 from viberate.llm import extract_answer
 from viberate.utils import print_annotated_hr
+from viberate.llm import LLM
 
 
 @dataclass
@@ -15,7 +16,7 @@ class Requirements:
         return self.signature.pretty_print() + "\n" + self.description
 
     @staticmethod
-    def from_description(model, desc: str) -> 'Requirements':
+    def from_description(model: LLM, desc: str) -> 'Requirements':
         return Requirements(Signature.from_description(model, desc), desc)
 
 
@@ -24,7 +25,7 @@ class NamedReturnSignature(Signature):
     return_name: str
 
     @staticmethod
-    def infer_name(model, req: Requirements) -> 'NamedReturnSignature':
+    def infer_name(model: LLM, req: Requirements) -> 'NamedReturnSignature':
         PROMPT = f""" For the problem below, name its return value
         descriptively using Python's snake_case naming convention.
         Enclose the name in <answer> tags.
@@ -39,7 +40,7 @@ class NamedReturnSignature(Signature):
                                     return_name)
         
 
-def choose_parameter_to_invert(model, req: Requirements) -> int:
+def choose_parameter_to_invert(model: LLM, req: Requirements) -> int:
     if len(req.signature.params) == 1:
         return 0
     else:
@@ -59,7 +60,7 @@ def choose_parameter_to_invert(model, req: Requirements) -> int:
         return [p.name for p in req.signature.params].index(name)
 
 
-def inverse_requirements(model, req: Requirements, inverse_index: int) -> Requirements:
+def inverse_requirements(model: LLM, req: Requirements, inverse_index: int) -> Requirements:
     print_annotated_hr("Signature")
     print(req.signature.pretty_print(), file=sys.stderr)
     
@@ -76,7 +77,7 @@ def inverse_requirements(model, req: Requirements, inverse_index: int) -> Requir
     return Requirements(inverse_sig, inverse_desc)
     
     
-def _inverse_signature(model,
+def _inverse_signature(model: LLM,
                        sig: NamedReturnSignature,
                        inverse_index: int) -> Signature:
     new_return_type = sig.params[inverse_index].type
@@ -87,7 +88,7 @@ def _inverse_signature(model,
     return new_sig
 
 
-def _inverse_description_single_arg(model,
+def _inverse_description_single_arg(model: LLM,
                                     req: Requirements,
                                     inverted_sig: Signature) -> str:
     PROMPT = f""" Rewrite the given problem, which requires
@@ -104,7 +105,7 @@ def _inverse_description_single_arg(model,
     return extract_answer(next(model.sample(PROMPT)))
 
 
-def _inverse_description(model,
+def _inverse_description(model: LLM,
                          req: Requirements,
                          inverted_sig: Signature,
                          inverse_index: int) -> str:
@@ -121,7 +122,7 @@ def _inverse_description(model,
     return extract_answer(next(model.sample(PROMPT)))
 
 
-def fiber_requirements(model, req: Requirements, inverse_index: int) -> Requirements:
+def fiber_requirements(model: LLM, req: Requirements, inverse_index: int) -> Requirements:
     print_annotated_hr("Signature")
     print(req.signature.pretty_print(), file=sys.stderr)
     
@@ -138,9 +139,9 @@ def fiber_requirements(model, req: Requirements, inverse_index: int) -> Requirem
     return Requirements(fiber_sig, fiber_desc)
 
 
-def _fiber_signature(model,
-                       sig: NamedReturnSignature,
-                       inverse_index: int) -> Signature:
+def _fiber_signature(model: LLM,
+                     sig: NamedReturnSignature,
+                     inverse_index: int) -> Signature:
     new_return_type = "list[" + sig.params[inverse_index].type + "]"
     new_params = [Parameter(sig.return_name, sig.return_type)]
     new_params.extend(p for i, p in enumerate(sig.params) if i != inverse_index)
@@ -149,7 +150,7 @@ def _fiber_signature(model,
     return new_sig
 
 
-def _fiber_description_single_arg(model,
+def _fiber_description_single_arg(model: LLM,
                                   req: Requirements,
                                   fiber_sig: Signature):
     PROMPT = f""" Rewrite the given problem, which requires
@@ -166,7 +167,7 @@ def _fiber_description_single_arg(model,
     return extract_answer(next(model.sample(PROMPT)))
 
 
-def _fiber_description(model,
+def _fiber_description(model: LLM,
                        req: Requirements,
                        fiber_sig: Signature,
                        inverse_index: int):
@@ -184,7 +185,7 @@ def _fiber_description(model,
     return extract_answer(next(model.sample(PROMPT)))
 
 
-def _fiber_description_wo_example(model,
+def _fiber_description_wo_example(model: LLM,
                                   req: Requirements,
                                   fiber_sig: Signature,
                                   inverse_index: int):
