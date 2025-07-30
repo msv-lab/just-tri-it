@@ -1,13 +1,16 @@
 import argparse
 import sys
 from pathlib import Path
-
+from itertools import islice
+from typing import List
 
 from viberate.llm import Cached, AI302, LLM
+from viberate.program import Program, Test
 from viberate.utils import print_annotated_hr
 from viberate.executor import Executor, Pass, Fail
 from viberate.dataset import Dataset, load_dataset
-from viberate.coder import Vanilla, Generator
+from viberate.code_generator import Vanilla, Generator, Selector
+from viberate.majority_vote import MajorityVote
 
 
 def parse_args():
@@ -49,9 +52,14 @@ def parse_args():
         help="Identifier of task to run (all by default)."
     )
     parser.add_argument(
-        "--config",
+        "--generator",
         type=str,
-        help="Tool configuration to benchmark."
+        help="Code generator configuration to benchmark."
+    )
+    parser.add_argument(
+        "--selector",
+        type=str,
+        help="Code selector configuration to benchmark."
     )
     parser.add_argument(
         "--model",
@@ -62,17 +70,38 @@ def parse_args():
     return parser.parse_args()
 
 
+def passes_tests(executor: Executor, program: Program, tests: List[Test]) -> bool:
+    ok = True
+    for test in tests:
+        match executor.run_test(program, test):
+            case Pass():
+                pass
+            case Fail():
+                ok = False
+                break
+    return ok
+
+
 def evaluate_generator(model: LLM, executor: Executor, generator: Generator, dataset: Dataset):
+    N = 5
     for task in dataset:
-        program = next(generator.generate(model, task.requirements))
-        solved = True
-        for test in task.tests:
-            match executor.run_test(program, test):
-                case Pass():
-                    pass
-                case Fail():
-                    solved = False
-        print(f"Task {task.id}: {solved}")
+        programs = islice(generator.generate(model, task.requirements), N)
+        results = []
+        for program in programs:
+            if passes_tests(executor, program, task.tests):
+                results.append(1)
+            else:
+                results.append(0)
+        print(f"Task {task.id} pass@1: {sum(results)/len(results)}")
+
+
+def evaluate_selector(model: LLM, executor: Executor, selector: Selector, dataset: Dataset):
+    for task in dataset:
+        program = selector.generate_and_select(model, task.requirements).program
+        if passes_tests(executor, program, task.tests):
+            print(f"Task {task.id}: solved")
+        else:
+            print(f"Task {task.id}: failed")
 
 
 def main():
@@ -100,13 +129,18 @@ def main():
 
     dataset = load_dataset(Path(args.dataset))
 
-    CONFIGURATIONS = {
+    GENERATORS = {
         "Vanilla": Vanilla()
     }
 
-    config = CONFIGURATIONS[args.config]
+    SELECTORS = {
+        "MajorityVote": MajorityVote(executor, Vanilla(), 5)
+    }
 
-    evaluate_generator(model, executor, config, dataset)
+    if args.generator:
+        evaluate_generator(model, executor, GENERATORS[args.generator], dataset)
+    if args.selector:
+        evaluate_selector(model, executor, SELECTORS[args.selector], dataset)
 
 
 if __name__ == "__main__":

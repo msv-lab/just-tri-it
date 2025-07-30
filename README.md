@@ -46,11 +46,13 @@ The goal of the benchmarking tool is to benchmark various tool configurations on
 
 To run a benchmark, execute
 
-    uv run benchmark --test-venv TESTING_ENVIRONMENT --dataset DATASET [ --task TASK_ID ] --config TOOL_CONFIG --model MODEL
+    uv run benchmark --test-venv TESTING_ENVIRONMENT --dataset DATASET [ --task TASK_ID ] [ --generator TOOL_CONFIG | --selector TOOL_CONFIG ] --model MODEL
 
 For example
 
-    uv run benchmark --test-venv test_venv/ --dataset datasets/test.json --config Vanilla --model gpt-4o
+    uv run benchmark --test-venv test_venv/ --dataset datasets/test.json --generator Vanilla --model gpt-4o
+    
+    uv run benchmark --test-venv test_venv/ --dataset datasets/test.json --selector MajorityVote --model gpt-4o
 
 ## Reproducibility
 

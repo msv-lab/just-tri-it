@@ -3,7 +3,7 @@ import sys
 from itertools import islice
 
 from viberate.program import Signature
-from viberate.coder import Vanilla
+from viberate.code_generator import Vanilla
 from viberate.executor import Success
 from viberate.input_generator import generate_inputs
 from viberate.requirements import (

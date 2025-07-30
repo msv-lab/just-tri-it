@@ -1,5 +1,5 @@
 from viberate.llm import LLM
-from viberate.coder import (
+from viberate.code_generator import (
     Selector,
     SelectionOutcome,
     Selected,
@@ -15,7 +15,3 @@ class CodeT(Selector):
     def generate_and_select(self, model, req: Requirements) -> SelectionOutcome:
         # TODO: implement CodeT algorithm
         pass
-    
-
-
-
