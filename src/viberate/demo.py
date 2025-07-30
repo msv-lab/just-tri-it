@@ -4,9 +4,10 @@ from pathlib import Path
 
 
 from viberate.llm import Cached, AI302
-from viberate.checker import select_for_inv, select_for_fib_lib
+from viberate.checker import select
 from viberate.utils import print_annotated_hr
 from viberate.executor import Executor
+from viberate.requirements import Requirements
 
 
 def parse_args():
@@ -48,7 +49,7 @@ def parse_args():
 def main():
     args = parse_args()
     model_name = "gpt-4o"
-    chosen_model = AI302(model_name, 1.0)
+    model = AI302(model_name, 1.0)
 
     if not args.no_cache:
         if args.cache_root:
@@ -56,43 +57,34 @@ def main():
         else:
             cache_root = Path.home() / ".viberate_cache"
         if args.replicate:
-            chosen_model = Cached(chosen_model, cache_root, replication=True)
+            model = Cached(model, cache_root, replication=True)
         else:
-            chosen_model = Cached(chosen_model, cache_root)
+            model = Cached(model, cache_root)
 
     if not args.no_cache and args.export_cache:
         export_root = Path(args.export_cache)
         export_root.mkdir(parents=True, exist_ok=True)
-        chosen_model.start_slicing(export_root)
+        model.start_slicing(export_root)
             
     test_venv = Path(args.test_venv)
     executor = Executor(test_venv)
 
     with open(args.input_file, 'r', encoding='utf-8') as f:
-        requirements = f.read()
+        description = f.read()
 
     n1, n2 = 5, 5
 
-    resonating = select_for_inv(executor, chosen_model, requirements, n1, n2)
+    requirements = Requirements.from_description(model, description)
+
+    resonating = select(executor, model, requirements, n1, n2)
     if len(resonating) > 0:
         print_annotated_hr("Forward function")
         print(resonating[0][0].code, file=sys.stderr)
-        print_annotated_hr("Inverse function")
+        print_annotated_hr("Resonates with")
         print(resonating[0][1].code, file=sys.stderr)
-        print("FOR-INV: selected")
+        print("Result: selected")
     else:
-        print("FOR-INV: abstain")
-
-    resonating = select_for_fib_lib(executor, chosen_model, requirements, n1, n2)
-    if len(resonating) > 0:
-        print_annotated_hr("Forward function")
-        print(resonating[0][0].code, file=sys.stderr)
-        print_annotated_hr("Fiber function")
-        print(resonating[0][1].code, file=sys.stderr)
-        print("FOR-FIB: selected")
-    else:
-        print("FOR-FIB: abstain")
-
+        print("Result: abstain")
 
 if __name__ == "__main__":
     main()

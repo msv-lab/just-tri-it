@@ -1,7 +1,22 @@
 from dataclasses import dataclass
+import sys
 
 from viberate.program import Signature, Parameter
 from viberate.llm import extract_answer
+from viberate.utils import print_annotated_hr
+
+
+@dataclass
+class Requirements:
+    signature: Signature
+    description: str
+
+    def __str__(self):
+        return self.signature.pretty_print() + "\n" + self.description
+
+    @staticmethod
+    def from_description(model, desc: str) -> 'Requirements':
+        return Requirements(Signature.from_description(model, desc), desc)
 
 
 @dataclass
@@ -9,23 +24,23 @@ class NamedReturnSignature(Signature):
     return_name: str
 
     @staticmethod
-    def infer_name(model, sig: Signature, req: str) -> 'NamedReturnSignature':
+    def infer_name(model, req: Requirements) -> 'NamedReturnSignature':
         PROMPT = f""" For the problem below, name its return value
         descriptively using Python's snake_case naming convention.
         Enclose the name in <answer> tags.
         
         Problem:
-        {req}
+        {req.description}
         """
         return_name = extract_answer(next(model.sample(PROMPT)))
-        return NamedReturnSignature(sig.name,
-                                    sig.params,
-                                    sig.return_type,
+        return NamedReturnSignature(req.signature.name,
+                                    req.signature.params,
+                                    req.signature.return_type,
                                     return_name)
         
 
-def choose_parameter_to_invert(model, sig: Signature, req: str) -> int:
-    if len(sig.params) == 1:
+def choose_parameter_to_invert(model, req: Requirements) -> int:
+    if len(req.signature.params) == 1:
         return 0
     else:
         PROMPT = f""" For the problem below and its corresponding
@@ -36,151 +51,153 @@ def choose_parameter_to_invert(model, sig: Signature, req: str) -> int:
         parameter in <answer> tags.
         
         Problem:
-        {req}
+        {req.description}
         Function signature:
-        {sig.pretty_print()}
+        {req.signature.pretty_print()}
         """
         name = extract_answer(next(model.sample(PROMPT)))
-        return [p.name for p in sig.params].index(name)
+        return [p.name for p in req.signature.params].index(name)
 
 
-def inverse_signature(model,
-                      sig: NamedReturnSignature,
-                      inverse_index: int,
-                      req: str) -> Signature:
+def inverse_requirements(model, req: Requirements, inverse_index: int) -> Requirements:
+    print_annotated_hr("Signature")
+    print(req.signature.pretty_print(), file=sys.stderr)
+    
+    named_sig = NamedReturnSignature.infer_name(model, req)
+    inverse_sig = _inverse_signature(model, named_sig, inverse_index)
+    print_annotated_hr(f"Inverse signature wrt {inverse_index}")
+    print(inverse_sig.pretty_print(), file=sys.stderr)
+
+    if len(req.signature.params) == 1:
+        inverse_desc = _inverse_description_single_arg(model, req, inverse_sig)
+    else:
+        inverse_desc = _inverse_description(model, req, inverse_sig, inverse_index)
+
+    return Requirements(inverse_sig, inverse_desc)
+    
+    
+def _inverse_signature(model,
+                       sig: NamedReturnSignature,
+                       inverse_index: int) -> Signature:
     new_return_type = sig.params[inverse_index].type
     new_params = [Parameter(sig.return_name, sig.return_type)]
     new_params.extend(p for i, p in enumerate(sig.params) if i != inverse_index)
     new_func_name = "inverse_" + sig.name + "_wrt_" + sig.params[inverse_index].name
     new_sig = Signature(new_func_name, new_params, new_return_type)
-    # PROMPT_NAME = f""" I have inverted the problem below, so its
-    # corresponding function signature has changed from
-    # {sig.pretty_print()} to {new_sig.pretty_print()}. Please help me
-    # create a descriptive name for "inverse_function" following
-    # Python's snake_case naming convention. Enclose your answer in
-    # <answer> tags.
-    #
-    # Problem:
-    # {req}
-    # """
-    # new_name = extract_answer(next(model.sample(PROMPT_NAME)))  # sig.name + "_inv_param_" + str(inverse_index)
-    # new_sig.name = new_name
     return new_sig
 
 
-def inverse_requirements_old(model,
-                             signature: Signature,
-                             inverted_sig: Signature,
-                             requirements: str) -> str:
+def _inverse_description_single_arg(model,
+                                    req: Requirements,
+                                    inverted_sig: Signature) -> str:
     PROMPT = f""" Rewrite the given problem, which requires
-    implementing the function {signature.pretty_print()}, so that it
-    instead requires implementing the function
+    implementing the function {req.signature.pretty_print()}, so that
+    it instead requires implementing the function
     {inverted_sig.pretty_print()}. The new function should, for each
     possible output of the original function, return the possible
     input that produce that output. Enclose your rewritten problem in
     <answer> tags.
 
     Problem:
-    {requirements}
+    {req.description}
     """
     return extract_answer(next(model.sample(PROMPT)))
 
 
-def inverse_requirements(model,
-                         sig: Signature,
+def _inverse_description(model,
+                         req: Requirements,
                          inverted_sig: Signature,
-                         inverse_index: int,
-                         requirements: str) -> str:
+                         inverse_index: int) -> str:
     PROMPT = f""" Rewrite the given problem, which requires
-    implementing the function {sig.pretty_print()}, so that it
-    requiresimplementing the function {inverted_sig.pretty_print()}
+    implementing the function {req.signature.pretty_print()}, so that
+    it requiresimplementing the function {inverted_sig.pretty_print()}
     instead. The new function should return the value of the parameter
-    {sig.params[inverse_index].name} that produce that given output.
-    Enclose your rewritten problem in <answer> tags.
+    {req.signature.params[inverse_index].name} that produce that given
+    output.  Enclose your rewritten problem in <answer> tags.
 
-     Problem:
-     {requirements}
-     """
+    Problem:
+    {req.description}
+    """
     return extract_answer(next(model.sample(PROMPT)))
 
 
-def fiber_signature(model,
-                    sig: NamedReturnSignature,
-                    inverse_index: int,
-                    req: str):
-    return_type = "list[" + sig.params[inverse_index].type + "]"
+def fiber_requirements(model, req: Requirements, inverse_index: int) -> Requirements:
+    print_annotated_hr("Signature")
+    print(req.signature.pretty_print(), file=sys.stderr)
+    
+    named_sig = NamedReturnSignature.infer_name(model, req)
+    fiber_sig = _fiber_signature(model, named_sig, inverse_index)
+    print_annotated_hr(f"Fiber signature wrt {inverse_index}")
+    print(fiber_sig.pretty_print(), file=sys.stderr)
+
+    if len(req.signature.params) == 1:
+        fiber_desc = _fiber_description_single_arg(model, req, fiber_sig)
+    else:
+        fiber_desc = _fiber_description(model, req, fiber_sig, inverse_index)
+
+    return Requirements(fiber_sig, fiber_desc)
+
+
+def _fiber_signature(model,
+                       sig: NamedReturnSignature,
+                       inverse_index: int) -> Signature:
+    new_return_type = "list[" + sig.params[inverse_index].type + "]"
     new_params = [Parameter(sig.return_name, sig.return_type)]
     new_params.extend(p for i, p in enumerate(sig.params) if i != inverse_index)
-    new_func_name = "inverse_" + sig.name + "_wrt_" + sig.params[inverse_index].name
-    new_sig = Signature(new_func_name, new_params, return_type)
-    # PROMPT_NAME = f""" I have inverted the problem below, so its
-    #     corresponding function signature has changed from
-    #     {sig.pretty_print()} to {new_sig.pretty_print()}. Please
-    #     help me create a descriptive name for "inverse_function()"
-    #     following Python's snake_case naming convention. Enclose
-    #     your answer in <answer> tags.
-    #
-    #     Problem:
-    #     {req}
-    #     """
-    # new_name = extract_answer(next(model.sample(PROMPT_NAME)))
-    # new_sig.name = new_name
+    new_func_name = "fiber_" + sig.name + "_wrt_" + sig.params[inverse_index].name
+    new_sig = Signature(new_func_name, new_params, new_return_type)
     return new_sig
 
 
-def fiber_requirements_old(model,
-                           signature: Signature,
-                           fiber_sig: Signature,
-                           requirements: str):
+def _fiber_description_single_arg(model,
+                                  req: Requirements,
+                                  fiber_sig: Signature):
     PROMPT = f""" Rewrite the given problem, which requires
-    implementing the function {signature.pretty_print()}, so that it
-    instead requires implementing the function
+    implementing the function {req.signature.pretty_print()}, so that
+    it instead requires implementing the function
     {fiber_sig.pretty_print()}. The new function should, for each
-    possible output of the original function, return the list of all
-    inputs that produce that output. Enclose your rewritten problem in
-    <answer> tags.
+    possible output of the original function, return the exhaustive
+    list of all inputs that produce that output. Enclose your
+    rewritten problem in <answer> tags.
 
     Problem:
-    {requirements}
+    {req.description}
     """
     return extract_answer(next(model.sample(PROMPT)))
 
 
-def fiber_requirements(model,
-                       sig: Signature,
+def _fiber_description(model,
+                       req: Requirements,
                        fiber_sig: Signature,
-                       inverse_index: int,
-                       requirements: str):
+                       inverse_index: int):
     PROMPT = f""" Rewrite the given problem, which requires
-    implementing the function {sig.pretty_print()}, so that it
-    requires implementing the function {fiber_sig.pretty_print()}
-    instead. The new function should return the list of **all**
-    possible values of the parameter {sig.params[inverse_index].name}
-    that produce the given output. Enclose your rewritten problem in
-    <answer> tags.
+    implementing the function {req.signature.pretty_print()}, so that
+    it requires implementing the function {fiber_sig.pretty_print()}
+    instead. The new function should return the exhaustive list of all
+    possible values of the parameter
+    {req.signature.params[inverse_index].name} that produce the given
+    output. Enclose your rewritten problem in <answer> tags.
 
     Problem:
-    {requirements}
+    {req.description}
     """
     return extract_answer(next(model.sample(PROMPT)))
 
 
-def fiber_requirements_wo_example(model,
-                                  sig: Signature,
+def _fiber_description_wo_example(model,
+                                  req: Requirements,
                                   fiber_sig: Signature,
-                                  inverse_index: int,
-                                  requirements: str):
+                                  inverse_index: int):
     PROMPT = f""" Rewrite the given problem, which requires
-    implementing the function {sig.pretty_print()}, so that it
-    requires implementing the function {fiber_sig.pretty_print()}
-    instead. The new function should return the list of **all**
-    possible values of the parameter {sig.params[inverse_index].name}
-    that produce the given output. The revised problem must not
-    include specific examples. Enclose your rewritten problem in
-    <answer> tags.
+    implementing the function {req.signature.pretty_print()}, so that
+    it requires implementing the function {fiber_sig.pretty_print()}
+    instead. The new function should return the exhaustive list of all
+    possible values of the parameter
+    {req.signature.params[inverse_index].name} that produce the given
+    output. The revised problem must not include input-output
+    examples. Enclose your rewritten problem in <answer> tags.
 
     Problem:
-    {requirements}
+    {req.description}
     """
     return extract_answer(next(model.sample(PROMPT)))
-

@@ -94,5 +94,4 @@ class Executor:
                         return Error(report['error_type'], report['error_message'])
                 
             except subprocess.TimeoutExpired:
-                print("Timeout")
                 return Timeout()

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import ast
+from typing import Any, List
 
 from viberate.llm import extract_code
 
@@ -39,7 +40,7 @@ class Signature:
         return Signature(fn_ast.name, params, return_type)
 
     @staticmethod
-    def from_requirements(model, req) -> 'Signature':
+    def from_description(model, desc: str) -> 'Signature':
         PROMPT_CODE = f"""
         For the problem below, write a Python function signature with:
         - Descriptive parameter names
@@ -50,7 +51,7 @@ class Signature:
         Please return only the function definition (with 'pass' as the body) inside a Markdown code block.
 
         Problem:
-        {req}
+        {desc}
         """
         code = extract_code(next(model.sample(PROMPT_CODE)))
         return Signature.from_function_ast(ast.parse(code).body[0])
@@ -60,3 +61,26 @@ class Signature:
 class Program:
     signature: Signature
     code: str
+
+    def __str__(self):
+        return self.code
+
+
+@dataclass
+class ExpectedOutput:
+    value: Any
+
+
+@dataclass
+class Assertion:
+    '''A predicate expression of the arity 1 represented as a string'''
+    code: str
+    
+
+type Oracle = ExpectedOutput | Assertion
+
+
+@dataclass
+class Test:
+    inputs: List[Any]
+    oracle: Oracle
