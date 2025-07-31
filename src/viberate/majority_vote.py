@@ -52,5 +52,6 @@ class MajorityVote(Selector):
                     classes.append(max(classes) + 1)
             outputs.append(results)
 
+        #FIXME: shouldn't select a class with all failed outputs
         largest_class = max(set(classes), key=classes.count)
         return Selected(generated[classes.index(largest_class)])
