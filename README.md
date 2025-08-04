@@ -57,6 +57,10 @@ For example
 For LiveCodeBench v6, first decompress the dataset using
 
     unzip dataset/lcb_part6.json.zip
+    
+A specific task can be specified using `--task`:
+    
+    uv run benchmark --test-venv test_venv/ --dataset datasets/lcb_part6.json --generator Vanilla --model gpt-4o --task atcoder_abc387_b
 
 ## Reproducibility
 

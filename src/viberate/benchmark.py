@@ -129,6 +129,9 @@ def main():
 
     dataset = load_dataset(Path(args.dataset))
 
+    if args.task:
+        dataset = [t for t in dataset if t.id == args.task]
+
     GENERATORS = {
         "Vanilla": Vanilla()
     }
