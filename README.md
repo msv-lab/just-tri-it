@@ -42,7 +42,7 @@ For example
 
 ### Benchmarking
 
-The goal of the benchmarking tool is to benchmark various tool configurations on various code generation datasets and compute comprehensive statistics.
+The goal of the benchmarking tool is to compare various tool configurations on various code generation datasets and compute comprehensive statistics.
 
 To run a benchmark, execute
 
@@ -53,6 +53,10 @@ For example
     uv run benchmark --test-venv test_venv/ --dataset datasets/test.json --generator Vanilla --model gpt-4o
     
     uv run benchmark --test-venv test_venv/ --dataset datasets/test.json --selector MajorityVote --model gpt-4o
+    
+For LiveCodeBench v6, first decompress the dataset using
+
+    unzip dataset/lcb_part6.json.zip
 
 ## Reproducibility
 

@@ -57,8 +57,12 @@ class Signature:
         {desc}
         """
         code = extract_code(next(model.sample(PROMPT_CODE)))
-        return Signature.from_function_ast(ast.parse(code).body[0])
-
+        tree = ast.parse(code)
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                return Signature.from_function_ast(node)
+        raise ValueError("No function definition found in code")        
+ 
 
 @dataclass    
 class Program:

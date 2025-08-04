@@ -1,4 +1,5 @@
 import os
+import copy
 import hashlib
 from pathlib import Path
 from typing import Iterable, Optional, Any
@@ -22,26 +23,20 @@ class ReplicationCacheMiss(Exception):
 
 class Cached(LLM):
     '''This decorator caches responses from an LLM by storing them in
-    a specified directory. The primary behavioral difference between a
-    non-cached and a cached LLM is as follows:
+    a specified directory.  The `replication` argument controls the
+    behavior when a cache miss occurs. If `replication` is `False`,
+    the system queries the LLM to generate a response. If
+    `replication` is `True`, the system raises the exception
+    ReplicationCacheMiss instead of querying the LLM.  `alias` is
+    useful when different providers use different names for the same
+    LLM, or the name contains symbols that cannot be used in
+    filesystem paths. If `stateful` is `False`, each call of sample
+    returns a new iterator through the same sequence. If `stateful` is
+    `True`, each call of sample returns reference to the same
+    iterator.
 
-    - For a non-cached LLM, every call to `sample` generates a new
-      infinite sequence of responses.
-    - For a cached LLM, every call to `sample` returns the same
-      infinite sequence of responses for the same prompt.
-
-    The `replication` argument controls the behavior when a cache
-    miss occurs:
-    - If `replication` is `False`, the system queries the LLM to
-      generate a response.
-    - If `replication` is `True`, the system raises the exception
-      ReplicationCacheMiss instead of querying the LLM.
-
-    `alias` is useful when different providers use different names for
-    the same LLM, or the name contains symbols that cannot be used in
-    filesystem paths.
     '''
-    def __init__(self, llm, cache_root: Path, replication: bool = False, alias: Optional[str] = None):
+    def __init__(self, llm, cache_root: Path, replication: bool = False, alias: Optional[str] = None, stateful=False):
         self.llm = llm
         if alias is not None:
             self.alias = alias
@@ -50,11 +45,12 @@ class Cached(LLM):
         self.replication = replication
         self.cache_root = cache_root
         self.cache_export_root = None
+        self.base_state: dict[str, Any] = dict()
+        self.stateful = stateful
+        self.state: dict[str, Any] = dict()
 
     def _model_dir(self, root: Path):
         return root / f"{self.alias}_{self.llm.temperature}"
-
-    _base_samplers: dict[str, Any] = dict()
 
     def start_slicing(self, d: Path):
         self.cache_export_root = d
@@ -62,10 +58,22 @@ class Cached(LLM):
     def stop_slicing(self):
         self.cache_export_root = None
 
+    def get_stateful(self):
+        new = copy.copy(self)
+        new.base_state = dict() #FIXME: I am not sure about this one
+        new.state = dict()
+        new.stateful = True
+        return new
+
     def sample(self, prompt: str) -> Iterable[str]:
-        if prompt not in Cached._base_samplers:
-            Cached._base_samplers[prompt] = self.llm.sample(prompt)
-        return Cached._LazyCachedSampler(self, prompt)
+        if prompt not in self.base_state:
+            self.base_state[prompt] = self.llm.sample(prompt)
+        if self.stateful:
+            if prompt not in self.state:
+                self.state[prompt] = Cached._LazyCachedSampler(self, prompt)
+            return self.state[prompt]
+        else:
+            return Cached._LazyCachedSampler(self, prompt)
 
     @staticmethod        
     def prompt_id(prompt: str) -> str:
@@ -104,7 +112,7 @@ class Cached(LLM):
             if sample is None:
                 if self.base.replication:
                     raise ReplicationCacheMiss(Cached.prompt_id(self.prompt))
-                sample = next(Cached._base_samplers[self.prompt])
+                sample = next(self.base.base_state[self.prompt])
                 self._write_sample(self.base.cache_root, self.prompt, sample, self.index)
             if self.base.cache_export_root is not None:
                 self._write_sample(self.base.cache_export_root,
@@ -120,6 +128,15 @@ class AI302(LLM):
     def __init__(self, model_name, temperature):
         self.model_name = model_name
         self.temperature = temperature
+
+    def start_slicing(self, d: Path):
+        pass
+
+    def stop_slicing(self):
+        pass
+
+    def get_stateful(self):
+        return self
 
     def sample(self, prompt: str) -> Iterable[str]:
         url = "https://api.302.ai/v1/chat/completions"
@@ -151,6 +168,15 @@ class MockModel(LLM):
         self.model_name = "mock-model"
         self.temperature = 1.0
 
+    def start_slicing(self, d: Path):
+        pass
+
+    def stop_slicing(self):
+        pass
+
+    def get_stateful(self):
+        return self
+
     def sample(self, prompt: str) -> Iterable[str]:
         while True:
             self.queries += 1
@@ -161,7 +187,16 @@ class Human(LLM):
     def __init__(self):
         self.model_name = "human"
         self.temperature = 36.6
+
+    def start_slicing(self, d: Path):
+        pass
+
+    def stop_slicing(self):
+        pass
     
+    def get_stateful(self):
+        return self
+
     def sample(self, prompt: str) -> Iterable[str]:
         while True:
             response = input(f"PROMPT: {prompt}\n")
