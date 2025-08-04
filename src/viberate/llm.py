@@ -157,6 +157,17 @@ class MockModel(LLM):
             yield self.response
 
 
+class Human(LLM):
+    def __init__(self):
+        self.model_name = "human"
+        self.temperature = 36.6
+    
+    def sample(self, prompt: str) -> Iterable[str]:
+        while True:
+            response = input(f"PROMPT: {prompt}\n")
+            yield response
+
+
 class DataExtractionFailure(Exception):
     "Raised when failed to parse LLM output"
     pass    

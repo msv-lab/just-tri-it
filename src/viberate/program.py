@@ -47,8 +47,11 @@ class Signature:
         - Type annotations for all parameters
         - Specified return type
         
-        Notice that the content required to print by the problem is the return value. 
-        Please return only the function definition (with 'pass' as the body) inside a Markdown code block.
+        If the problem description instructs to read from stdin or
+        write to stdout, please ignore. All inputs should be
+        explicitly represented as parameters, and the output as the
+        return value. Please return only the function definition (with
+        'pass' as the body) inside a Markdown code block.
 
         Problem:
         {desc}
@@ -64,6 +67,9 @@ class Program:
 
     def __str__(self):
         return self.code
+
+    def add_imports(self, imports) -> 'Program':
+        return Program(self.signature, imports + "\n" + self.code)
 
 
 @dataclass

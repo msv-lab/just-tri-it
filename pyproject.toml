@@ -14,7 +14,7 @@ dependencies = [
 [project.scripts]
 demo = "viberate.demo:main"
 benchmark = "viberate.benchmark:main"
-preprocess_lcb = "viberate.preprocess_lcb:main"
+preprocess_dataset = "viberate.preprocess_dataset:main"
 
 [build-system]
 requires = ["hatchling"]

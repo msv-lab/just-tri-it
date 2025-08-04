@@ -1,4 +1,5 @@
 import pickle
+import math
 from dataclasses import dataclass
 from pathlib import Path
 import subprocess
@@ -55,11 +56,11 @@ def test_harness(p: Program, input_file: Path, output_file: Path):
     return f"""
 import pickle
 if __name__ == '__main__':
-    with open('{str(input_file)}', 'rb') as f:
-        input = pickle.load(f)
+    with open('{str(input_file)}', 'rb') as __input_file:
+        __input_list = pickle.load(__input_file)
     report = dict()
     try:
-        output = {p.signature.name}(*input)
+        output = {p.signature.name}(*__input_list)
         report['status'] = 'success'
         report['value'] = output
     except Exception as e:
@@ -77,6 +78,7 @@ class Executor:
         self.test_venv = test_venv
 
     def run(self, p: Program, inputs: list[Any]) -> ExecutionOutcome:
+        assert isinstance(inputs, list)
         with TemporaryDirectory() as tmp:
             exec_dir = Path(tmp)
             input_file = exec_dir / 'input.pkl'
@@ -116,7 +118,9 @@ class Executor:
             case Success(actual):
                 match t.oracle:
                     case ExpectedOutput(expected):
-                        if actual == expected:
+                        if isinstance(actual, float) and isinstance(expected, float) and math.isclose(actual, expected):
+                            return Pass()
+                        elif actual == expected:
                             return Pass()
                         else:
                             return Fail()

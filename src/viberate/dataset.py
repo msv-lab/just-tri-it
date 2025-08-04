@@ -3,6 +3,9 @@ from typing import List, Any
 from pathlib import Path
 import ast
 import json
+import zlib
+import pickle
+import base64
 
 from viberate.program import Test, Signature, ExpectedOutput, Assertion
 from viberate.requirements import Requirements
@@ -17,6 +20,23 @@ class Task:
 
 
 type Dataset = List[Task]
+
+
+# compression method from LiveCodeBench
+def lcb_decompress(s: str) -> Any:
+    return pickle.loads(
+        zlib.decompress(
+            base64.b64decode(s.encode("utf-8"))
+        )
+    )
+
+
+def lcb_compress(obj: Any) -> str:
+    return base64.b64encode(
+        zlib.compress(
+            pickle.dumps(obj)
+        )
+    ).decode("utf-8")
 
 
 def load_dataset(file: Path) -> Dataset:
@@ -50,7 +70,7 @@ def load_dataset(file: Path) -> Dataset:
     for task in data:
         sig_str = task["requirements"]["signature"]
         code = f"""
-def {sig_str}:
+{sig_str}:
    pass
         """
         tree = ast.parse(code)
@@ -60,7 +80,11 @@ def {sig_str}:
         requirements = Requirements(signature, description)
 
         tests = []
-        for t in task["tests"]:
+        if isinstance(task["tests"], str):
+            test_data = lcb_decompress(task["tests"])
+        else:
+            test_data = task["tests"]
+        for t in test_data:
             inputs = t["inputs"]
             oracle_d = t["oracle"]
             if oracle_d["type"] == "expected_output":
@@ -81,7 +105,7 @@ def {sig_str}:
     return tasks
 
 
-def save_dataset(dataset: List[Task], file: Path) -> None:
+def save_dataset(dataset: List[Task], file: Path, compress=False):
     data = []
 
     for task in dataset:
@@ -112,7 +136,7 @@ def save_dataset(dataset: List[Task], file: Path) -> None:
         task_dict = {
             "id": task.id,
             "requirements": requirements,
-            "tests": tests,
+            "tests": tests if not compress else lcb_compress(tests),
             "metadata": task.metadata
         }
         data.append(task_dict)

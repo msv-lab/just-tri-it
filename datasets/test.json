@@ -1,8 +1,8 @@
 [
     {
-        "id": "0000",
+        "id": "0_fibonacci",
         "requirements": {
-            "signature": "f(n: int) -> int",
+            "signature": "def f(n: int) -> int",
             "description": "implement a Fibonacci function"
         },
         "tests": [
