@@ -11,7 +11,7 @@ from viberate.executor import Executor, Pass, Fail
 from viberate.dataset import Dataset, load_dataset
 from viberate.code_generator import Vanilla, Generator, Selector
 from viberate.majority_vote import MajorityVote
-
+from viberate.codet import CodeT
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -137,7 +137,8 @@ def main():
     }
 
     SELECTORS = {
-        "MajorityVote": MajorityVote(executor, Vanilla(), 5)
+        "MajorityVote": MajorityVote(executor, Vanilla(), 5),
+        "CodeT": CodeT(executor, Vanilla(), 5, 5)
     }
 
     if args.generator:
