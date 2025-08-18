@@ -1,12 +1,15 @@
 # This example can be executed with `uvx pytest example.py`
-
+import hashlib
+import json
 from dataclasses import dataclass
 from functools import partial
+import random
 from typing import Union, Set, Dict, List, Optional, Callable, Any, Iterable
 
 import math
 
-from viberate.executor import Success
+from viberate.code_generator import generate_specific_code
+from viberate.executor import Success, Timeout
 
 
 # This code defines classes representing propositional logic formulas:
@@ -97,32 +100,6 @@ def is_satisfiable(f: Formula) -> Optional[Dict[str, bool]]:
     return inner(0, {})
 
 
-def test_satisfiable():
-    # (A ∨ B) ∧ (¬A ∨ ¬B)
-    formula = And(
-        Or(Var('A'), Var('B')),
-        Or(Not(Var('A')), Not(Var('B')))
-    )
-
-    assert is_satisfiable(formula)
-
-
-def test_unsatisfiable():
-    # (A ∨ B) ∧ (¬A ∨ ¬B) ∧ (¬A ∨ B) ∧ (A ∨ ¬B)
-    formula = And(
-        And(
-            Or(Var('A'), Var('B')),
-            Or(Not(Var('A')), Not(Var('B')))
-        ),
-        And(
-            Or(Not(Var('A')), Var('B')),
-            Or(Var('A'), Not(Var('B')))
-        )
-    )
-
-    assert not is_satisfiable(formula)
-
-
 # Now, we extend it to first-order logic. First-order logic formulas are
 # constructed from predicates applied to Terms (`Term`) that can be
 # variables (`Var`), constants (`Const`), or function applications
@@ -149,6 +126,12 @@ class FuncList:
     args: List['Term']
     enum_arg: 'Term'
 
+
+class UnknownValue:
+    pass
+
+
+UNKNOWN = UnknownValue()
 
 Term = Union[Var, Const, Func, FuncList]
 
@@ -205,52 +188,69 @@ class Interpretation:
     preds: Dict[str, tuple[int, Callable[..., bool]]]
 
 
-def eval_term(term: Term, interp: Interpretation, env: Dict[str, Any]) -> Any:
-    match term:
-        case Var(name):
-            return env[name]
-        case Const(name):
-            return interp.consts[name]
-        case Func(name, args):
-            arity, f = interp.funcs[name]
-            argvals = [eval_term(arg, interp, env) for arg in args]
-            print("run " + name + " argvals are")
-            print(argvals)
-            if len(argvals) != arity:
-                raise ValueError(f"Function {name} expects {arity} arguments")
-            outcome = f(argvals)
-            # return outcome
-            match outcome:
-                case Success(output):
-                    print("answer")
-                    print(output)
-                    return output
-                case _:
-                    print("Facing error or panic or timeout!")
-                    print(outcome)
-                    return False
-        case FuncList(name, index, args, enum_arg):
-            answer = []
-            enum_ele = eval_term(enum_arg, interp, env)
-            print(enum_ele)
-            for ele in enum_ele:
-                new_args = args.copy()
-                new_args[index] = Var("temp")
-                new_env = env.copy()
-                new_env["temp"] = ele
-                outcome = eval_term(Func(name, new_args), interp, new_env)
-                if outcome not in answer:
-                    answer.append(outcome)
-            return answer
+# def eval_term(term: Term, interp: Interpretation, env: Dict[str, Any]) -> Any:
+#     match term:
+#         case Var(name):
+#             return env[name]
+#         case Const(name):
+#             return interp.consts[name]
+#         case Func(name, args):
+#             arity, f = interp.funcs[name]
+#             argvals = []
+#             for arg in args:
+#                 new_val = eval_term(arg, interp, env)
+#                 if new_val == UNKNOWN:
+#                     return UNKNOWN
+#                 argvals.append(new_val)
+#             print("run " + name + " argvals are")
+#             print(argvals)
+#             if len(argvals) != arity:
+#                 raise ValueError(f"Function {name} expects {arity} arguments")
+#             outcome = f(argvals)
+#             # return outcome
+#             match outcome:
+#                 case Success(output):
+#                     print("answer")
+#                     print(output)
+#                     return output
+#                 case Timeout():
+#                     return UNKNOWN
+#                 case _:
+#                     print("Facing error or panic or timeout!")
+#                     print(outcome)
+#                     return False
+#         case FuncList(name, index, args, enum_arg):
+#             answer = []
+#             enum_ele = eval_term(enum_arg, interp, env)
+#             if enum_ele == UNKNOWN:
+#                 return UNKNOWN
+#             if len(enum_ele) > 10:
+#                 enum_ele = random.sample(enum_ele, 10)
+#             for ele in enum_ele:
+#                 new_args = args.copy()
+#                 new_args[index] = Var("temp")
+#                 new_env = env.copy()
+#                 new_env["temp"] = ele
+#                 outcome = eval_term(Func(name, new_args), interp, new_env)
+#                 if outcome == UNKNOWN:
+#                     continue
+#                 if outcome not in answer:
+#                     answer.append(outcome)
+#             return answer
 
 
 # This function assume that there are no free variables in the formula:
 
-def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any]) -> bool:
+def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any], cache=None) -> bool:
     match formula:
         case Pred(name, args):
             arity, p = interp.preds[name]
-            argvals = [eval_term(arg, interp, env) for arg in args]
+            argvals = []
+            for arg in args:
+                new_val = eval_term_cache(arg, interp, env, cache)
+                if new_val == UNKNOWN:
+                    return True
+                argvals.append(new_val)
             print(name, argvals)
             if len(argvals) != arity:
                 raise ValueError(f"Predicate {name} expects {arity} arguments")
@@ -287,126 +287,95 @@ def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any
             return False
 
 
-def test_first_order_true():
-    interp = Interpretation(
-        domain={(1,), (2,)},
-        consts={"a": 1},
-        funcs={},
-        preds={
-            "P": (1, lambda x: x == 2),
-            "Q": (1, lambda x: x == 1),
-        },
-    )
-    # ∀x. (x == 2 ∨ a == 1)
-    formula = ForAll(Var("x"), Or(Pred("P", [Var("x")]), Pred("Q", [Const("a")])))
-    assert is_formula_true(formula, interp, {})
+def term_to_id(term: Term, env: Dict[str, Any], interp: Interpretation) -> str:
+    def encode(t: Term):
+        match t:
+            case Var(name):
+                return {"Var": (name, env.get(name))}
+            case Const(name):
+                return {"Const": (name, interp.consts.get(name))}
+            case Func(name, args):
+                return {"Func": (name, [encode(arg) for arg in args])}
+            case FuncList(name, index, args, enum_arg):
+                return {"FuncList": (name, index,
+                                     [encode(arg) for arg in args],
+                                     encode(enum_arg))}
+            case _:
+                return {"Unknown": str(t)}
+
+    raw = json.dumps(encode(term), sort_keys=True)
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
-def test_first_order_false():
-    interp = Interpretation(
-        domain={(1,), (2,)},
-        consts={},
-        funcs={},
-        preds={
-            "P": (2, lambda x, y: x == y)
-        },
-    )
-    # ∀x. ∀y. (x == y)
-    formula = ForAll(Var("x"),
-                     ForAll(Var("y"),
-                            Pred("P", [Var("x"), Var("y")])))
-    assert not is_formula_true(formula, interp, {})
+def eval_term_cache(term: Term,
+                    interp: Interpretation,
+                    env: Dict[str, Any],
+                    cache: Optional[Dict[str, Any]] = None) -> Any:
+    if cache is None:
+        cache = {}
+
+    key = term_to_id(term, env, interp)
+
+    if key in cache:
+        return cache[key]
+
+    match term:
+        case Var(name):
+            result = env[name]
+        case Const(name):
+            result = interp.consts[name]
+        case Func(name, args):
+            arity, f = interp.funcs[name]
+            argvals = []
+            for arg in args:
+                new_val = eval_term_cache(arg, interp, env, cache)
+                if new_val == UNKNOWN:
+                    return UNKNOWN
+                argvals.append(new_val)
+            if len(argvals) != arity:
+                raise ValueError(f"Function {name} expects {arity} arguments")
+            outcome = f(argvals)
+            match outcome:
+                case Success(output):
+                    result = output
+                case Timeout():
+                    return UNKNOWN
+                case _:
+                    result = False
+        case FuncList(name, index, args, enum_arg):
+            answer = []
+            enum_ele = eval_term_cache(enum_arg, interp, env, cache)
+            if enum_ele == UNKNOWN:
+                return UNKNOWN
+            if len(enum_ele) > 10:
+                enum_ele = random.sample(enum_ele, 10)
+            for ele in enum_ele:
+                new_args = args.copy()
+                new_args[index] = Var("temp")
+                new_env = env.copy()
+                new_env["temp"] = ele
+                outcome = eval_term_cache(Func(name, new_args), interp, new_env, cache)
+                if outcome == UNKNOWN:
+                    continue
+                if outcome not in answer:
+                    answer.append(outcome)
+            result = answer
+        case _:
+            result = UNKNOWN
+
+    if result != UNKNOWN:
+        cache[key] = result
+    return result
 
 
-def add(inputs):
-    x = inputs[0]
-    y = inputs[1]
-    return x + y
-
-
-def sub(inputs):
-    x = inputs[0]
-    y = inputs[1]
-    return x - y
-
-
-# def test_for_inv_property(executor, forward, inverse, arity, generated_inputs, inverse_index):
-def test_for_inv_property_demo(arity=2, inverse_index=0):
-    interp = Interpretation(
-        domain={(1, 2), (2, 3)},
-        # generated_inputs,
-        consts={},
-        funcs={
-            "f": (arity, add),
-            # "f": (arity, partial(executor.run, forward)),
-            "g": (arity, sub)
-            # "g": (arity, partial(executor.run, inverse))
-        },
-        preds={
-            "Equals": (2, lambda x, y: x == y)
-        }
-    )
-    all_arg = []
-    for i in range(arity):
-        all_arg.append(Var(f"x_{i}"))
-    new_arg = all_arg[:inverse_index] + all_arg[inverse_index + 1:]
-    formula = ForAll(VarList("all_x", all_arg),
-                     Pred("Equals", [
-                         Var(f"x_{inverse_index}"),  # x_i
-                         Func("g", [Func("f", all_arg.copy())] + new_arg.copy())  # g(...)
-                     ])
-                     )
-    assert is_formula_true(formula, interp, {})
-
-
-def test_for_inv_property(executor, forward, inverse, arity, generated_inputs, inverse_index):
-    generated_inputs = list(tuple(sublist) for sublist in generated_inputs)
-    interp = Interpretation(
-        domain=generated_inputs,
-        # generated_inputs,
-        consts={},
-        funcs={
-            "f": (arity, partial(executor.run, forward)),
-            "g": (arity, partial(executor.run, inverse))
-        },
-        preds={
-            "Equals": (2, lambda x, y: x == y)
-        }
-    )
-    all_arg = []
-    for i in range(arity):
-        all_arg.append(Var(f"x_{i}"))
-    new_arg = all_arg[:inverse_index] + all_arg[inverse_index + 1:]
-    formula = ForAll(VarList("all_x", all_arg),
-                     Pred("Equals", [
-                         Var(f"x_{inverse_index}"),  # x_i
-                         Func("g", [Func("f", all_arg.copy())] + new_arg.copy())  # g(...)
-                     ])
-                     )
-    return is_formula_true(formula, interp, {})
-
-
-def square(inputs):
-    x = inputs[0]
-    return x * x
-
-
-def inverse_square(inputs):
-    x = inputs[0]
-    if x == 0:
-        return [0]
-    else:
-        return [math.sqrt(x), -math.sqrt(x)]
-
-
-def test_for_fib_property(executor, forward, fiber, arity, generated_inputs, inverse_index):
+def general_checker(formula, executor, program_1, program_2, arity, generated_inputs):
     generated_inputs = list(tuple(sublist) for sublist in generated_inputs)
     interp = Interpretation(
         domain=generated_inputs,
         consts={},
         funcs={
-            "f": (arity, partial(executor.run, forward)),
-            "g": (arity, partial(executor.run, fiber))
+            "f": (arity, partial(executor.run, program_1)),
+            "g": (arity, partial(executor.run, program_2))
         },
         preds={
             "Equals": (2, lambda x, y: x == y),
@@ -414,21 +383,22 @@ def test_for_fib_property(executor, forward, fiber, arity, generated_inputs, inv
             "Includes": (2, lambda x, y: x in y if isinstance(y, Iterable) else False)
         }
     )
-    all_arg = []
-    for i in range(arity):
-        all_arg.append(Var(f"x_{i}"))
-    new_arg = all_arg[:inverse_index] + all_arg[inverse_index + 1:]
-    formula = ForAll(VarList("all_x", all_arg),
-                     And(
-                         Pred("Includes", [
-                             Var(f"x_{inverse_index}"),  # x_i
-                             Func("g", [Func("f", all_arg.copy())] + new_arg.copy())  # g(...)
-                         ]),
-                         Pred("Equals_set", [
-                             Func("f", all_arg.copy()),
-                             FuncList("f", inverse_index, all_arg.copy(), Func("g", [Func("f", all_arg.copy())]
-                                                                               + new_arg.copy()))
-                         ])
-                     )
-                     )
-    return is_formula_true(formula, interp, {})
+    return is_formula_true(formula, interp, {}, {})
+
+
+def new_general_checker(formula, executor, program_1, arity, generated_inputs, model, req, choice, num, n2):
+    generated_inputs = list(tuple(sublist) for sublist in generated_inputs)
+    interp = Interpretation(
+        domain=generated_inputs,
+        consts={},
+        funcs={
+            "f": (arity, partial(executor.run, program_1)),
+            "g": (arity, partial(generate_specific_code, executor, model, req, choice, num, n2))
+        },
+        preds={
+            "Equals": (2, lambda x, y: x == y),
+            "Equals_set": (2, lambda x, y: [x] == y),
+            "Includes": (2, lambda x, y: x in y if isinstance(y, Iterable) else False)
+        }
+    )
+    return is_formula_true(formula, interp, {}, {})

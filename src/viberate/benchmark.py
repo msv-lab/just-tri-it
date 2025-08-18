@@ -4,13 +4,14 @@ from pathlib import Path
 from itertools import islice
 from typing import List
 
-from viberate.llm import Cached, AI302, LLM
+from viberate.checker import select
+from viberate.llm import Cached, AI302, LLM, XMCP
 from viberate.program import Program, Test
-from viberate.utils import print_annotated_hr
 from viberate.executor import Executor, Pass, Fail
 from viberate.dataset import Dataset, load_dataset
 from viberate.code_generator import Vanilla, Generator, Selector
 from viberate.majority_vote import MajorityVote
+from viberate.utils import print_annotated_hr
 
 
 def parse_args():
@@ -104,10 +105,35 @@ def evaluate_selector(model: LLM, executor: Executor, selector: Selector, datase
             print(f"Task {task.id}: failed")
 
 
+def evaluate_vb(executor, model, dataset, n1, n2):
+    for task in dataset:
+        program_num, program_list, decision, pairs = select(executor, model, task.requirements, n1, n2)
+        if decision:
+            print_annotated_hr(f"Selected")
+            print(pairs)
+            for index, program in enumerate(program_list):
+                if index in program_num:
+                    print(f"Program {index} is selected", file=sys.stderr)
+                else:
+                    print(f"Program {index} is not selected", file=sys.stderr)
+                if passes_tests(executor, program, task.tests):
+                    print(f"Task {task.id}: solved", file=sys.stderr)
+                else:
+                    print(f"Task {task.id}: failed", file=sys.stderr)
+        else:
+            print_annotated_hr(f"Abstained")
+            for program in program_list:
+                if passes_tests(executor, program, task.tests):
+                    print(f"Task {task.id}: solved", file=sys.stderr)
+                else:
+                    print(f"Task {task.id}: failed", file=sys.stderr)
+
+
 def main():
     args = parse_args()
     
     model = AI302(args.model, 1.0)
+    # model = XMCP(args.model, 1.0)
 
     if not args.no_cache:
         if args.cache_root:
@@ -144,6 +170,8 @@ def main():
         evaluate_generator(model, executor, GENERATORS[args.generator], dataset)
     if args.selector:
         evaluate_selector(model, executor, SELECTORS[args.selector], dataset)
+
+    evaluate_vb(executor, model, dataset, 5, 5)
 
 
 if __name__ == "__main__":

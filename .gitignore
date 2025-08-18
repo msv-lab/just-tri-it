@@ -1,2 +1,4 @@
 .idea/
 __pycache__/
+datasets/lcb_part6.json
+datasets/lcb_try

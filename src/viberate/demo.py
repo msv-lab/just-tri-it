@@ -48,7 +48,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    model_name = "gpt-4o"
+    model_name = "gpt-5"
     model = AI302(model_name, 1.0)
 
     if not args.no_cache:
@@ -76,13 +76,10 @@ def main():
 
     requirements = Requirements.from_description(model, description)
 
-    resonating = select(executor, model, requirements, n1, n2)
-    if len(resonating) > 0:
-        print_annotated_hr("Forward function")
-        print(resonating[0][0].code, file=sys.stderr)
-        print_annotated_hr("Resonates with")
-        print(resonating[0][1].code, file=sys.stderr)
+    sel_num, all_code, result, resonating = select(executor, model, requirements, n1, n2)
+    if result:
         print("Result: selected")
+        print(sel_num)
     else:
         print("Result: abstain")
 

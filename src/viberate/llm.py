@@ -140,6 +140,7 @@ class AI302(LLM):
 
     def sample(self, prompt: str) -> Iterable[str]:
         url = "https://api.302.ai/v1/chat/completions"
+        print("sample sample sample sample")
 
         payload = json.dumps({
             "model": self.model_name,
@@ -153,6 +154,44 @@ class AI302(LLM):
         headers = {
             'Accept': 'application/json',
             'Authorization': 'Bearer ' + os.environ['AI302_API_KEY'],
+            'Content-Type': 'application/json'
+        }
+
+        while True:
+            raw_response = requests.request("POST", url, headers=headers, data=payload)
+            yield json.loads(raw_response.text)["choices"][0]["message"]["content"]
+
+
+class XMCP(LLM):
+
+    def __init__(self, model_name, temperature):
+        self.model_name = model_name
+        self.temperature = temperature
+
+    def start_slicing(self, d: Path):
+        pass
+
+    def stop_slicing(self):
+        pass
+
+    def get_stateful(self):
+        return self
+
+    def sample(self, prompt: str) -> Iterable[str]:
+        url = "https://llm.xmcp.ltd/chat/completions"
+
+        payload = json.dumps({
+            "model": self.model_name,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        })
+        headers = {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer ' + os.environ['XMCP_API_KEY_UNLIMITED'],
             'Content-Type': 'application/json'
         }
 
