@@ -11,7 +11,7 @@ from viberate.requirements import (
     Requirements
 )
 from viberate.utils import print_annotated_hr
-from viberate.llm import LLM
+from viberate.cached_llm import Model
 from viberate.logic import Var, VarList, ForAll, Pred, Func, And, FuncList, general_checker, new_general_checker
 
 
@@ -77,7 +77,7 @@ from viberate.logic import Var, VarList, ForAll, Pred, Func, And, FuncList, gene
 #     return True
 
 
-def select(executor, model: LLM, req: Requirements, n1: int, n2: int):
+def select(executor, model: Model, req: Requirements, n1: int, n2: int):
     forward_programs = islice(Vanilla().generate(model, req), n1)
 
     inverse_index = choose_parameter_to_invert(model, req)

@@ -15,7 +15,8 @@ import jsonlines
 from viberate.dataset import Dataset
 from viberate.utils import panic
 from viberate.requirements import Requirements
-from viberate.llm import LLM, Cached, AI302, Human, extract_code, extract_answer
+from viberate.cached_llm import Model, Persistent, Independent, AI302
+from viberate.utils import extract_code, extract_answer
 from viberate.program import Signature, Test, Parameter, Program, ExpectedOutput
 from viberate.executor import Executor, Success
 from viberate.dataset import Task, Dataset, save_dataset, load_dataset, lcb_compress, lcb_decompress
@@ -99,14 +100,14 @@ def main():
         else:
             cache_root = Path.home() / ".viberate_cache"
         if args.replicate:
-            model = Cached(model, cache_root, replication=True)
+            model = Persistent(model, cache_root, replication=True)
         else:
-            model = Cached(model, cache_root)
+            model = Persistent(model, cache_root)
 
     if not args.no_cache and args.export_cache:
         export_root = Path(args.export_cache)
         export_root.mkdir(parents=True, exist_ok=True)
-        model.start_slicing(export_root)
+        model = Persistent(model, export_root)
             
     test_venv = Path(args.test_venv)
     executor = Executor(test_venv)
@@ -202,7 +203,7 @@ def strip_multiline(s: str) -> str:
     return "\n".join([line.strip() for line in s.splitlines() if line.strip()])
 
 
-def lcb_generate_input_formatter(model: LLM, req: Requirements):
+def lcb_generate_input_formatter(model: Model, req: Requirements):
     formatter_sig = Signature("format_input", req.signature.params, "str")
     solution_sig = Signature(req.signature.name, [Parameter("s", "str")], "str")
 
@@ -253,7 +254,7 @@ def lcb_input_sanity_check(executor: Executor, formatter: Program, stdin: str, p
             raise FailedToConvertAutomatically(f"failed to execute input sanity check: {result}")
 
 
-def lcb_generate_output_formatter(model: LLM, req: Requirements) -> Program:
+def lcb_generate_output_formatter(model: Model, req: Requirements) -> Program:
     formatter_sig = Signature("format_output", [Parameter("value", req.signature.return_type)], "str")
 
     PROMPT=f"""I have developed a program to solve the problem
@@ -302,7 +303,7 @@ def lcb_output_sanity_check(executor: Executor, formatter: Program, stdout: str,
             raise FailedToConvertAutomatically(f"failed to execute output sanity check: {result}")
 
 
-def lcb_generate_input_parser(model: LLM, req: Requirements):
+def lcb_generate_input_parser(model: Model, req: Requirements):
     parser_sig = Signature("parse_input", [Parameter("s", "str")], req.signature.return_type)
     
     PROMPT=f"""Given the problem description below, I have already
@@ -350,7 +351,7 @@ def lcb_parse_stdin_inputs(executor: Executor, parser: Program, stdin: str) -> l
             raise FailedToConvertAutomatically(f"failed to extract parameters: {result}")
 
 
-def lcb_generate_output_parser(model: LLM, req: Requirements):
+def lcb_generate_output_parser(model: Model, req: Requirements):
     parser_sig = Signature("parse_output", [Parameter("output_str", "str")], req.signature.return_type)
 
     PROMPT_PARSER=f"""I have developed a program to solve the problem
@@ -388,7 +389,7 @@ def lcb_parse_stdout_output(executor: Executor, parser: Program, stdout: str) ->
             raise FailedToConvertAutomatically(f"failed to parse output: {result}")
 
 
-def lcb_convert(model: LLM,
+def lcb_convert(model: Model,
                 executor: Executor,
                 input_file: Path,
                 output_file: Path) -> Dataset:
@@ -406,14 +407,14 @@ def lcb_convert(model: LLM,
                 continue
             print(f"converting {unique_id}")
             NUM_ATTEMPTS = 3
-            stateful_model = model.get_stateful()
+            ind_model = Independent(model)
             for attempt in range(NUM_ATTEMPTS):
                 try:
                     if entry["starter_code"] != "":
                         signature = lcb_signature_from_starter_code(entry["starter_code"])
                         req = Requirements(signature, entry["question_content"])
                     else:
-                        req = Requirements.from_description(stateful_model, entry["question_content"])
+                        req = Requirements.from_description(ind_model, entry["question_content"])
                     tests = []
                     test_data = json.loads(entry["public_test_cases"])
                     test_data.extend(json.loads(lcb_decompress(entry["private_test_cases"])))
@@ -424,10 +425,10 @@ def lcb_convert(model: LLM,
                     for t in test_data:
                         if t["testtype"] == "stdin":
                             if input_parser is None:
-                                input_parser = lcb_generate_input_parser(stateful_model, req)
-                                output_parser = lcb_generate_output_parser(stateful_model, req)
-                                input_formatter = lcb_generate_input_formatter(stateful_model, req)
-                                output_formatter = lcb_generate_output_formatter(stateful_model, req)
+                                input_parser = lcb_generate_input_parser(ind_model, req)
+                                output_parser = lcb_generate_output_parser(ind_model, req)
+                                input_formatter = lcb_generate_input_formatter(ind_model, req)
+                                output_formatter = lcb_generate_output_formatter(ind_model, req)
                             i = lcb_parse_stdin_inputs(executor, input_parser, t["input"])
                             lcb_input_sanity_check(executor, input_formatter, t["input"], i)
                             o = lcb_parse_stdout_output(executor, output_parser, t["output"])

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import ast
 from typing import Any, List
 
-from viberate.llm import extract_code
+from viberate.utils import extract_code
 
 
 @dataclass

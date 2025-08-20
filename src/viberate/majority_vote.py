@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from itertools import islice
 
-from viberate.llm import LLM
 from viberate.executor import Executor, Success
 from viberate.requirements import Requirements
 from viberate.input_generator import generate_inputs

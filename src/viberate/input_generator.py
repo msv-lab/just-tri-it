@@ -3,7 +3,7 @@ import re
 import sys
 
 from viberate.executor import Success
-from viberate.llm import extract_code
+from viberate.utils import extract_code
 from viberate.program import Program
 from viberate.utils import print_annotated_hr
 

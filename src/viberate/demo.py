@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 
-from viberate.llm import Cached, AI302
+from viberate.cached_llm import Persistent, AI302
 from viberate.checker import select
 from viberate.utils import print_annotated_hr
 from viberate.executor import Executor
@@ -57,14 +57,14 @@ def main():
         else:
             cache_root = Path.home() / ".viberate_cache"
         if args.replicate:
-            model = Cached(model, cache_root, replication=True)
+            model = Persistent(model, cache_root, replication=True)
         else:
-            model = Cached(model, cache_root)
+            model = Persistent(model, cache_root)
 
     if not args.no_cache and args.export_cache:
         export_root = Path(args.export_cache)
         export_root.mkdir(parents=True, exist_ok=True)
-        model.start_slicing(export_root)
+        model = Persistent(model, export_root)
             
     test_venv = Path(args.test_venv)
     executor = Executor(test_venv)

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from itertools import islice
 from typing import Iterator, List, Tuple
 
-from viberate.llm import LLM
+from viberate.cached_llm import Model
 from viberate.executor import Executor, Success
 from viberate.requirements import Requirements
 from viberate.input_generator import generate_inputs
@@ -22,7 +22,7 @@ class CodeT(Selector):
         self.n = n
         self.m = m
 
-    def generate_and_select(self, model: LLM, req: Requirements) -> SelectionOutcome:
+    def generate_and_select(self, model: Model, req: Requirements) -> SelectionOutcome:
 
         programs = list(islice(self.generator.generate(model, req), self.n))
         inputs = list(islice(generate_inputs(model, req), self.m))

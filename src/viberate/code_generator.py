@@ -4,7 +4,7 @@ from itertools import islice
 from typing import Iterable
 from abc import ABC, abstractmethod
 
-from viberate.llm import extract_code
+from viberate.utils import extract_code
 from viberate.program import Signature, Program
 from viberate.requirements import Requirements, specific_requirements
 

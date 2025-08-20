@@ -5,7 +5,7 @@ from itertools import islice
 from typing import List
 
 from viberate.checker import select
-from viberate.llm import Cached, AI302, LLM, XMCP
+from viberate.cached_llm import Model, Persistent, AI302, XMCP
 from viberate.program import Program, Test
 from viberate.executor import Executor, Pass, Fail
 from viberate.dataset import Dataset, load_dataset
@@ -83,7 +83,7 @@ def passes_tests(executor: Executor, program: Program, tests: List[Test]) -> boo
     return ok
 
 
-def evaluate_generator(model: LLM, executor: Executor, generator: Generator, dataset: Dataset):
+def evaluate_generator(model: Model, executor: Executor, generator: Generator, dataset: Dataset):
     N = 5
     for task in dataset:
         programs = islice(generator.generate(model, task.requirements), N)
@@ -96,7 +96,7 @@ def evaluate_generator(model: LLM, executor: Executor, generator: Generator, dat
         print(f"Task {task.id} pass@1: {sum(results)/len(results)}")
 
 
-def evaluate_selector(model: LLM, executor: Executor, selector: Selector, dataset: Dataset):
+def evaluate_selector(model: Model, executor: Executor, selector: Selector, dataset: Dataset):
     for task in dataset:
         program = selector.generate_and_select(model, task.requirements).program
         if passes_tests(executor, program, task.tests):
