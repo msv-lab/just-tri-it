@@ -141,9 +141,9 @@ def main():
         else:
             cache_root = Path.home() / ".viberate_cache"
         if args.replicate:
-            model = Cached(model, cache_root, replication=True)
+            model = Persistent(model, cache_root, replication=True)
         else:
-            model = Cached(model, cache_root)
+            model = Persistent(model, cache_root)
 
     if not args.no_cache and args.export_cache:
         export_root = Path(args.export_cache)
