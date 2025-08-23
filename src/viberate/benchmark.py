@@ -13,6 +13,8 @@ from viberate.code_generator import Vanilla, Generator, Selector
 from viberate.majority_vote import MajorityVote
 from viberate.utils import print_annotated_hr
 from viberate.codet import CodeT
+from viberate.vb_selector import VibeRate
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -106,8 +108,9 @@ def evaluate_selector(model: Model, executor: Executor, selector: Selector, data
 
 
 def evaluate_vb(executor, model, dataset, n1, n2):
+    vb = VibeRate(executor, Vanilla(), n1, n2)
     for task in dataset:
-        program_num, program_list, decision, pairs = select(executor, model, task.requirements, n1, n2)
+        program_num, program_list, decision, pairs = vb.generate_and_select(model, task.requirements)
         if decision:
             print_annotated_hr(f"Selected")
             print(pairs)

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from viberate.cached_llm import Persistent, AI302
 from viberate.code_generator import Vanilla
-from viberate.new_version import VibeRate
+from viberate.vb_selector import VibeRate
 from viberate.executor import Executor
 from viberate.requirements import Requirements
 
