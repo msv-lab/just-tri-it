@@ -348,19 +348,3 @@ def checker(formula: Formula, funcs: list[Callable], arity):
         }
     )
     return is_formula_true(formula, interp, {}, {})
-
-
-def new_general_checker(formula, executor, program_1, arity, model, req, choice, num, n2):
-    interp = Interpretation(
-        consts={},
-        funcs={
-            "f": (arity, partial(executor.run, program_1)),
-            "g": (arity, partial(generate_specific_code, executor, model, req, choice, num, n2))
-        },
-        preds={
-            "Equals": (2, lambda x, y: x == y),
-            "Equals_set": (2, lambda x, y: [x] == y),
-            "Includes": (2, lambda x, y: x in y if isinstance(y, Iterable) else False)
-        }
-    )
-    return is_formula_true(formula, interp, {}, {})

@@ -4,7 +4,6 @@ from pathlib import Path
 from itertools import islice
 from typing import List
 
-from viberate.checker import select
 from viberate.cached_llm import Model, Persistent, AI302, XMCP
 from viberate.program import Program, Test
 from viberate.executor import Executor, Pass, Fail
