@@ -176,14 +176,13 @@ def specific_requirements(model, fiber_req, fiber_input, choice):
     {fiber_req.description}
     """
     revised_question = extract_answer(next(model.sample(REMOVE_PROMPT)))
-    match choice:
-        case 'fiber':
-            complete_question = (revised_question + "\n" + specific_question +
-                                 " Please return all possible answers in a list.")
-        case 'inverse':
-            complete_question = revised_question + "\n" + specific_question
-        case _:
-            complete_question = None
+    if 'fiber' in choice:
+        complete_question = (revised_question + "\n" + specific_question +
+                             " Please return all possible answers in a list.")
+    elif 'inverse' in choice:
+        complete_question = revised_question + "\n" + specific_question
+    else:
+        complete_question = None
     print(complete_question)
     new_sig = Signature(fiber_req.signature.name, [], fiber_req.signature.return_type)
     return Requirements(new_sig, complete_question)

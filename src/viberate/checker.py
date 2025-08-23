@@ -12,7 +12,7 @@ from viberate.requirements import (
 )
 from viberate.utils import print_annotated_hr
 from viberate.cached_llm import Model
-from viberate.logic import Var, VarList, ForAll, Pred, Func, And, FuncList, general_checker, new_general_checker
+from viberate.logic import Var, ForAll, Pred, Func, And, FuncList, new_general_checker
 
 
 # def check_for_inv(executor, forward, inverse, forward_inputs, arg_index):

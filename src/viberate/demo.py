@@ -1,11 +1,10 @@
 import argparse
-import sys
 from pathlib import Path
 
 
 from viberate.cached_llm import Persistent, AI302
-from viberate.checker import select
-from viberate.utils import print_annotated_hr
+from viberate.code_generator import Vanilla
+from viberate.new_version import VibeRate
 from viberate.executor import Executor
 from viberate.requirements import Requirements
 
@@ -48,7 +47,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    model_name = "gpt-5"
+    model_name = "gpt-4o"
     model = AI302(model_name, 1.0)
 
     if not args.no_cache:
@@ -73,10 +72,9 @@ def main():
         description = f.read()
 
     n1, n2 = 5, 5
-
     requirements = Requirements.from_description(model, description)
-
-    sel_num, all_code, result, resonating = select(executor, model, requirements, n1, n2)
+    viberate = VibeRate(executor, Vanilla(), n1, n2)
+    sel_num, all_code, result, resonating = viberate.generate_and_select(model, requirements)
     if result:
         print("Result: selected")
         print(sel_num)

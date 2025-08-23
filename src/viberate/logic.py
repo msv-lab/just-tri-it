@@ -5,27 +5,13 @@ from dataclasses import dataclass
 from functools import partial
 import random
 from typing import Union, Set, Dict, List, Optional, Callable, Any, Iterable
-
-import math
-
 from viberate.code_generator import generate_specific_code
 from viberate.executor import Success, Timeout
 
 
-# This code defines classes representing propositional logic formulas:
-# - A `Var` is a propositional variable (like "p", "q")
-# - `Not` represents logical negation
-# - `And` and `Or` represent the logical connectives
-
 @dataclass
 class Var:
     name: str
-
-
-@dataclass
-class VarList:
-    name: str
-    ele: List[Var]
 
 
 @dataclass
@@ -47,8 +33,6 @@ class Or:
 
 Formula = Union[Var, Not, And, Or]
 
-
-# Such formulas are processed using recursive functions that match different constructors:
 
 def get_vars(f: Formula) -> Set[str]:
     """Recursively extract variables from the formula."""
@@ -76,9 +60,6 @@ def eval_formula(f: Formula, assignment: Dict[str, bool]) -> bool:
             raise ValueError("Unsupported formula type")
 
 
-# Naive satisfiability checking can be implemented using a recursive function that
-# enumerates and checks all possible assignments of propositional variables
-
 def is_satisfiable(f: Formula) -> Optional[Dict[str, bool]]:
     """Find a satisfying assignment, or return None if unsatisfiable."""
     vars_ = sorted(get_vars(f))
@@ -99,14 +80,6 @@ def is_satisfiable(f: Formula) -> Optional[Dict[str, bool]]:
 
     return inner(0, {})
 
-
-# Now, we extend it to first-order logic. First-order logic formulas are
-# constructed from predicates applied to Terms (`Term`) that can be
-# variables (`Var`), constants (`Const`), or function applications
-# (`Func`), where functions have a name and a list of arguments. Complex
-# formulas are built by combining formulas using logical connectives
-# (`Not`, `And`, `Or`, `Implies`, and `Iff`). Quantified formulas use
-# `ForAll` (universal quantification) or `Exists` (existential quantification)
 
 @dataclass
 class Const:
@@ -156,7 +129,8 @@ class Iff:
 
 @dataclass
 class ForAll:
-    vars: Var | VarList
+    vars: Var | list[Var]
+    domain: Term | Set[tuple[Any, ...]] | List[tuple[Any, ...]]
     body: 'Formula'
 
 
@@ -178,11 +152,8 @@ Formula = Union[
 ]
 
 
-# An interpretation defines a domain D and maps non-logical symbols to predicates, functions, and constants
-
 @dataclass
 class Interpretation:
-    domain: Set[tuple[Any, ...]] | List[tuple[Any, ...]]
     consts: Dict[str, Any]
     funcs: Dict[str, tuple[int, Callable[..., Any]]]
     preds: Dict[str, tuple[int, Callable[..., bool]]]
@@ -239,23 +210,21 @@ class Interpretation:
 #             return answer
 
 
-# This function assume that there are no free variables in the formula:
-
 def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any], cache=None) -> bool:
     match formula:
         case Pred(name, args):
             arity, p = interp.preds[name]
-            argvals = []
+            arg_vals = []
             for arg in args:
                 new_val = eval_term_cache(arg, interp, env, cache)
                 if new_val == UNKNOWN:
                     return True
-                argvals.append(new_val)
-            print(name, argvals)
-            if len(argvals) != arity:
+                arg_vals.append(new_val)
+            print(name, arg_vals)
+            if len(arg_vals) != arity:
                 raise ValueError(f"Predicate {name} expects {arity} arguments")
-            print(p(*argvals))
-            return p(*argvals)
+            print(p(*arg_vals))
+            return p(*arg_vals)
         case Not(operand):
             return not is_formula_true(operand, interp, env)
         case And(left, right):
@@ -266,25 +235,22 @@ def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any
             return not is_formula_true(left, interp, env) or is_formula_true(right, interp, env)
         case Iff(left, right):
             return is_formula_true(left, interp, env) == is_formula_true(right, interp, env)
-        case ForAll(vars, body):
-            for d in interp.domain:
+        case ForAll(ele, domain, body):
+            if isinstance(domain, Term):
+                domain = eval_term_cache(domain, interp, env, cache)
+            for d in domain:
                 new_env = env.copy()
-                if isinstance(vars, Var):
-                    new_env[vars.name] = d[0]
+                if isinstance(ele, Var):
+                    new_env[ele.name] = d[0]
                 else:
-                    for index, var in enumerate(vars.ele):
+                    for index, var in enumerate(ele):
                         new_env[var.name] = d[index]
                 if not is_formula_true(body, interp, new_env):
                     return False
             return True
         case Exists(var, body):
             # unfinished
-            for d in interp.domain:
-                new_env = env.copy()
-                new_env[var.name] = d
-                if is_formula_true(body, interp, new_env):
-                    return True
-            return False
+            pass
 
 
 def term_to_id(term: Term, env: Dict[str, Any], interp: Interpretation) -> str:
@@ -368,14 +334,12 @@ def eval_term_cache(term: Term,
     return result
 
 
-def general_checker(formula, executor, program_1, program_2, arity, generated_inputs):
-    generated_inputs = list(tuple(sublist) for sublist in generated_inputs)
+def checker(formula: Formula, funcs: list[Callable], arity):
     interp = Interpretation(
-        domain=generated_inputs,
         consts={},
         funcs={
-            "f": (arity, partial(executor.run, program_1)),
-            "g": (arity, partial(executor.run, program_2))
+            "f": (arity, funcs[0]),
+            "g": (arity, funcs[1])
         },
         preds={
             "Equals": (2, lambda x, y: x == y),
@@ -386,10 +350,8 @@ def general_checker(formula, executor, program_1, program_2, arity, generated_in
     return is_formula_true(formula, interp, {}, {})
 
 
-def new_general_checker(formula, executor, program_1, arity, generated_inputs, model, req, choice, num, n2):
-    generated_inputs = list(tuple(sublist) for sublist in generated_inputs)
+def new_general_checker(formula, executor, program_1, arity, model, req, choice, num, n2):
     interp = Interpretation(
-        domain=generated_inputs,
         consts={},
         funcs={
             "f": (arity, partial(executor.run, program_1)),

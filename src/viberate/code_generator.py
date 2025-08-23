@@ -39,17 +39,16 @@ specific_dict = {}
 series_dict = {}
 
 
-def generate_specific_code(executor, model, req, choice, num, n2, inputs):
-    if specific_dict.get(choice + str(inputs) + str(num)) is None:
-        specific_req = specific_requirements(model, req, inputs, choice)
-        if series_dict.get(choice + str(inputs)) is None:
-            series_dict[choice + str(inputs)] = islice(generate_no_input(model, specific_req), n2)
-        specific_code = next(series_dict[choice + str(inputs)])
-        print(specific_code, file=sys.stderr)
+def generate_specific_code(executor, model, t, num, n2, inputs):
+    if specific_dict.get(t.get_name() + str(inputs) + str(num)) is None:
+        if series_dict.get(t.get_name() + str(inputs)) is None:
+            specific_req = specific_requirements(model, t.req, inputs, t.get_name())
+            series_dict[t.get_name() + str(inputs)] = islice(generate_no_input(model, specific_req), n2)
+        specific_code = next(series_dict[t.get_name() + str(inputs)])
         outcome = executor.run(specific_code, [])
-        specific_dict[choice + str(inputs) + str(num)] = outcome
+        specific_dict[t.get_name() + str(inputs) + str(num)] = outcome
     else:
-        outcome = specific_dict[choice + str(inputs) + str(num)]
+        outcome = specific_dict[t.get_name() + str(inputs) + str(num)]
     return outcome
 
 
@@ -68,7 +67,6 @@ def generate_no_input(model, req: Requirements) -> Iterable[Program]:
     Problem:
     {req.description}
     """
-    print(PROMPT)
     for s in model.sample(PROMPT):
         yield Program(req.signature, extract_code(s))
 

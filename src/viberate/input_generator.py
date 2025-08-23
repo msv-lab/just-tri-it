@@ -98,7 +98,7 @@ def generate_inputs(model, req, executor=None):
     {req.signature}
     """
     response = next(model.sample(PROMPT))
-    # print(response)
+    print(response)
     pattern = r"```(.*?)```"
     matches = re.findall(pattern, response, re.DOTALL)
     input_list = [eval(block.strip()) for block in matches]
