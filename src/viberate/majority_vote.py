@@ -27,7 +27,7 @@ class MajorityVote(Selector):
         self.n = n
         
     def generate_and_select(self, model, req: Requirements):
-        inputs = generate_inputs(model, req)
+        inputs = generate_inputs(model, req, self.executor)
         programs = list(islice(self.generator.generate(model, req), self.n))
         classes = []
         outputs = []

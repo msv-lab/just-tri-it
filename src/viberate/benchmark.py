@@ -256,6 +256,8 @@ def main():
 
     if args.generator:
         evaluate_generator(model, executor, GENERATORS[args.generator], dataset)
+
+    if args.selector:
         print_annotated_hr(args.selector)
         match args.selector:
             case "MajorityVote":
