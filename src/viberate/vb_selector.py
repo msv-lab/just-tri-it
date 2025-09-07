@@ -1,7 +1,7 @@
 import sys
 
 from itertools import islice
-from viberate.code_generator import Selector, Generator
+from viberate.code_generator import Selector, Generator, Selected, Abstained
 from viberate.executor import Executor
 from viberate.input_generator import generate_inputs
 from viberate.requirements import (
@@ -92,7 +92,8 @@ class VibeRate(Selector):
                                               SpecificWrapper(self.executor, model, partial_for_fib_i, self.n2)))
 
         # -------------- step 3: check for each triangulation --------------
-        ts: list[Triangulation] = [for_inv, for_fib, spec_for_inv, spec_for_fib]
+        # ts: list[Triangulation] = [for_inv, for_fib, spec_for_inv, spec_for_fib]
+        ts: list[Triangulation] = [for_inv, for_fib]
         selected_forward = []
         resonating_pairs = {}
         for t in ts:
@@ -101,9 +102,11 @@ class VibeRate(Selector):
             for index in new_selected:
                 if index not in selected_forward:
                     selected_forward.append(index)
-            resonating_pairs.update({t.print_name(): new_pairs})
+            if new_pairs:
+                resonating_pairs.update({t.print_name(): new_pairs})
 
         if resonating_pairs:
-            return selected_forward, trans_to_programs[forward], True, resonating_pairs
+            return (selected_forward, trans_to_programs[forward],
+                    Selected(trans_to_programs[forward][selected_forward[0]]), resonating_pairs)
         else:
-            return [], trans_to_programs[forward], False, []
+            return [], trans_to_programs[forward], Abstained(), []

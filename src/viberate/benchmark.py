@@ -5,10 +5,11 @@ from itertools import islice
 from typing import List
 
 from viberate.cached_llm import Model, Persistent, AI302, XMCP
+from viberate.metrics import all_metrics_abt
 from viberate.program import Program, Test
 from viberate.executor import Executor, Pass, Fail
 from viberate.dataset import Dataset, load_dataset
-from viberate.code_generator import Vanilla, Generator, Selector
+from viberate.code_generator import Vanilla, Generator, Selector, Abstained
 from viberate.majority_vote import MajorityVote
 from viberate.utils import print_annotated_hr
 from viberate.codet import CodeT
@@ -69,6 +70,11 @@ def parse_args():
         required=True,
         help="LLM to use."
     )
+    parser.add_argument(
+        "--experiment-result",
+        type=str,
+        help="Store your experiment result."
+    )
     return parser.parse_args()
 
 
@@ -97,38 +103,116 @@ def evaluate_generator(model: Model, executor: Executor, generator: Generator, d
         print(f"Task {task.id} pass@1: {sum(results)/len(results)}")
 
 
-def evaluate_selector(model: Model, executor: Executor, selector: Selector, dataset: Dataset):
+def evaluate_class_selector(model: Model, executor: Executor, selector: Selector, dataset: Dataset):
+    c_prob_lst = []
+    n1, n2, n3, n4, n5 = 0, 0, 0, 0, 0
     for task in dataset:
-        program = selector.generate_and_select(model, task.requirements).program
-        if passes_tests(executor, program, task.tests):
-            print(f"Task {task.id}: solved")
+        print_annotated_hr(f"Task {task.id}")
+        program_nums, program_list, decision, classes = selector.generate_and_select(model, task.requirements)
+        correct_num = []
+        for index, program in enumerate(program_list):
+            if passes_tests(executor, program, task.tests):
+                correct_num.append(index)
+        c_prob_denominator = 0
+        c_prob_numerator = None
+        if not isinstance(decision, Abstained):
+            for class_num, pid_list in classes.items():
+                c_prob_denominator += len(pid_list) * (len(pid_list) - 1)
+                if c_prob_numerator is None:
+                    for pid in pid_list:
+                        if pid in correct_num:
+                            c_prob_numerator = len(pid_list) * (len(pid_list) - 1)
+                            break
+            if c_prob_numerator is None:
+                c_prob_numerator = 0
+            if c_prob_denominator != 0:
+                c_prob_lst.append(c_prob_numerator / c_prob_denominator)
+        if len(correct_num) > 0:
+            # GT: no abstention
+            if c_prob_numerator and c_prob_numerator > 0:
+                n1 += 1
+            elif isinstance(decision, Abstained):
+                n3 += 1
+            else:
+                n2 += 1
         else:
-            print(f"Task {task.id}: failed")
+            # GT: abstention
+            if isinstance(decision, Abstained):
+                n5 += 1
+            else:
+                n4 += 1
+    print_annotated_hr("conditional probability")
+    print(c_prob_lst, file=sys.stderr)
+    all_metrics_abt(n1, n2, n3, n4, n5)
 
 
-def evaluate_vb(executor, model, dataset, n1, n2):
-    vb = VibeRate(executor, Vanilla(), n1, n2)
+def evaluate_pair_selector(model, executor, selector, dataset):
+    c_prob_lst = []
+    n1, n2, n3, n4, n5 = 0, 0, 0, 0, 0
     for task in dataset:
-        program_num, program_list, decision, pairs = vb.generate_and_select(model, task.requirements)
+        print_annotated_hr(f"Task {task.id}")
+        program_nums, program_list, decision, pairs = selector.generate_and_select(model, task.requirements)
+        correct_num = []
+        for index, program in enumerate(program_list):
+            if passes_tests(executor, program, task.tests):
+                correct_num.append(index)
+        c_prob_denominator = 0
+        c_prob_numerator = 0
         if decision:
             print_annotated_hr(f"Selected")
             print(pairs)
-            for index, program in enumerate(program_list):
-                if index in program_num:
-                    print(f"Program {index} is selected", file=sys.stderr)
-                else:
-                    print(f"Program {index} is not selected", file=sys.stderr)
-                if passes_tests(executor, program, task.tests):
-                    print(f"Task {task.id}: solved", file=sys.stderr)
-                else:
-                    print(f"Task {task.id}: failed", file=sys.stderr)
+            for key, value in pairs.items():
+                c_prob_denominator += len(value)  # the number of resonating pairs
+                for pair in value:
+                    if pair[0] in correct_num:
+                        c_prob_numerator += 1  # the number of pair that contains a correct answer
+            if c_prob_denominator != 0:
+                c_prob_lst.append(c_prob_numerator / c_prob_denominator)
+        if len(correct_num) > 0:
+            # GT: no abstention
+            if c_prob_numerator and c_prob_numerator > 0:
+                n1 += 1
+            elif isinstance(decision, Abstained):
+                n3 += 1
+            else:
+                n2 += 1
         else:
-            print_annotated_hr(f"Abstained")
-            for program in program_list:
-                if passes_tests(executor, program, task.tests):
-                    print(f"Task {task.id}: solved", file=sys.stderr)
-                else:
-                    print(f"Task {task.id}: failed", file=sys.stderr)
+            # GT: abstention
+            if isinstance(decision, Abstained):
+                n5 += 1
+            else:
+                n4 += 1
+    if len(c_prob_lst) != 0:
+        print_annotated_hr("conditional probability")
+        print(c_prob_lst, file=sys.stderr)
+    else:
+        print_annotated_hr("abstain all tasks")
+
+
+def evaluate_simple_selector(model, executor, selector, dataset):
+    n1, n2, n3, n4, n5 = 0, 0, 0, 0, 0
+    for task in dataset:
+        print_annotated_hr(f"Task {task.id}")
+        program_num, program_list, decision = selector.generate_and_select(model, task.requirements)
+        correct_num = []
+        for index, program in enumerate(program_list):
+            if passes_tests(executor, program, task.tests):
+                correct_num.append(index)
+        if len(correct_num) > 0:
+            # GT: no abstention
+            if program_num and program_num in correct_num:
+                n1 += 1
+            elif isinstance(decision, Abstained):
+                n3 += 1
+            else:
+                n2 += 1
+        else:
+            # GT: abstention
+            if isinstance(decision, Abstained):
+                n5 += 1
+            else:
+                n4 += 1
+    all_metrics_abt(n1, n2, n3, n4, n5)
 
 
 def main():
@@ -166,15 +250,26 @@ def main():
 
     SELECTORS = {
         "MajorityVote": MajorityVote(executor, Vanilla(), 5),
-        "CodeT": CodeT(executor, Vanilla(), 5, 5)
+        "CodeT": CodeT(executor, Vanilla(), 5, 5),
+        "VibeRate": VibeRate(executor, Vanilla(), 5, 5)
     }
 
     if args.generator:
         evaluate_generator(model, executor, GENERATORS[args.generator], dataset)
-    if args.selector:
-        evaluate_selector(model, executor, SELECTORS[args.selector], dataset)
+        print_annotated_hr(args.selector)
+        match args.selector:
+            case "MajorityVote":
+                evaluate_class_selector(model, executor, SELECTORS[args.selector], dataset)
+            case "CodeT":
+                evaluate_simple_selector(model, executor, SELECTORS[args.selector], dataset)
+            case "VibeRate":
+                evaluate_pair_selector(model, executor, SELECTORS[args.selector], dataset)
 
-    evaluate_vb(executor, model, dataset, 5, 5)
+    if args.experiment_result:
+        result_root = Path(args.experiment_result)
+
+    # print_annotated_hr("VibeRate")
+    # evaluate_pair_selector(model, executor, SELECTORS["VibeRate"], dataset)
 
 
 if __name__ == "__main__":

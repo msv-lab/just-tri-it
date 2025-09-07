@@ -98,12 +98,12 @@ def generate_inputs(model, req, executor=None):
     {req.signature}
     """
     response = next(model.sample(PROMPT))
-    print(response)
+    # print(response)
     pattern = r"```(.*?)```"
     matches = re.findall(pattern, response, re.DOTALL)
     input_list = [eval(block.strip()) for block in matches]
     input_list = [i for i in input_list if not value_is_too_large(i, 10000, 10)]
-    print(input_list, file=sys.stderr)
+    # print(input_list, file=sys.stderr)
     if executor:
         input_list = range_checker(executor, model, req, input_list)
     return input_list

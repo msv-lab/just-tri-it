@@ -33,11 +33,19 @@ class NamedReturnSignature(Signature):
         Problem:
         {req.description}
         """
-        return_name = extract_answer(next(model.sample(PROMPT)))
+        return_name_lst = list(islice(model.sample(PROMPT), 3))
+        valid_name = None
+        for return_name in return_name_lst:
+            try:
+                valid_name = extract_answer(return_name)
+                if valid_name is not None:
+                    break
+            except:
+                continue
         return NamedReturnSignature(req.signature.name,
                                     req.signature.params,
                                     req.signature.return_type,
-                                    return_name)
+                                    valid_name)
 
 
 def choose_parameter_to_invert(model: Model, req: Requirements) -> int:
@@ -62,14 +70,16 @@ def choose_parameter_to_invert(model: Model, req: Requirements) -> int:
         """
         name_lst = list(islice(model.sample(PROMPT), 3))
         valid_name = None
+        return_param = None
         for n in name_lst:
             try:
                 valid_name = extract_answer(n)
+                return_param = [p.name for p in req.signature.params].index(valid_name)
                 if valid_name is not None:
-                    break
+                    return return_param
             except:
                 continue
-        return [p.name for p in req.signature.params].index(valid_name)
+        return return_param
 
 
 def inverse_requirements(model: Model, req: Requirements, inverse_index: int) -> Requirements:

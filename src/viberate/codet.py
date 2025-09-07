@@ -13,6 +13,7 @@ from viberate.code_generator import (
     Generator
 )
 
+
 class CodeT(Selector):
     def __init__(self, executor: Executor, generator: Generator, n: int = 10, m: int = 10):
         self.executor = executor
@@ -20,7 +21,7 @@ class CodeT(Selector):
         self.n = n
         self.m = m
     
-    def generate_and_select(self, model: Model, req: Requirements) -> SelectionOutcome:
+    def generate_and_select(self, model: Model, req: Requirements):
         programs = list(islice(self.generator.generate(model, req), self.n))
         
         test_cases = list(islice(generate_test_cases(model, req, self.executor), self.m))
@@ -48,7 +49,7 @@ class CodeT(Selector):
                     pass
         
         best_score = -1
-        selected_program = None
+        selected_program_id = None
         
         for i in range(self.n):
             for j in range(self.m):
@@ -60,9 +61,9 @@ class CodeT(Selector):
                     
                     if score > best_score:
                         best_score = score
-                        selected_program = programs[i]
+                        selected_program_id = i
         
-        if selected_program is not None:
-            return Selected(selected_program)
+        if selected_program_id is not None:
+            return selected_program_id, programs, Selected(programs[selected_program_id])
         else:
-            return Abstained()
+            return None, programs, Abstained()

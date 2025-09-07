@@ -1,5 +1,7 @@
+from collections import defaultdict
 from dataclasses import dataclass
 from itertools import islice
+from typing import List, Any
 
 from viberate.executor import Executor, Success
 from viberate.requirements import Requirements
@@ -8,7 +10,7 @@ from viberate.code_generator import (
     Selector,
     SelectionOutcome,
     Selected,
-    Generator
+    Generator, Abstained
 )
 
 
@@ -24,15 +26,15 @@ class MajorityVote(Selector):
         self.generator = generator
         self.n = n
         
-    def generate_and_select(self, model, req: Requirements) -> SelectionOutcome:
+    def generate_and_select(self, model, req: Requirements):
         inputs = generate_inputs(model, req)
-        programs = islice(self.generator.generate(model, req), self.n)
+        programs = list(islice(self.generator.generate(model, req), self.n))
         classes = []
         outputs = []
         generated = []
-        for p in programs:
+        for p_id, p in enumerate(programs):
             results = []
-            generated.append(p)
+            generated.append(p_id)
             for i in inputs:
                 match self.executor.run(p, i):
                     case Success(v):
@@ -51,6 +53,32 @@ class MajorityVote(Selector):
                     classes.append(max(classes) + 1)
             outputs.append(results)
 
-        #FIXME: shouldn't select a class with all failed outputs
-        largest_class = max(set(classes), key=classes.count)
-        return Selected(generated[classes.index(largest_class)])
+        class_to_pid = {}
+        for class_id, p_id in zip(classes, generated):
+            if class_id not in class_to_pid:
+                class_to_pid[class_id] = []
+            class_to_pid[class_id].append(p_id)
+
+        class_to_outputs = {}
+        for class_id, output in zip(classes, outputs):
+            if class_id not in class_to_outputs:
+                class_to_outputs[class_id] = []
+            class_to_outputs[class_id].append(output)
+
+        valid_classes = {}
+        for class_id, outputs_list in class_to_outputs.items():
+            all_uncertain = True
+            for output in outputs_list:
+                if not all(isinstance(item, UncertainOutput) for item in output):
+                    all_uncertain = False
+                    break
+            if not all_uncertain:
+                valid_classes[class_id] = class_to_pid[class_id]
+
+        if not valid_classes:
+            return [], programs, Abstained(), {}
+
+        largest_class_id = max(valid_classes.items(), key=lambda x: len(x[1]))[0]
+
+        return (class_to_pid[largest_class_id], programs, Selected(programs[valid_classes[largest_class_id][0]]),
+                class_to_pid)

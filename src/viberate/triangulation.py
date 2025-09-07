@@ -125,7 +125,10 @@ class Triangulation:
     property: Property
 
     def print_name(self):
-        return self.trans_1.get_name() + "_" + self.trans_2.get_name()
+        if isinstance(self.property.wrapper, SpecificWrapper):
+            return self.trans_1.get_name() + "_" + self.trans_2.get_name() + " (specific)"
+        else:
+            return self.trans_1.get_name() + "_" + self.trans_2.get_name()
 
 
 def enumerate_pair(trans_to_programs: dict, t: Triangulation, arity):
