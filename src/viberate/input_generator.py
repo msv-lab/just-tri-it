@@ -55,7 +55,7 @@ def range_checker(executor, model, req, input_list):
     ```
     """
     response = next(model.sample(PROMPT))
-    print(response)
+    # print(response)
     checker_sig.return_type = 'int'
     valid_checker = Program(checker_sig, extract_code(response))
     # print(valid_checker, file=sys.stderr)
@@ -64,7 +64,7 @@ def range_checker(executor, model, req, input_list):
         if len(unchecked_input) != len(req.signature.params) and len(req.signature.params) == 1:
             unchecked_input = [unchecked_input]
         check_outcome = executor.run(valid_checker, unchecked_input)
-        print(check_outcome)
+        # print(check_outcome)
         match check_outcome:
             case Success(outcome):
                 if outcome:

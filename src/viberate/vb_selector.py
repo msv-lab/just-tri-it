@@ -1,7 +1,7 @@
 import sys
 
 from itertools import islice
-from viberate.code_generator import Selector, Generator, Selected, Abstained
+from viberate.code_generator import Selector, Generator, Selected, Abstained, SpecificGenerator
 from viberate.executor import Executor
 from viberate.input_generator import generate_inputs
 from viberate.requirements import (
@@ -9,7 +9,7 @@ from viberate.requirements import (
     Requirements
 )
 from viberate.triangulation import Triangulation, PartialFiber, PartialInverse, enumerate_pair, Wrapper, Property, \
-    SpecificWrapper, Forward
+    SpecificWrapper, Forward, program_printer
 from viberate.utils import print_annotated_hr
 from viberate.cached_llm import Model
 from viberate.logic import Var, ForAll, Pred, Func, And, FuncList
@@ -67,11 +67,13 @@ class VibeRate(Selector):
         trans_to_programs.update(
             {forward: list(islice(self.generator.generate(model, req), self.n1))}
         )
+        program_printer(trans_to_programs, forward)
         # partial for-inv wrt inverse_index: its transformation and mapping to programs
         partial_for_inv_i = PartialInverse(model, req, inverse_index)
         trans_to_programs.update(
             {partial_for_inv_i: list(islice(self.generator.generate(model, partial_for_inv_i.req), self.n2))}
         )
+        program_printer(trans_to_programs, partial_for_inv_i)
         # for-inv triangulation
         for_inv = Triangulation(forward, partial_for_inv_i, Property(for_inv_formula, Wrapper(self.executor)))
 
@@ -80,20 +82,24 @@ class VibeRate(Selector):
         trans_to_programs.update(
             {partial_for_fib_i: list(islice(self.generator.generate(model, partial_for_fib_i.req), self.n2))}
         )
+        program_printer(trans_to_programs, partial_for_fib_i)
         # for-fib triangulation
         for_fib = Triangulation(forward, partial_for_fib_i, Property(for_fib_formula, Wrapper(self.executor)))
+        # for specific version
+        spec_gen = SpecificGenerator()
         # for-inv (specific version) triangulation
         spec_for_inv = Triangulation(forward, partial_for_inv_i,
                                      Property(for_inv_formula,
-                                              SpecificWrapper(self.executor, model, partial_for_inv_i, self.n2)))
+                                              SpecificWrapper(self.executor, model, partial_for_inv_i, self.n2, spec_gen)))
         # for-fib (specific version) triangulation
         spec_for_fib = Triangulation(forward, partial_for_fib_i,
                                      Property(for_fib_formula,
-                                              SpecificWrapper(self.executor, model, partial_for_fib_i, self.n2)))
+                                              SpecificWrapper(self.executor, model, partial_for_fib_i, self.n2, spec_gen)))
 
         # -------------- step 3: check for each triangulation --------------
         # ts: list[Triangulation] = [for_inv, for_fib, spec_for_inv, spec_for_fib]
         ts: list[Triangulation] = [for_inv, for_fib]
+        # ts: list[Triangulation] = [spec_for_inv, spec_for_fib]
         selected_forward = []
         resonating_pairs = {}
         for t in ts:

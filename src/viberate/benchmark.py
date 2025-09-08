@@ -109,10 +109,16 @@ def evaluate_class_selector(model: Model, executor: Executor, selector: Selector
     for task in dataset:
         print_annotated_hr(f"Task {task.id}")
         program_nums, program_list, decision, classes = selector.generate_and_select(model, task.requirements)
+
         correct_num = []
+        print_annotated_hr("Run tests for checking correctness")
         for index, program in enumerate(program_list):
+            print_annotated_hr(f"Running program {index}")
             if passes_tests(executor, program, task.tests):
                 correct_num.append(index)
+        print_annotated_hr("Index of correct programs")
+        print(correct_num)
+
         c_prob_denominator = 0
         c_prob_numerator = None
         if not isinstance(decision, Abstained):
@@ -127,6 +133,11 @@ def evaluate_class_selector(model: Model, executor: Executor, selector: Selector
                 c_prob_numerator = 0
             if c_prob_denominator != 0:
                 c_prob_lst.append(c_prob_numerator / c_prob_denominator)
+        else:
+            c_prob_lst.append(None)
+        print_annotated_hr("conditional probability")
+        print(c_prob_lst, file=sys.stderr)
+
         if len(correct_num) > 0:
             # GT: no abstention
             if c_prob_numerator and c_prob_numerator > 0:
@@ -141,8 +152,6 @@ def evaluate_class_selector(model: Model, executor: Executor, selector: Selector
                 n5 += 1
             else:
                 n4 += 1
-    print_annotated_hr("conditional probability")
-    print(c_prob_lst, file=sys.stderr)
     all_metrics_abt(n1, n2, n3, n4, n5)
 
 
@@ -152,13 +161,19 @@ def evaluate_pair_selector(model, executor, selector, dataset):
     for task in dataset:
         print_annotated_hr(f"Task {task.id}")
         program_nums, program_list, decision, pairs = selector.generate_and_select(model, task.requirements)
+
         correct_num = []
+        print_annotated_hr("Run tests for checking correctness")
         for index, program in enumerate(program_list):
+            print_annotated_hr(f"Running program {index}")
             if passes_tests(executor, program, task.tests):
                 correct_num.append(index)
+        print_annotated_hr("Index of correct programs")
+        print(correct_num)
+
         c_prob_denominator = 0
         c_prob_numerator = 0
-        if decision:
+        if not isinstance(decision, Abstained):
             print_annotated_hr(f"Selected")
             print(pairs)
             for key, value in pairs.items():
@@ -168,6 +183,11 @@ def evaluate_pair_selector(model, executor, selector, dataset):
                         c_prob_numerator += 1  # the number of pair that contains a correct answer
             if c_prob_denominator != 0:
                 c_prob_lst.append(c_prob_numerator / c_prob_denominator)
+        else:
+            c_prob_lst.append(None)
+        print_annotated_hr("conditional probability")
+        print(c_prob_lst, file=sys.stderr)
+
         if len(correct_num) > 0:
             # GT: no abstention
             if c_prob_numerator and c_prob_numerator > 0:
@@ -182,11 +202,7 @@ def evaluate_pair_selector(model, executor, selector, dataset):
                 n5 += 1
             else:
                 n4 += 1
-    if len(c_prob_lst) != 0:
-        print_annotated_hr("conditional probability")
-        print(c_prob_lst, file=sys.stderr)
-    else:
-        print_annotated_hr("abstain all tasks")
+    all_metrics_abt(n1, n2, n3, n4, n5)
 
 
 def evaluate_simple_selector(model, executor, selector, dataset):

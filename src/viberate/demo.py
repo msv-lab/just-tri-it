@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 from viberate.cached_llm import Persistent, AI302
-from viberate.code_generator import Vanilla
+from viberate.code_generator import Vanilla, Abstained
 from viberate.vb_selector import VibeRate
 from viberate.executor import Executor
 from viberate.requirements import Requirements
@@ -75,7 +75,7 @@ def main():
     requirements = Requirements.from_description(model, description)
     viberate = VibeRate(executor, Vanilla(), n1, n2)
     sel_num, all_code, result, resonating = viberate.generate_and_select(model, requirements)
-    if result:
+    if not isinstance(result, Abstained):
         print("Result: selected")
         print(sel_num)
     else:

@@ -175,7 +175,6 @@ def specific_requirements(model, fiber_req, fiber_input, choice):
             specific_question += ", '" + param.name + "' is " + str(fiber_input[index])
     if len(fiber_req.signature.params) == 1:
         specific_question += "?"
-    print(specific_question)
     REMOVE_PROMPT = f"""
     Remove the sections such as Input, Output, Constraints, and Example from the
     following problem description, leaving only the complete problem statement. Words like
@@ -193,7 +192,7 @@ def specific_requirements(model, fiber_req, fiber_input, choice):
         complete_question = revised_question + "\n" + specific_question
     else:
         complete_question = None
-    print(complete_question)
+    # print(complete_question)
     new_sig = Signature(fiber_req.signature.name, [], fiber_req.signature.return_type)
     return Requirements(new_sig, complete_question)
 

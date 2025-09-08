@@ -6,7 +6,7 @@ from typing import Callable
 from viberate.executor import Success, Executor
 
 from viberate.cached_llm import Model
-from viberate.code_generator import generate_specific_code
+from viberate.code_generator import generate_specific_code, SpecificGenerator
 from viberate.logic import Formula, checker
 from viberate.requirements import Requirements, NamedReturnSignature, _inverse_signature, \
     _inverse_description_single_arg, _inverse_description, _fiber_signature, _fiber_description_single_arg, \
@@ -105,11 +105,12 @@ class SpecificWrapper(Wrapper):
     model: Model
     transformation: Transformation
     n2: int
+    specific_generator: SpecificGenerator
 
     def function_wrapper(self, program_1, num_1, program_2, num_2) -> list[Callable]:
-        # a bug here to solve: the params for generate_specific_code
-        return [partial(self.executor.run, program_1), partial(generate_specific_code, self.executor,
-                                                               self.model, self.transformation, num_2, self.n2)]
+        return [partial(self.executor.run, program_1), partial(self.specific_generator.generate_specific_code_and_run,
+                                                               self.executor, self.model, self.transformation, num_2,
+                                                               self.n2)]
 
 
 @dataclass
@@ -137,7 +138,19 @@ def enumerate_pair(trans_to_programs: dict, t: Triangulation, arity):
     for i, program_1 in enumerate(trans_to_programs[t.trans_1]):
         for j, program_2 in enumerate(trans_to_programs[t.trans_2]):
             print_annotated_hr(f"testing forward {i} and transformed {j}")
-            if checker(t.property.formula, t.property.wrapper.function_wrapper(program_1, i, program_2, j), arity):
-                resonating_pairs.append((i, j))
-                selected_num.append(i)
+            try:
+                if checker(t.property.formula, t.property.wrapper.function_wrapper(program_1, i, program_2, j), arity):
+                    print('Succeed to resonate')
+                    resonating_pairs.append((i, j))
+                    selected_num.append(i)
+                else:
+                    print('Fail to resonate')
+            except Exception as e:
+                print(e)
     return selected_num, resonating_pairs
+
+
+def program_printer(trans_to_programs: dict, t: Transformation):
+    for index, prog in enumerate(trans_to_programs[t]):
+        print_annotated_hr(f"{t.get_name()}: Program {index}")
+        print(prog.code)

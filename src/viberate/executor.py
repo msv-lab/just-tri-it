@@ -125,6 +125,6 @@ class Executor:
                         else:
                             return Fail()
                     case Assertion():
-                        panic("test assertions are not suppported")
+                        panic("test assertions are not supported")
             case _:
                 return execution_outcome

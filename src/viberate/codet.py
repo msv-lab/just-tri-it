@@ -2,7 +2,8 @@ from dataclasses import dataclass
 from itertools import islice
 from typing import Iterator, List, Tuple
 from viberate.cached_llm import Model
-from viberate.executor import Executor, Success
+from viberate.executor import Executor, Pass
+from viberate.program import Test, ExpectedOutput
 from viberate.requirements import Requirements
 from viberate.test_generator import generate_test_cases
 from viberate.code_generator import (
@@ -38,11 +39,10 @@ class CodeT(Selector):
                         adjusted_input = [test_input]
                     else:
                         adjusted_input = test_input
-                    
-                    match self.executor.run(program, adjusted_input):
-                        case Success(actual_output):
-                            if actual_output == expected_output:
-                                results[i][j] = True
+                    formed_input = Test(adjusted_input, ExpectedOutput(expected_output))
+                    match self.executor.run_test(program, formed_input):
+                        case Pass():
+                            results[i][j] = True
                         case _:
                             pass
                 except Exception as e:

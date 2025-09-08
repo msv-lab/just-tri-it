@@ -6,7 +6,7 @@ from functools import partial
 import random
 from typing import Union, Set, Dict, List, Optional, Callable, Any, Iterable
 from viberate.code_generator import generate_specific_code
-from viberate.executor import Success, Timeout
+from viberate.executor import Success, Timeout, Error
 
 
 @dataclass
@@ -45,42 +45,6 @@ def get_vars(f: Formula) -> Set[str]:
             return get_vars(left) | get_vars(right)
 
 
-def eval_formula(f: Formula, assignment: Dict[str, bool]) -> bool:
-    """Evaluate formula under an assignment."""
-    match f:
-        case Var(name):
-            return assignment[name]
-        case Not(operand):
-            return not eval_formula(operand, assignment)
-        case And(left, right):
-            return eval_formula(left, assignment) and eval_formula(right, assignment)
-        case Or(left, right):
-            return eval_formula(left, assignment) or eval_formula(right, assignment)
-        case _:
-            raise ValueError("Unsupported formula type")
-
-
-def is_satisfiable(f: Formula) -> Optional[Dict[str, bool]]:
-    """Find a satisfying assignment, or return None if unsatisfiable."""
-    vars_ = sorted(get_vars(f))
-
-    def inner(idx: int, assignment: Dict[str, bool]) -> Optional[Dict[str, bool]]:
-        if idx == len(vars_):
-            if eval_formula(f, assignment):
-                return assignment.copy()
-            else:
-                return None
-        v = vars_[idx]
-        for val in [False, True]:
-            assignment[v] = val
-            result = inner(idx + 1, assignment)
-            if result is not None:
-                return result
-        return None
-
-    return inner(0, {})
-
-
 @dataclass
 class Const:
     name: str
@@ -100,11 +64,20 @@ class FuncList:
     enum_arg: 'Term'
 
 
+@dataclass
 class UnknownValue:
-    pass
+    reason: str
 
 
-UNKNOWN = UnknownValue()
+TIMEOUT = UnknownValue('timeout')
+INVALID_IN = UnknownValue('invalid input')
+# except timout and invalid_input errors
+ERROR = UnknownValue('other errors when evaluating')
+
+# only for is_formula_true: UNKNOWN, True, False
+# UNKNOWN will not affect the result of AND, OR...
+UNKNOWN = UnknownValue('unknown value for boolean')
+
 
 Term = Union[Var, Const, Func, FuncList]
 
@@ -159,85 +132,61 @@ class Interpretation:
     preds: Dict[str, tuple[int, Callable[..., bool]]]
 
 
-# def eval_term(term: Term, interp: Interpretation, env: Dict[str, Any]) -> Any:
-#     match term:
-#         case Var(name):
-#             return env[name]
-#         case Const(name):
-#             return interp.consts[name]
-#         case Func(name, args):
-#             arity, f = interp.funcs[name]
-#             argvals = []
-#             for arg in args:
-#                 new_val = eval_term(arg, interp, env)
-#                 if new_val == UNKNOWN:
-#                     return UNKNOWN
-#                 argvals.append(new_val)
-#             print("run " + name + " argvals are")
-#             print(argvals)
-#             if len(argvals) != arity:
-#                 raise ValueError(f"Function {name} expects {arity} arguments")
-#             outcome = f(argvals)
-#             # return outcome
-#             match outcome:
-#                 case Success(output):
-#                     print("answer")
-#                     print(output)
-#                     return output
-#                 case Timeout():
-#                     return UNKNOWN
-#                 case _:
-#                     print("Facing error or panic or timeout!")
-#                     print(outcome)
-#                     return False
-#         case FuncList(name, index, args, enum_arg):
-#             answer = []
-#             enum_ele = eval_term(enum_arg, interp, env)
-#             if enum_ele == UNKNOWN:
-#                 return UNKNOWN
-#             if len(enum_ele) > 10:
-#                 enum_ele = random.sample(enum_ele, 10)
-#             for ele in enum_ele:
-#                 new_args = args.copy()
-#                 new_args[index] = Var("temp")
-#                 new_env = env.copy()
-#                 new_env["temp"] = ele
-#                 outcome = eval_term(Func(name, new_args), interp, new_env)
-#                 if outcome == UNKNOWN:
-#                     continue
-#                 if outcome not in answer:
-#                     answer.append(outcome)
-#             return answer
-
-
-def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any], cache=None) -> bool:
+def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any], cache=None) -> bool | UnknownValue:
     match formula:
         case Pred(name, args):
             arity, p = interp.preds[name]
             arg_vals = []
             for arg in args:
                 new_val = eval_term_cache(arg, interp, env, cache)
-                if new_val == UNKNOWN:
-                    return True
+                if new_val == TIMEOUT:
+                    return UNKNOWN
+                elif new_val == ERROR:  # if we meet ERROR, the pred should be definitely false
+                    return False
+                # only INVALID_IN can be compared
                 arg_vals.append(new_val)
-            print(name, arg_vals)
+            # print(name, arg_vals)
             if len(arg_vals) != arity:
                 raise ValueError(f"Predicate {name} expects {arity} arguments")
-            print(p(*arg_vals))
             return p(*arg_vals)
         case Not(operand):
-            return not is_formula_true(operand, interp, env)
+            ans = is_formula_true(operand, interp, env)
+            if ans == UNKNOWN:
+                return UNKNOWN
+            else:
+                return not ans
         case And(left, right):
-            return is_formula_true(left, interp, env) and is_formula_true(right, interp, env)
+            ans_1 = is_formula_true(left, interp, env)
+            ans_2 = is_formula_true(right, interp, env)
+            if ans_1 == UNKNOWN and ans_2 == UNKNOWN:
+                return UNKNOWN
+            elif ans_1 == UNKNOWN:
+                return ans_2
+            elif ans_2 == UNKNOWN:
+                return ans_1
+            else:
+                return ans_1 and ans_2
         case Or(left, right):
-            return is_formula_true(left, interp, env) or is_formula_true(right, interp, env)
-        case Implies(left, right):
-            return not is_formula_true(left, interp, env) or is_formula_true(right, interp, env)
-        case Iff(left, right):
-            return is_formula_true(left, interp, env) == is_formula_true(right, interp, env)
+            ans_1 = is_formula_true(left, interp, env)
+            ans_2 = is_formula_true(right, interp, env)
+            if ans_1 == UNKNOWN and ans_2 == UNKNOWN:
+                return UNKNOWN
+            elif ans_1 == UNKNOWN:
+                return ans_2
+            elif ans_2 == UNKNOWN:
+                return ans_1
+            else:
+                return ans_1 or ans_2
         case ForAll(ele, domain, body):
             if isinstance(domain, Term):
                 domain = eval_term_cache(domain, interp, env, cache)
+            if domain == ERROR:
+                return False
+            elif domain == TIMEOUT or domain == INVALID_IN:
+                return UNKNOWN
+            if not isinstance(domain, List):
+                domain = [domain]
+            has_value = False
             for d in domain:
                 new_env = env.copy()
                 if isinstance(ele, Var):
@@ -245,12 +194,17 @@ def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any
                 else:
                     for index, var in enumerate(ele):
                         new_env[var.name] = d[index]
-                if not is_formula_true(body, interp, new_env):
+                ans = is_formula_true(body, interp, new_env)
+                if ans is False:
                     return False
-            return True
-        case Exists(var, body):
-            # unfinished
-            pass
+                elif ans is True:
+                    has_value = True
+            if has_value:
+                return True
+            else:
+                return UNKNOWN
+        case _:
+            raise ValueError(f"Unsupported formula type")
 
 
 def term_to_id(term: Term, env: Dict[str, Any], interp: Interpretation) -> str:
@@ -295,8 +249,9 @@ def eval_term_cache(term: Term,
             argvals = []
             for arg in args:
                 new_val = eval_term_cache(arg, interp, env, cache)
-                if new_val == UNKNOWN:
-                    return UNKNOWN
+                if new_val == TIMEOUT or new_val == INVALID_IN or new_val == ERROR:
+                    cache[key] = new_val
+                    return new_val
                 argvals.append(new_val)
             if len(argvals) != arity:
                 raise ValueError(f"Function {name} expects {arity} arguments")
@@ -305,14 +260,19 @@ def eval_term_cache(term: Term,
                 case Success(output):
                     result = output
                 case Timeout():
-                    return UNKNOWN
+                    result = TIMEOUT
+                case Error("ValueError", "Invalid input"):
+                    result = INVALID_IN
                 case _:
-                    result = False
+                    result = ERROR
         case FuncList(name, index, args, enum_arg):
             answer = []
             enum_ele = eval_term_cache(enum_arg, interp, env, cache)
-            if enum_ele == UNKNOWN:
-                return UNKNOWN
+            if enum_ele == TIMEOUT or enum_ele == INVALID_IN or enum_ele == ERROR:
+                cache[key] = enum_ele
+                return enum_ele
+            if not isinstance(enum_ele, List):
+                enum_ele = [enum_ele]
             if len(enum_ele) > 10:
                 enum_ele = random.sample(enum_ele, 10)
             for ele in enum_ele:
@@ -321,16 +281,15 @@ def eval_term_cache(term: Term,
                 new_env = env.copy()
                 new_env["temp"] = ele
                 outcome = eval_term_cache(Func(name, new_args), interp, new_env, cache)
-                if outcome == UNKNOWN:
+                if outcome == TIMEOUT:  # if we meet ERROR or INVALID_IN, it can't be ignored
                     continue
                 if outcome not in answer:
                     answer.append(outcome)
             result = answer
         case _:
-            result = UNKNOWN
+            raise NotImplementedError("This term type has not been implemented yet")
 
-    if result != UNKNOWN:
-        cache[key] = result
+    cache[key] = result
     return result
 
 
@@ -347,4 +306,8 @@ def checker(formula: Formula, funcs: list[Callable], arity):
             "Includes": (2, lambda x, y: x in y if isinstance(y, Iterable) else False)
         }
     )
-    return is_formula_true(formula, interp, {}, {})
+    ans = is_formula_true(formula, interp, {}, {})
+    if ans is True or ans is UNKNOWN:
+        return True
+    else:
+        return False

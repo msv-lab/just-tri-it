@@ -1,4 +1,6 @@
+import hashlib
 import sys
+import threading
 from dataclasses import dataclass
 from itertools import islice
 from typing import Iterable
@@ -35,8 +37,7 @@ class Selector(ABC):
         pass
 
 
-specific_dict = {}
-series_dict = {}
+
 
 
 def generate_specific_code(executor, model, t, num, n2, inputs):
@@ -106,10 +107,56 @@ class Vanilla(Generator):
         code outside the function. Please ensure the generated code
         returns pure Python types. If there are requirements for the
         output format in the problem description, please be sure to format
-        it correctly.
-
+        it correctly. When handling invalid inputs, please include logic to
+        raise a ValueError with the message 'Invalid input'.
+         
         Problem:
         {req.description}
         """
         for s in model.sample(PROMPT):
             yield Program(req.signature, extract_code(s))
+
+
+@dataclass
+class SpecificGenerator:
+    specific_dict = {}
+    series_dict = {}
+    lock = threading.Lock()
+
+    @staticmethod
+    def _generate_key(*args):
+        hash_obj = hashlib.sha256()
+        for arg in args:
+            hash_obj.update(repr(arg).encode('utf-8'))
+        return hash_obj.hexdigest()
+
+    def generate_specific_code_and_run(self, executor, model, t, num, n2, inputs):
+        base_key = self._generate_key(t.get_name(), inputs)
+        specific_key = self._generate_key(t.get_name(), inputs, num)
+
+        with self.lock:
+            if specific_key in self.specific_dict:
+                # print("hit")
+                return self.specific_dict[specific_key]
+
+            if base_key not in self.series_dict:
+                # print("miss and generate")
+                specific_req = specific_requirements(model, t.req, inputs, t.get_name())
+                self.series_dict[base_key] = islice(generate_no_input(model, specific_req), n2)
+
+            code_iterator = self.series_dict[base_key]
+
+            try:
+                specific_code = next(code_iterator)
+                try:
+                    outcome = executor.run(specific_code, [])
+                except Exception as e:
+                    # unfinished
+                    outcome = f"Execution error: {str(e)}"
+                self.specific_dict[specific_key] = outcome
+                return outcome
+            except StopIteration:
+                # unfinished
+                error_msg = f"Iterator exhausted for key {base_key}, n2={n2} but num={num}"
+                self.specific_dict[specific_key] = error_msg
+                return error_msg
