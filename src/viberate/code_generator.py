@@ -6,6 +6,7 @@ from itertools import islice
 from typing import Iterable
 from abc import ABC, abstractmethod
 
+from viberate.executor import Error
 from viberate.utils import extract_code
 from viberate.program import Signature, Program
 from viberate.requirements import Requirements, specific_requirements
@@ -130,17 +131,7 @@ class SpecificGenerator:
 
             code_iterator = self.series_dict[base_key]
 
-            try:
-                specific_code = next(code_iterator)
-                try:
-                    outcome = executor.run(specific_code, [])
-                except Exception as e:
-                    # unfinished
-                    outcome = f"Execution error: {str(e)}"
-                self.specific_dict[specific_key] = outcome
-                return outcome
-            except StopIteration:
-                # unfinished
-                error_msg = f"Iterator exhausted for key {base_key}, n2={n2} but num={num}"
-                self.specific_dict[specific_key] = error_msg
-                return error_msg
+            specific_code = next(code_iterator)
+            outcome = executor.run(specific_code, [])
+            self.specific_dict[specific_key] = outcome
+            return outcome
