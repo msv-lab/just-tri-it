@@ -6,7 +6,7 @@ from typing import Callable
 from viberate.executor import Success, Executor
 
 from viberate.cached_llm import Model
-from viberate.code_generator import generate_specific_code, SpecificGenerator
+from viberate.code_generator import SpecificGenerator
 from viberate.logic import Formula, checker
 from viberate.requirements import Requirements, NamedReturnSignature, _inverse_signature, \
     _inverse_description_single_arg, _inverse_description, _fiber_signature, _fiber_description_single_arg, \

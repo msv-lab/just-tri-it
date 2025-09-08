@@ -37,22 +37,6 @@ class Selector(ABC):
         pass
 
 
-
-
-
-def generate_specific_code(executor, model, t, num, n2, inputs):
-    if specific_dict.get(t.get_name() + str(inputs) + str(num)) is None:
-        if series_dict.get(t.get_name() + str(inputs)) is None:
-            specific_req = specific_requirements(model, t.req, inputs, t.get_name())
-            series_dict[t.get_name() + str(inputs)] = islice(generate_no_input(model, specific_req), n2)
-        specific_code = next(series_dict[t.get_name() + str(inputs)])
-        outcome = executor.run(specific_code, [])
-        specific_dict[t.get_name() + str(inputs) + str(num)] = outcome
-    else:
-        outcome = specific_dict[t.get_name() + str(inputs) + str(num)]
-    return outcome
-
-
 def generate_no_input(model, req: Requirements) -> Iterable[Program]:
     PROMPT = f"""Write a Python function
     '{req.signature.pretty_print()}' without any input to solve the following problem.

@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from functools import partial
 import random
 from typing import Union, Set, Dict, List, Optional, Callable, Any, Iterable
-from viberate.code_generator import generate_specific_code
 from viberate.executor import Success, Timeout, Error
 
 
