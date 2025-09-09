@@ -83,8 +83,112 @@ class ExpectedOutput:
 
 @dataclass
 class Assertion:
-    '''A predicate expression of the arity 1 represented as a string'''
-    code: str
+    test_function_code: str
+    target_signature: Signature
+    test_function_name: str
+    
+    @staticmethod
+    def from_code(code: str, target_signature: Signature) -> 'Assertion':
+        tree = ast.parse(code)
+        for node in tree.body:
+            if isinstance(node, ast.FunctionDef) and node.name.startswith('test_'):
+                return Assertion(
+                    test_function_code=code,
+                    target_signature=target_signature,
+                    test_function_name=node.name
+                )
+        raise ValueError("No test function found in code")
+    
+    @staticmethod
+    def generate_from_signature(model, target_signature: Signature, num_tests: int = 1) -> List['Assertion']:
+        PROMPT_TESTS = f"""
+        I have a function with the signature: {target_signature.pretty_print()}
+        
+        Please generate {num_tests} unit test(s) such that each unit test is a function whose name starts with test_, 
+        it calls the target function, and contains assertions to verify the correctness.
+        
+        Each test function should be in a separate Python code block. For example:
+        
+        ```python
+        def test_basic_case():
+            result = {target_signature.name}(5)
+            assert result == 5
+        ```
+        """
+        
+        try:
+            response = next(model.sample(PROMPT_TESTS))
+            if isinstance(response, str):
+                import re
+                code_blocks = re.findall(r'```python\n(.*?)\n```', response, re.DOTALL)
+                if not code_blocks:
+                    code_blocks = [extract_code(response)]
+            else:
+                code_blocks = [extract_code(response)]
+                
+            assertions = []
+            for code in code_blocks:
+                if code and code.strip():
+                    try:
+                        assertion = Assertion.from_code(code, target_signature)
+                        assertions.append(assertion)
+                    except ValueError as e:
+                        print(f"Failed to create assertion from code: {e}")
+                        continue
+                        
+            return assertions
+        except Exception as e:
+            print(f"Error in generate_from_signature: {e}")
+            return []
+    
+    def execute(self, program: Program) -> bool:
+        try:
+            exec_globals = {}
+            
+            exec(program.code, exec_globals)
+            
+            exec(self.test_function_code, exec_globals)
+            
+            test_func = exec_globals[self.test_function_name]
+            test_func()
+            
+            return True
+        except Exception as e:
+            return False
+    
+    def extract_inputs(self, program: Program) -> List[List[Any]]:
+        inputs_collected = []
+        
+        def create_dummy_function(signature: Signature):
+            def dummy(*args, **kwargs):
+                param_values = []
+                for i, param in enumerate(signature.params):
+                    if i < len(args):
+                        param_values.append(args[i])
+                    elif param.name in kwargs:
+                        param_values.append(kwargs[param.name])
+                inputs_collected.append(param_values)
+                return None
+            return dummy
+        
+        try:
+            exec_globals = {}
+            
+            dummy_func = create_dummy_function(self.target_signature)
+            exec_globals[self.target_signature.name] = dummy_func
+            
+            exec(self.test_function_code, exec_globals)
+            test_func = exec_globals[self.test_function_name]
+            
+            try:
+                test_func()
+            except:
+                pass
+                
+        except Exception as e:
+            pass
+            
+        return inputs_collected
     
 
 type Oracle = ExpectedOutput | Assertion
@@ -94,3 +198,11 @@ type Oracle = ExpectedOutput | Assertion
 class Test:
     inputs: List[Any]
     oracle: Oracle
+
+    @staticmethod
+    def from_assertion(assertion: Assertion) -> 'Test':
+        return Test(inputs=[], oracle=assertion)
+    
+    @staticmethod
+    def from_expected_output(inputs: List[Any], expected: Any) -> 'Test':
+        return Test(inputs=inputs, oracle=ExpectedOutput(expected))
