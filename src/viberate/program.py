@@ -100,45 +100,64 @@ class Assertion:
         raise ValueError("No test function found in code")
     
     @staticmethod
-    def generate_from_signature(model, target_signature: Signature, num_tests: int = 1) -> List['Assertion']:
-        PROMPT_TESTS = f"""
-        I have a function with the signature: {target_signature.pretty_print()}
-        
-        Please generate {num_tests} unit test(s) such that each unit test is a function whose name starts with test_, 
-        it calls the target function, and contains assertions to verify the correctness.
-        
-        Each test function should be in a separate Python code block. For example:
-        
+    def generate_from_problem(model, problem_description: str, target_signature: Signature, num_tests: int = 1) -> List['Assertion']:        
+        PROMPT_ASSERTIONS = f"""
+        For the problem below, write {num_tests} unit test function(s) to verify the correctness of the solution.
+
+        Problem:
+        {problem_description}
+
+        Function signature: {target_signature.pretty_print()}
+
+        Each test should be a function whose name starts with test_, calls the target function, 
+        and contains assertions to verify correctness. The tests should cover:
+        - Normal/typical cases
+        - Edge cases and boundary conditions  
+        - Error conditions (if applicable)
+
+        For problems where exact output cannot be predetermined, use assertions that check 
+        properties, constraints, or relationships rather than exact values.
+
+        Example formats:
         ```python
-        def test_basic_case():
-            result = {target_signature.name}(5)
-            assert result == 5
+        def test_basic_functionality():
+            result = {target_signature.name}(typical_input)
+            assert result == expected_value
         ```
+
+        ```python  
+        def test_boundary_condition():
+            result = {target_signature.name}(edge_case_input)
+            assert some_property_holds(result)
+        ```
+
+        Return each test function in a separate Python code block.
         """
         
         try:
-            response = next(model.sample(PROMPT_TESTS))
-            if isinstance(response, str):
-                import re
-                code_blocks = re.findall(r'```python\n(.*?)\n```', response, re.DOTALL)
-                if not code_blocks:
-                    code_blocks = [extract_code(response)]
-            else:
+            response = next(model.sample(PROMPT_ASSERTIONS))
+            
+            # 提取代码块
+            import re
+            code_blocks = re.findall(r'```python\n(.*?)\n```', response, re.DOTALL)
+            if not code_blocks:
+                # 如果没找到代码块，尝试提取整个响应作为代码
                 code_blocks = [extract_code(response)]
                 
             assertions = []
             for code in code_blocks:
                 if code and code.strip():
                     try:
-                        assertion = Assertion.from_code(code, target_signature)
+                        assertion = Assertion.from_code(code.strip(), target_signature)
                         assertions.append(assertion)
                     except ValueError as e:
                         print(f"Failed to create assertion from code: {e}")
                         continue
                         
-            return assertions
+            return assertions[:num_tests]
+            
         except Exception as e:
-            print(f"Error in generate_from_signature: {e}")
+            print(f"Error in generate_from_problem: {e}")
             return []
     
     def execute(self, program: Program) -> bool:

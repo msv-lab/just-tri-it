@@ -45,8 +45,20 @@ class Plurality(Selector):
             generated.append(p_id)
             
             for test in tests:
-                result = self._execute_test(p, test)
-                results.append(result)
+                if test.oracle is None:
+                    match self.executor.run(p, test.inputs):
+                        case Success(v):
+                            results.append(v)
+                        case _:
+                            results.append(UncertainOutput())
+                else:
+                    match self.executor.run_test(p, test):
+                        case Pass():
+                            results.append(TestPassed())
+                        case Fail():
+                            results.append(TestFailed())
+                        case _:
+                            results.append(UncertainOutput())
             
             if len(classes) == 0:
                 classes.append(0)
@@ -100,7 +112,7 @@ class Plurality(Selector):
             print(f"Failed to generate traditional inputs: {e}")
         
         try:
-            assertions = Assertion.generate_from_signature(model, req.signature, num_tests=3)
+            assertions = Assertion.generate_from_problem(model, req.description, req.signature, num_tests=3)
             print(f"Generated {len(assertions)} assertion tests")
             for assertion in assertions:
                 print(f"Assertion test function: {assertion.test_function_name}")
@@ -110,33 +122,3 @@ class Plurality(Selector):
         
         print(f"Total tests generated: {len(tests)}")
         return tests
-    
-    def _execute_test(self, program, test: Test):
-        if test.oracle is None:
-            match self.executor.run(program, test.inputs):
-                case Success(v):
-                    return v
-                case _:
-                    return UncertainOutput()
-        
-        elif isinstance(test.oracle, ExpectedOutput):
-            match self.executor.run(program, test.inputs):
-                case Success(v):
-                    if v == test.oracle.value:
-                        return TestPassed()
-                    else:
-                        return TestFailed()
-                case _:
-                    return UncertainOutput()
-        
-        elif isinstance(test.oracle, Assertion):
-            match self.executor.run_test(program, test):
-                case Pass():
-                    return TestPassed()
-                case Fail():
-                    return TestFailed()
-                case _:
-                    return UncertainOutput()
-        
-        else:
-            return UncertainOutput()

@@ -14,7 +14,6 @@ from viberate.code_generator import (
     Generator
 )
 
-
 class CodeT(Selector):
     def __init__(self, executor: Executor, generator: Generator, n: int = 10, m: int = 10):
         self.executor = executor
@@ -35,8 +34,11 @@ class CodeT(Selector):
         for i, program in enumerate(programs):
             for j, test in enumerate(tests):
                 try:
-                    test_passed = self._execute_test(program, test, req)
-                    results[i][j] = test_passed
+                    match self.executor.run_test(program, test):
+                        case Pass():
+                            results[i][j] = True
+                        case _:
+                            pass
                 except Exception as e:
                     pass
         
@@ -64,7 +66,7 @@ class CodeT(Selector):
         tests = []
         
         try:
-            traditional_tests = list(islice(generate_test_cases(model, req, self.executor), self.m))
+            traditional_tests = list(islice(generate_test_cases(model, req, self.executor), self.m // 2))
             for test_input, expected_output in traditional_tests:
                 if len(test_input) != len(req.signature.params) and len(req.signature.params) == 1:
                     adjusted_input = [test_input]
@@ -78,11 +80,7 @@ class CodeT(Selector):
         
         try:
             print(f"Attempting to generate assertion tests for signature: {req.signature.pretty_print()}")
-            assertions = Assertion.generate_from_signature(
-                model, 
-                req.signature, 
-                num_tests=min(3, self.m - len(tests))
-            )
+            assertions = Assertion.generate_from_problem(model, req.description, req.signature, num_tests=self.m - len(tests))
             print(f"Successfully generated {len(assertions)} assertion tests")
             for assertion in assertions:
                 test = Test.from_assertion(assertion)
@@ -92,43 +90,4 @@ class CodeT(Selector):
             import traceback
             traceback.print_exc()
         
-        if len(tests) < self.m:
-            try:
-                additional_tests = list(islice(
-                    generate_test_cases(model, req, self.executor), 
-                    self.m - len(tests)
-                ))
-                for test_input, expected_output in additional_tests:
-                    if len(test_input) != len(req.signature.params) and len(req.signature.params) == 1:
-                        adjusted_input = [test_input]
-                    else:
-                        adjusted_input = test_input
-                    
-                    test = Test(adjusted_input, ExpectedOutput(expected_output))
-                    tests.append(test)
-            except Exception:
-                pass
-        
-        return tests[:self.m]
-    
-    def _execute_test(self, program, test: Test, req: Requirements) -> bool:
-        match test.oracle:
-            case ExpectedOutput(_):
-                match self.executor.run_test(program, test):
-                    case Pass():
-                        return True
-                    case _:
-                        return False
-            
-            case Assertion(_):
-                match self.executor.run_test(program, test):
-                    case Pass():
-                        return True
-                    case _:
-                        return False
-            
-            case None:
-                return False
-            
-            case _:
-                return False
+        return tests
