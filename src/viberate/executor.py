@@ -65,12 +65,38 @@ if __name__ == '__main__':
         report['value'] = output
     except Exception as e:
         report['status'] = 'error'
-        report['error_type'] = type(e)
+        report['error_type'] = type(e).__name__
         report['error_message'] = str(e)
     with open('{str(output_file)}', 'wb') as f:
         pickle.dump(report,f)
     """
 
+def assertion_test_harness(p: Program, assertion: Assertion, output_file: Path):
+    return f"""
+import pickle
+
+{p.code}
+
+{assertion.test_function_code}
+
+if __name__ == '__main__':
+    report = dict()
+    try:
+        {assertion.test_function_name}()
+        report['status'] = 'success'
+        report['test_passed'] = True
+    except AssertionError as e:
+        report['status'] = 'success'
+        report['test_passed'] = False
+        report['assertion_message'] = str(e)
+    except Exception as e:
+        report['status'] = 'error'
+        report['error_type'] = type(e).__name__
+        report['error_message'] = str(e)
+    
+    with open('{str(output_file)}', 'wb') as f:
+        pickle.dump(report, f)
+    """
 
 class Executor:
 
@@ -111,13 +137,50 @@ class Executor:
                 
             except subprocess.TimeoutExpired:
                 return Timeout()
+    
+    def run_assertion_test(self, p: Program, assertion: Assertion) -> TestOutcome:
+        with TemporaryDirectory() as tmp:
+            exec_dir = Path(tmp)
+            output_file = exec_dir / 'output.pkl'
+            source_code = assertion_test_harness(p, assertion, output_file)
+            (exec_dir / 'code.py').write_text(source_code)
+            
+            try:
+                interpreter = str(self.test_venv.resolve() / 'bin' / 'python')
+                result = subprocess.run(
+                    [interpreter, 'code.py'],
+                    cwd=exec_dir,
+                    capture_output=True,
+                    text=True,
+                    timeout=EXECUTION_TIMEOUT_SECONDS,
+                    check=False
+                )
+                
+                if result.returncode != 0:
+                    return Panic(result.stderr)
+                    
+                if not output_file.exists():
+                    return Panic("no output")
+                    
+                with output_file.open('rb') as f:
+                    report = pickle.load(f)
+                    if report['status'] == 'success':
+                        if report['test_passed']:
+                            return Pass()
+                        else:
+                            return Fail()
+                    else:
+                        return Error(report['error_type'], report['error_message'])
+                        
+            except subprocess.TimeoutExpired:
+                return Timeout()
 
     def run_test(self, p: Program, t: Test) -> TestOutcome:
-        execution_outcome = self.run(p, t.inputs)
-        match execution_outcome:
-            case Success(actual):
-                match t.oracle:
-                    case ExpectedOutput(expected):
+        match t.oracle:
+            case ExpectedOutput(expected):
+                execution_outcome = self.run(p, t.inputs)
+                match execution_outcome:
+                    case Success(actual):
                         if isinstance(actual, float) and isinstance(expected, float) and math.isclose(actual, expected):
                             return Pass()
                         elif actual == expected:
@@ -126,7 +189,8 @@ class Executor:
                             print(f"Expected: {expected}")
                             print(f"Actual: {actual}")
                             return Fail()
-                    case Assertion():
-                        panic("test assertions are not supported")
-            case _:
-                return execution_outcome
+                    case _:
+                        return execution_outcome
+            
+            case Assertion() as assertion:
+                return self.run_assertion_test(p, assertion)

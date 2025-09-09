@@ -10,7 +10,7 @@ from viberate.program import Program, Test
 from viberate.executor import Executor, Pass, Fail, Timeout
 from viberate.dataset import Dataset, load_dataset
 from viberate.code_generator import Vanilla, Generator, Selector, Abstained
-from viberate.majority_vote import MajorityVote
+from viberate.plurality import Plurality
 from viberate.utils import print_annotated_hr
 from viberate.codet import CodeT
 from viberate.vb_selector import VibeRate
@@ -281,7 +281,7 @@ def main():
     }
 
     SELECTORS = {
-        "MajorityVote": MajorityVote(executor, Vanilla(), 5),
+        "Plurality": Plurality(executor, Vanilla(), 5),
         "CodeT": CodeT(executor, Vanilla(), 5, 5),
         "VibeRate": VibeRate(executor, Vanilla(), 5, 5)
     }
@@ -292,7 +292,7 @@ def main():
     if args.selector:
         print_annotated_hr(args.selector)
         match args.selector:
-            case "MajorityVote":
+            case "Plurality":
                 evaluate_class_selector(model, executor, SELECTORS[args.selector], dataset)
             case "CodeT":
                 evaluate_simple_selector(model, executor, SELECTORS[args.selector], dataset)

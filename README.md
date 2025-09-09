@@ -52,7 +52,7 @@ For example
 
     uv run benchmark --test-venv test_venv/ --dataset datasets/test.json --generator Vanilla --model gpt-4o
     
-    uv run benchmark --test-venv test_venv/ --dataset datasets/test.json --selector MajorityVote --model gpt-4o
+    uv run benchmark --test-venv test_venv/ --dataset datasets/test.json --selector Plurality --model gpt-4o
     
 For LiveCodeBench v6, first decompress the dataset using
 
