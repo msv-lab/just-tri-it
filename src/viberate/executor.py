@@ -123,6 +123,8 @@ class Executor:
                         elif actual == expected:
                             return Pass()
                         else:
+                            print(f"Expected: {expected}")
+                            print(f"Actual: {actual}")
                             return Fail()
                     case Assertion():
                         panic("test assertions are not supported")

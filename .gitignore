@@ -6,5 +6,4 @@ datasets/lcb_try_batches
 src/viberate/executor_test.py
 src/viberate/new_executor_1.py
 src/viberate/new_executor_2.py
-src/viberate/input_generator.py
-src/viberate/input_generator_new.py
+src/viberate/yihan.py

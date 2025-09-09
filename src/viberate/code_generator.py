@@ -92,8 +92,9 @@ class Vanilla(Generator):
         code outside the function. Please ensure the generated code
         returns pure Python types. If there are requirements for the
         output format in the problem description, please be sure to format
-        it correctly. When handling invalid inputs, please include logic to
-        raise a ValueError with the message 'Invalid input'.
+        it correctly. When handling invalid inputs that is not explicitly
+        stated how to deal with in the problem description, please raise a
+        ValueError with the message 'Invalid input'.
          
         Problem:
         {req.description}

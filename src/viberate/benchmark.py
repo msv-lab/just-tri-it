@@ -7,7 +7,7 @@ from typing import List
 from viberate.cached_llm import Model, Persistent, AI302, XMCP
 from viberate.metrics import all_metrics_abt
 from viberate.program import Program, Test
-from viberate.executor import Executor, Pass, Fail
+from viberate.executor import Executor, Pass, Fail, Timeout
 from viberate.dataset import Dataset, load_dataset
 from viberate.code_generator import Vanilla, Generator, Selector, Abstained
 from viberate.majority_vote import MajorityVote
@@ -84,7 +84,9 @@ def passes_tests(executor: Executor, program: Program, tests: List[Test]) -> boo
         match executor.run_test(program, test):
             case Pass():
                 pass
-            case Fail():
+            case Timeout():
+                pass
+            case _:
                 ok = False
                 break
     return ok
@@ -106,16 +108,24 @@ def evaluate_generator(model: Model, executor: Executor, generator: Generator, d
 def evaluate_class_selector(model: Model, executor: Executor, selector: Selector, dataset: Dataset):
     c_prob_lst = []
     n1, n2, n3, n4, n5 = 0, 0, 0, 0, 0
+    potential_example = []
     for task in dataset:
         print_annotated_hr(f"Task {task.id}")
         program_nums, program_list, decision, classes = selector.generate_and_select(model, task.requirements)
 
+        print_annotated_hr("Classification Result")
+        print(classes)
+        example_flag = False
         correct_num = []
         print_annotated_hr("Run tests for checking correctness")
         for index, program in enumerate(program_list):
             print_annotated_hr(f"Running program {index}")
             if passes_tests(executor, program, task.tests):
                 correct_num.append(index)
+                if index not in program_nums:
+                    example_flag = True
+        if example_flag:
+            potential_example.append(task.id)
         print_annotated_hr("Index of correct programs")
         print(correct_num)
 
@@ -133,8 +143,10 @@ def evaluate_class_selector(model: Model, executor: Executor, selector: Selector
                 c_prob_numerator = 0
             if c_prob_denominator != 0:
                 c_prob_lst.append(c_prob_numerator / c_prob_denominator)
+            else:
+                c_prob_lst.append(None)
         else:
-            c_prob_lst.append(None)
+            c_prob_lst.append('Abstained')
         print_annotated_hr("conditional probability")
         print(c_prob_lst, file=sys.stderr)
 
@@ -153,6 +165,7 @@ def evaluate_class_selector(model: Model, executor: Executor, selector: Selector
             else:
                 n4 += 1
     all_metrics_abt(n1, n2, n3, n4, n5)
+    print_annotated_hr(f"potential motivation example: {potential_example}")
 
 
 def evaluate_pair_selector(model, executor, selector, dataset):
@@ -183,7 +196,10 @@ def evaluate_pair_selector(model, executor, selector, dataset):
                         c_prob_numerator += 1  # the number of pair that contains a correct answer
             if c_prob_denominator != 0:
                 c_prob_lst.append(c_prob_numerator / c_prob_denominator)
+            else:
+                c_prob_lst.append(None)
         else:
+            print_annotated_hr(f"Abstained")
             c_prob_lst.append(None)
         print_annotated_hr("conditional probability")
         print(c_prob_lst, file=sys.stderr)

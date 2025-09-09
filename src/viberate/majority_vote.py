@@ -28,6 +28,7 @@ class MajorityVote(Selector):
         
     def generate_and_select(self, model, req: Requirements):
         inputs = generate_inputs(model, req, self.executor)
+        # print(inputs)
         programs = list(islice(self.generator.generate(model, req), self.n))
         classes = []
         outputs = []
@@ -36,7 +37,9 @@ class MajorityVote(Selector):
             results = []
             generated.append(p_id)
             for i in inputs:
-                match self.executor.run(p, i):
+                result = self.executor.run(p, i)
+                # print(result)
+                match result:
                     case Success(v):
                         results.append(v)
                     case _:
@@ -58,12 +61,14 @@ class MajorityVote(Selector):
             if class_id not in class_to_pid:
                 class_to_pid[class_id] = []
             class_to_pid[class_id].append(p_id)
+        print(class_to_pid)
 
         class_to_outputs = {}
         for class_id, output in zip(classes, outputs):
             if class_id not in class_to_outputs:
                 class_to_outputs[class_id] = []
             class_to_outputs[class_id].append(output)
+        print(class_to_outputs)
 
         valid_classes = {}
         for class_id, outputs_list in class_to_outputs.items():

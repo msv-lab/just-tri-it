@@ -139,15 +139,19 @@ def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any
             for arg in args:
                 new_val = eval_term_cache(arg, interp, env, cache)
                 if new_val == TIMEOUT:
+                    print("timeout")
                     return UNKNOWN
                 elif new_val == ERROR:  # if we meet ERROR, the pred should be definitely false
+                    print("error")
                     return False
                 # only INVALID_IN can be compared
                 arg_vals.append(new_val)
-            # print(name, arg_vals)
+            print(name, arg_vals)
             if len(arg_vals) != arity:
                 raise ValueError(f"Predicate {name} expects {arity} arguments")
-            return p(*arg_vals)
+            ans = p(*arg_vals)
+            print(ans)
+            return ans
         case Not(operand):
             ans = is_formula_true(operand, interp, env)
             if ans == UNKNOWN:
@@ -156,6 +160,8 @@ def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any
                 return not ans
         case And(left, right):
             ans_1 = is_formula_true(left, interp, env)
+            if ans_1 == False:
+                return False
             ans_2 = is_formula_true(right, interp, env)
             if ans_1 == UNKNOWN and ans_2 == UNKNOWN:
                 return UNKNOWN
@@ -254,7 +260,9 @@ def eval_term_cache(term: Term,
                 argvals.append(new_val)
             if len(argvals) != arity:
                 raise ValueError(f"Function {name} expects {arity} arguments")
+            print(name, argvals)
             outcome = f(argvals)
+            print(outcome)
             match outcome:
                 case Success(output):
                     result = output
@@ -306,7 +314,4 @@ def checker(formula: Formula, funcs: list[Callable], arity):
         }
     )
     ans = is_formula_true(formula, interp, {}, {})
-    if ans is True or ans is UNKNOWN:
-        return True
-    else:
-        return False
+    return ans

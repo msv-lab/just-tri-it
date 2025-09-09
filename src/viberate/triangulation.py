@@ -139,12 +139,16 @@ def enumerate_pair(trans_to_programs: dict, t: Triangulation, arity):
         for j, program_2 in enumerate(trans_to_programs[t.trans_2]):
             print_annotated_hr(f"testing forward {i} and transformed {j}")
             try:
-                if checker(t.property.formula, t.property.wrapper.function_wrapper(program_1, i, program_2, j), arity):
-                    print('Succeed to resonate')
-                    resonating_pairs.append((i, j))
-                    selected_num.append(i)
-                else:
-                    print('Fail to resonate')
+                result = checker(t.property.formula, t.property.wrapper.function_wrapper(program_1, i, program_2, j), arity)
+                match result:
+                    case True:
+                        print('Succeed to resonate')
+                        resonating_pairs.append((i, j))
+                        selected_num.append(i)
+                    case False:
+                        print('Fail to resonate')
+                    case _:
+                        print('Unknown result')
             except Exception as e:
                 print(e)
     return selected_num, resonating_pairs
