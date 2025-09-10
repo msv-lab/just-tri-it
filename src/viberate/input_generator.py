@@ -136,66 +136,26 @@ def generate_inputs(model, req, executor=None):
             # For other types, use string representation
             return str(data)
 
-    # Generate small-scale inputs
-    pattern = r"```(.*?)```"
+    def sample_and_extract_with_retry(prompt, used_model, num_retry=3):
+        ind_model = Independent(used_model)
+        pattern = r"```(.*?)```"
+        inputs = []
+        for attempt in range(num_retry):
+            try:
+                response = next(ind_model.sample(prompt))
+                matches = re.findall(pattern, response, re.DOTALL)
+                inputs = [eval(block.strip()) for block in matches]
+                inputs = [i for i in inputs if not value_is_too_large(i, 10000, 10)]
+                break
+            except Exception as e:
+                if attempt == num_retry - 1:
+                    raise Exception(f"did not get good response: {e}")
+            pass
+        return inputs
 
-    # response_small = next(model.sample(PROMPT_SMALL))
-    # matches = re.findall(pattern, response_small, re.DOTALL)
-    # small_inputs = [eval(block.strip()) for block in matches]
-    # small_inputs = [i for i in small_inputs if not value_is_too_large(i, 10000, 10)]
-
-    ind_model = Independent(model)
-    NUM_RETRIES = 3
-    small_inputs = []
-    for attempt in range(NUM_RETRIES):
-        try:
-            response_small = next(ind_model.sample(PROMPT_SMALL))
-            matches = re.findall(pattern, response_small, re.DOTALL)
-            small_inputs = [eval(block.strip()) for block in matches]
-            small_inputs = [i for i in small_inputs if not value_is_too_large(i, 10000, 10)]
-            break
-        except Exception as e:
-            if attempt == NUM_RETRIES - 1:
-                raise Exception("did not get good response")
-        pass
-    NUM_RETRIES = 3
-    medium_inputs = []
-    for attempt in range(NUM_RETRIES):
-        try:
-            response_medium = next(ind_model.sample(PROMPT_MEDIUM))
-            matches = re.findall(pattern, response_medium, re.DOTALL)
-            medium_inputs = [eval(block.strip()) for block in matches]
-            # medium_inputs = [i for i in medium_inputs if not value_is_too_large(i, 10000, 10)]
-            break
-        except Exception as e:
-            if attempt == NUM_RETRIES - 1:
-                raise Exception("did not get good response")
-        pass
-    NUM_RETRIES = 3
-    boundary_inputs = []
-    for attempt in range(NUM_RETRIES):
-        try:
-            response_boundary = next(ind_model.sample(PROMPT_BOUNDARY))
-            matches = re.findall(pattern, response_boundary, re.DOTALL)
-            boundary_inputs = [eval(block.strip()) for block in matches]
-            # boundary_inputs = [i for i in boundary_inputs if not value_is_too_large(i, 10000, 10)]
-            break
-        except Exception as e:
-            if attempt == NUM_RETRIES - 1:
-                raise Exception("did not get good response")
-        pass
-
-    # Generate medium-scale inputs
-    # response_medium = next(model.sample(PROMPT_MEDIUM))
-    # matches = re.findall(pattern, response_medium, re.DOTALL)
-    # medium_inputs = [eval(block.strip()) for block in matches]
-    # # medium_inputs = [i for i in medium_inputs if not value_is_too_large(i, 10000, 10)]
-
-    # Generate boundary inputs
-    # response_boundary = next(model.sample(PROMPT_BOUNDARY))
-    # matches = re.findall(pattern, response_boundary, re.DOTALL)
-    # boundary_inputs = [eval(block.strip()) for block in matches]
-    # # boundary_inputs = [i for i in boundary_inputs if not value_is_too_large(i, 10000, 10)]
+    small_inputs = sample_and_extract_with_retry(PROMPT_SMALL, model)
+    medium_inputs = sample_and_extract_with_retry(PROMPT_MEDIUM, model)
+    boundary_inputs = sample_and_extract_with_retry(PROMPT_BOUNDARY, model)
 
     # Use range_checker to filter inputs if executor is provided
     if executor:
@@ -261,4 +221,9 @@ def generate_inputs(model, req, executor=None):
         needed_additional = 15 - len(unique_inputs)
         unique_inputs.extend(additional_inputs[:needed_additional])
 
-    return unique_inputs[:15]  # Ensure no more than 15 unique inputs are returned
+    ans = unique_inputs[:15]
+    print_annotated_hr(f"Generated {len(ans)} inputs")
+    for index, input_data in enumerate(ans):
+        print(f"Test input {index}: {input_data}")
+
+    return ans  # Ensure no more than 15 unique inputs are returned

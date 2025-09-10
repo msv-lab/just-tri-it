@@ -5,29 +5,8 @@ from viberate.executor import Success
 from viberate.utils import extract_code
 from viberate.program import Program
 from viberate.utils import print_annotated_hr
+from viberate.input_generator import value_is_too_large
 
-def value_is_too_large(data, int_bound, seq_bound):
-    if isinstance(data, int):
-        if data < -int_bound or data > int_bound:
-            return True
-    elif isinstance(data, str):
-        if len(data) > seq_bound:
-            return True
-    elif isinstance(data, list):
-        if len(data) > seq_bound:
-            return True
-        for item in data:
-            if value_is_too_large(item, int_bound, seq_bound):
-                return True
-    elif isinstance(data, dict):
-        for key, val in data.items():
-            if value_is_too_large(val, int_bound, seq_bound):
-                return True
-    elif isinstance(data, tuple):
-        for item in data:
-            if value_is_too_large(item, int_bound, seq_bound):
-                return True
-    return False
 
 def validate_test_case(executor, model, req, test_case):
     validator_sig = copy.deepcopy(req.signature)
@@ -64,6 +43,34 @@ def validate_test_case(executor, model, req, test_case):
         case _:
             return False
 
+
+def extract_test_case(matches):
+    test_cases = []
+    for block in matches:
+        try:
+            lines = block.strip().split('\n')
+            input_line = None
+            output_line = None
+
+            for line in lines:
+                line = line.strip()
+                if line.startswith('input:'):
+                    input_line = line[6:].strip()
+                elif line.startswith('output:'):
+                    output_line = line[7:].strip()
+
+            if input_line and output_line:
+                test_input = eval(input_line)
+                test_output = eval(output_line)
+
+                if not value_is_too_large(test_input, 10000, 10):
+                    test_cases.append((test_input, test_output))
+        except Exception as e:
+            print(f"Error parsing test case: {e}", file=sys.stderr)
+            continue
+    return test_cases
+
+
 def generate_test_cases(model, req, executor=None):
     PROMPT = f"""
     Given a problem description and function signature, create a comprehensive 
@@ -95,30 +102,7 @@ def generate_test_cases(model, req, executor=None):
     pattern = r"```(.*?)```"
     matches = re.findall(pattern, response, re.DOTALL)
     
-    test_cases = []
-    for block in matches:
-        try:
-            lines = block.strip().split('\n')
-            input_line = None
-            output_line = None
-            
-            for line in lines:
-                line = line.strip()
-                if line.startswith('input:'):
-                    input_line = line[6:].strip()
-                elif line.startswith('output:'):
-                    output_line = line[7:].strip()
-            
-            if input_line and output_line:
-                test_input = eval(input_line)
-                test_output = eval(output_line)
-                
-                if not value_is_too_large(test_input, 10000, 10) and not value_is_too_large(test_output, 10000, 10):
-                    test_cases.append((test_input, test_output))
-        except Exception as e:
-            print(f"Error parsing test case: {e}", file=sys.stderr)
-            continue
-    
+    test_cases = extract_test_case(matches)
     print(f"Generated {len(test_cases)} test cases", file=sys.stderr)
     
     if executor:
@@ -139,6 +123,7 @@ def generate_test_cases(model, req, executor=None):
         return validated_cases
     
     return test_cases
+
 
 def generate_additional_test_cases(model, req, existing_cases, executor=None):
     existing_inputs_str = "\n".join([str(case[0]) for case in existing_cases])
@@ -169,31 +154,9 @@ def generate_additional_test_cases(model, req, existing_cases, executor=None):
     pattern = r"```(.*?)```"
     matches = re.findall(pattern, response, re.DOTALL)
     
-    additional_cases = []
-    for block in matches:
-        try:
-            lines = block.strip().split('\n')
-            input_line = None
-            output_line = None
-            
-            for line in lines:
-                line = line.strip()
-                if line.startswith('input:'):
-                    input_line = line[6:].strip()
-                elif line.startswith('output:'):
-                    output_line = line[7:].strip()
-            
-            if input_line and output_line:
-                test_input = eval(input_line)
-                test_output = eval(output_line)
-                
-                if not value_is_too_large(test_input, 10000, 10) and not value_is_too_large(test_output, 10000, 10):
-                    additional_cases.append((test_input, test_output))
-        except Exception as e:
-            print(f"Error parsing additional test case: {e}", file=sys.stderr)
-            continue
-    
+    additional_cases = extract_test_case(matches)
     return additional_cases
+
 
 def generate_comprehensive_tests(model, req, executor=None, min_cases=10):
     initial_cases = generate_test_cases(model, req, executor)

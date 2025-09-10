@@ -260,9 +260,9 @@ def eval_term_cache(term: Term,
                 argvals.append(new_val)
             if len(argvals) != arity:
                 raise ValueError(f"Function {name} expects {arity} arguments")
-            print(name, argvals)
+            # print(name, argvals)
             outcome = f(argvals)
-            print(outcome)
+            # print(outcome)
             match outcome:
                 case Success(output):
                     result = output

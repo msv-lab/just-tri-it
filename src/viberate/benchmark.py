@@ -12,7 +12,7 @@ from viberate.dataset import Dataset, load_dataset
 from viberate.code_generator import Vanilla, Generator, Selector, Abstained
 from viberate.plurality import Plurality
 from viberate.utils import print_annotated_hr
-from viberate.codet import CodeT
+from viberate.codet import CodeT, MODE
 from viberate.vb_selector import VibeRate
 
 
@@ -227,6 +227,7 @@ def evaluate_simple_selector(model, executor, selector, dataset):
         print_annotated_hr(f"Task {task.id}")
         program_num, program_list, decision = selector.generate_and_select(model, task.requirements)
         correct_num = []
+
         for index, program in enumerate(program_list):
             if passes_tests(executor, program, task.tests):
                 correct_num.append(index)
@@ -282,7 +283,8 @@ def main():
 
     SELECTORS = {
         "Plurality": Plurality(executor, Vanilla(), 5),
-        "CodeT": CodeT(executor, Vanilla(), 5, 5),
+        "CodeT_assertion": CodeT(executor, Vanilla(), MODE.ASSERTION, 5, 5),
+        "CodeT_IOcompare": CodeT(executor, Vanilla(), MODE.IO_COMPARE, 5, 5),
         "VibeRate": VibeRate(executor, Vanilla(), 5, 5)
     }
 
@@ -294,10 +296,12 @@ def main():
         match args.selector:
             case "Plurality":
                 evaluate_class_selector(model, executor, SELECTORS[args.selector], dataset)
-            case "CodeT":
+            case "CodeT_assertion" | "CodeT_IOcompare":
                 evaluate_simple_selector(model, executor, SELECTORS[args.selector], dataset)
             case "VibeRate":
                 evaluate_pair_selector(model, executor, SELECTORS[args.selector], dataset)
+            case _:
+                print("Unsupported selector", file=sys.stderr)
 
     if args.experiment_result:
         result_root = Path(args.experiment_result)

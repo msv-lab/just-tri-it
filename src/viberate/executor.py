@@ -71,6 +71,7 @@ if __name__ == '__main__':
         pickle.dump(report,f)
     """
 
+
 def assertion_test_harness(p: Program, assertion: Assertion, output_file: Path):
     return f"""
 import pickle

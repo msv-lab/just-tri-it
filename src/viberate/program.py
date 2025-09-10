@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import ast
+import re
 from typing import Any, List
 
 from viberate.utils import extract_code
@@ -136,13 +137,10 @@ class Assertion:
         
         try:
             response = next(model.sample(PROMPT_ASSERTIONS))
-            
-            # 提取代码块
-            import re
+
             code_blocks = re.findall(r'```python\n(.*?)\n```', response, re.DOTALL)
             if not code_blocks:
-                # 如果没找到代码块，尝试提取整个响应作为代码
-                code_blocks = [extract_code(response)]
+                code_blocks = re.findall(r'```\n(.*?)\n```', response, re.DOTALL)
                 
             assertions = []
             for code in code_blocks:

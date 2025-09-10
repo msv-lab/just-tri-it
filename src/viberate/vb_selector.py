@@ -30,8 +30,6 @@ class VibeRate(Selector):
         print(inverse_index, file=sys.stderr)
 
         forward_inputs = generate_inputs(model, req, self.executor)
-        print_annotated_hr("Forward tests")
-        print(forward_inputs, file=sys.stderr)
 
         arity = len(req.signature.params)
         all_arg = []
