@@ -187,7 +187,7 @@ def evaluate_pair_selector(model, executor, selector, dataset):
         c_prob_denominator = 0
         c_prob_numerator = 0
         if not isinstance(decision, Abstained):
-            print_annotated_hr(f"Selected")
+            print_annotated_hr("Selected")
             print(pairs)
             for key, value in pairs.items():
                 c_prob_denominator += len(value)  # the number of resonating pairs
@@ -199,7 +199,7 @@ def evaluate_pair_selector(model, executor, selector, dataset):
             else:
                 c_prob_lst.append(None)
         else:
-            print_annotated_hr(f"Abstained")
+            print_annotated_hr("Abstained")
             c_prob_lst.append(None)
         print_annotated_hr("conditional probability")
         print(c_prob_lst, file=sys.stderr)

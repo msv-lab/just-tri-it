@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import subprocess
 from tempfile import TemporaryDirectory
-from typing import Any
+from typing import Any, List
 
 from viberate.program import Program, Test, ExpectedOutput, Assertion
 from viberate.utils import panic
@@ -195,3 +195,17 @@ class Executor:
             
             case Assertion() as assertion:
                 return self.run_assertion_test(p, assertion)
+
+
+def passes_tests(executor: Executor, program: Program, tests: List[Test]) -> bool:
+    ok = True
+    for test in tests:
+        match executor.run_test(program, test):
+            case Pass():
+                pass
+            case Timeout():
+                pass
+            case _:
+                ok = False
+                break
+    return ok

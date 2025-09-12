@@ -10,6 +10,7 @@ from viberate.executor import Error
 from viberate.utils import extract_code
 from viberate.program import Signature, Program
 from viberate.requirements import Requirements, specific_requirements
+from viberate.executor import Executor, passes_tests
 
 
 class Generator(ABC):
@@ -36,6 +37,24 @@ class Selector(ABC):
     @abstractmethod
     def generate_and_select(self, model, req: Requirements) -> SelectionOutcome:
         pass
+    
+    @staticmethod
+    def store_program(programs: list[Program]):
+        code_list = []
+        for p in programs:
+            code_list.append(hashlib.sha256(p.code.encode()).hexdigest())
+        return code_list
+
+    @staticmethod
+    def store_program_return_correctness(executor: Executor, programs: list[Program], tests, p_dict: dict):
+        code_list = []
+        for p in programs:
+            p_code = hashlib.sha256(p.code.encode()).hexdigest()
+            code_list.append(p_code)
+            if p_code not in p_dict:
+                result = passes_tests(executor, p, tests)
+                p_dict.update({p_code: result})
+        return p_dict, code_list
 
 
 def generate_no_input(model, req: Requirements) -> Iterable[Program]:

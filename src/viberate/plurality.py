@@ -33,9 +33,21 @@ class Plurality(Selector):
         self.generator = generator
         self.n = n
         
-    def generate_and_select(self, model, req: Requirements):
+    def generate_and_select(self, model, req: Requirements, p_dict, tests):
+        exp_results = {
+            "generated_programs": [],
+            "generated_inputs": None,
+            "classes": [],
+            "chosen_class": None,
+            "chosen_programs": [],
+            "decision": None
+        }
         inputs = generate_inputs(model, req, self.executor)
+        exp_results["generated_inputs"] = inputs
+
         programs = list(islice(self.generator.generate(model, req), self.n))
+        p_dict, exp_results["generated_programs"] = Selector.store_program_return_correctness(self.executor, programs, tests, p_dict)
+
         classes = []
         outputs = []
         generated = []
@@ -68,22 +80,28 @@ class Plurality(Selector):
         class_to_outputs = {}
         for class_id, output in zip(classes, outputs):
             if class_id not in class_to_outputs:
-                class_to_outputs[class_id] = []
-            class_to_outputs[class_id].append(output)
+                class_to_outputs[class_id] = output
 
         valid_classes = {}
+        print(class_to_outputs)
         for class_id, outputs_list in class_to_outputs.items():
             all_uncertain = True
-            for output in outputs_list:
-                if not all(isinstance(item, UncertainOutput) for item in output):
-                    all_uncertain = False
-                    break
+            if not all(isinstance(item, UncertainOutput) for item in outputs_list):
+                all_uncertain = False
             if not all_uncertain:
-                valid_classes[class_id] = class_to_pid[class_id]
-        
+                lst = class_to_pid[class_id]
+                valid_classes[class_id] = lst
+                exp_results["classes"].append(
+                    {
+                        "program_indexes": lst,
+                        "outputs": outputs_list
+                    }
+                )
         if not valid_classes:
-            return [], programs, Abstained(), {}
-        
-        largest_class_id = max(valid_classes.items(), key=lambda x: len(x[1]))[0]
-        return (class_to_pid[largest_class_id], programs, Selected(programs[valid_classes[largest_class_id][0]]),
-                class_to_pid)
+            exp_results["decision"] = "Abstained"
+        else:
+            largest_class_id = max(valid_classes.items(), key=lambda x: len(x[1]))[0]
+            exp_results["chosen_class"] = largest_class_id
+            exp_results["chosen_programs"] = valid_classes[largest_class_id]
+            exp_results["decision"] = "Selected"
+        return exp_results, p_dict

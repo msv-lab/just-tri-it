@@ -223,3 +223,15 @@ class Test:
     @staticmethod
     def from_expected_output(inputs: List[Any], expected: Any) -> 'Test':
         return Test(inputs=inputs, oracle=ExpectedOutput(expected))
+    
+    def special_reformat(self):
+        if isinstance(self.oracle, ExpectedOutput):
+            return {
+                "expexted_input": self.inputs,
+                "expexted_output": self.oracle.value
+            }
+        if isinstance(self.oracle, Assertion):
+            return {
+                "function_code": self.oracle.test_function_code,
+                "function_name": self.oracle.test_function_name
+            }

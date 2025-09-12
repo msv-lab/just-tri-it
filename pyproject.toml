@@ -7,13 +7,14 @@ requires-python = ">=3.12"
 dependencies = [
     "mistletoe>=1.4.0",
     "numpy>=1.26.0",
-    "jsonlines>=4.0.0",
+    "jsonlines>=4.0.0"
 ]
 
 [project.scripts]
 demo = "viberate.demo:main"
 benchmark = "viberate.benchmark:main"
 preprocess_dataset = "viberate.preprocess_dataset:main"
+experiment = "viberate.experiment:main"
 
 [build-system]
 requires = ["hatchling"]

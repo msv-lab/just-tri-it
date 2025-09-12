@@ -23,13 +23,21 @@ class VibeRate(Selector):
         self.n1 = n1
         self.n2 = n2
 
-    def generate_and_select(self, model: Model, req: Requirements):
+    def generate_and_select(self, model: Model, req: Requirements, p_dict, tests):
+        exp_results = {
+            "programs": {},
+            "generated_inputs": None,
+            "pairs": {},
+            "decision": None,
+            "chosen_programs": []
+        }
         # -------------- step 1: prepare formula --------------
         inverse_index = choose_parameter_to_invert(model, req)
         print_annotated_hr("Inverse index")
         print(inverse_index, file=sys.stderr)
 
         forward_inputs = generate_inputs(model, req, self.executor)
+        exp_results["generated_inputs"] = forward_inputs
 
         arity = len(req.signature.params)
         all_arg = []
@@ -65,12 +73,14 @@ class VibeRate(Selector):
         trans_to_programs.update(
             {forward: list(islice(self.generator.generate(model, req), self.n1))}
         )
+        p_dict, exp_results["programs"][forward.get_name()] = Selector.store_program_return_correctness(self.executor, trans_to_programs[forward], tests, p_dict)
         program_printer(trans_to_programs, forward)
         # partial for-inv wrt inverse_index: its transformation and mapping to programs
         partial_for_inv_i = PartialInverse(model, req, inverse_index)
         trans_to_programs.update(
             {partial_for_inv_i: list(islice(self.generator.generate(model, partial_for_inv_i.req), self.n2))}
         )
+        exp_results["programs"][partial_for_inv_i.get_name()] = Selector.store_program(trans_to_programs[partial_for_inv_i])
         program_printer(trans_to_programs, partial_for_inv_i)
         # for-inv triangulation
         for_inv = Triangulation(forward, partial_for_inv_i, Property(for_inv_formula, Wrapper(self.executor)))
@@ -80,6 +90,7 @@ class VibeRate(Selector):
         trans_to_programs.update(
             {partial_for_fib_i: list(islice(self.generator.generate(model, partial_for_fib_i.req), self.n2))}
         )
+        exp_results["programs"][partial_for_fib_i.get_name()] = Selector.store_program(trans_to_programs[partial_for_fib_i])
         program_printer(trans_to_programs, partial_for_fib_i)
         # for-fib triangulation
         for_fib = Triangulation(forward, partial_for_fib_i, Property(for_fib_formula, Wrapper(self.executor)))
@@ -108,9 +119,10 @@ class VibeRate(Selector):
                     selected_forward.append(index)
             if new_pairs:
                 resonating_pairs.update({t.print_name(): new_pairs})
-
-        if resonating_pairs:
-            return (selected_forward, trans_to_programs[forward],
-                    Selected(trans_to_programs[forward][selected_forward[0]]), resonating_pairs)
+        if resonating_pairs is not {}:
+            exp_results["pairs"] = resonating_pairs
+            exp_results["decision"] = "Selected"
+            exp_results["chosen_programs"] = selected_forward
         else:
-            return [], trans_to_programs[forward], Abstained(), []
+            exp_results["decision"] = "Abstained"
+        return exp_results, p_dict
