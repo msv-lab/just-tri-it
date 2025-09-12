@@ -233,7 +233,7 @@ def evaluate_simple_selector(model, executor, selector, dataset):
                 correct_num.append(index)
         if len(correct_num) > 0:
             # GT: no abstention
-            if program_num and program_num in correct_num:
+            if program_num and program_num[0] in correct_num:
                 n1 += 1
             elif isinstance(decision, Abstained):
                 n3 += 1

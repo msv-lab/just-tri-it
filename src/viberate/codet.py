@@ -63,11 +63,12 @@ class CodeT(Selector):
                     
                     if score > best_score:
                         best_score = score
-                        selected_program_id = i
-                        
-        
+                        selected_program_id = [i]
+                    elif score == best_score:
+                        selected_program_id.append(i)
+
         if selected_program_id is not None:
-            return selected_program_id, programs, Selected(programs[selected_program_id])
+            return selected_program_id, programs, Selected(programs[selected_program_id[0]])
         else:
             return None, programs, Abstained()
     
