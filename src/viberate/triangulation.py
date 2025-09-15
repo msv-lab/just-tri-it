@@ -34,6 +34,55 @@ class Forward(Transformation):
         return 'forward'
 
 
+class SyntacticTrans(Transformation):
+    req: Requirements
+
+    def __init__(self, model, req):
+        self.req = self.transform(model, req)
+
+    def transform(self, model, req: Requirements) -> Requirements:
+        # unfinished
+        return req
+
+    def get_name(self):
+        return 'syntactic transformation'
+
+
+class TSemanticTrans(Transformation):
+    req: Requirements
+
+    def __init__(self, model, req):
+        self.req = self.transform(model, req)
+
+    def transform(self, model, req: Requirements) -> Requirements:
+        return_type = req.signature.return_type
+        add_sentence = None
+        FIXED_WORD = "When you get the final answer, please {sth} and then return."
+        match return_type:
+            case "int":  # add one
+                add_sentence = FIXED_WORD.format(sth="add 1 to it")
+            case "float":  # add one
+                add_sentence = FIXED_WORD.format(sth="add 1.0 to it")
+            case "bool":  # flip
+                add_sentence = FIXED_WORD.format(sth="negate it")
+            case "str":  # add a suffix "_1"
+                add_sentence = FIXED_WORD.format(sth="add a suffix '_1' to it")
+            case _ if return_type.startswith("list[") and return_type.endswith("]"):
+                if "int" in return_type:
+                    add_sentence = FIXED_WORD.format(sth="add 1 to each element")
+                if "float" in return_type:
+                    add_sentence = FIXED_WORD.format(sth="add 1.0 to each element")
+                if "bool" in return_type:
+                    add_sentence = FIXED_WORD.format(sth="negate each element")
+                if "str" in return_type:
+                    add_sentence = FIXED_WORD.format(sth="add a suffix '_1' to each element")
+        # unfinished
+        return Requirements(req.signature, req.description + add_sentence)
+
+    def get_name(self):
+        return 'trivial semantic transformation'
+
+
 class PartialInverse(Transformation):
     inverse_index: int
     req: Requirements
@@ -139,7 +188,8 @@ def enumerate_pair(trans_to_programs: dict, t: Triangulation, arity):
         for j, program_2 in enumerate(trans_to_programs[t.trans_2]):
             print_annotated_hr(f"testing forward {i} and transformed {j}")
             try:
-                result = checker(t.property.formula, t.property.wrapper.function_wrapper(program_1, i, program_2, j), arity)
+                result = checker(t.property.formula, t.property.wrapper.function_wrapper(program_1, i, program_2, j),
+                                 arity)
                 match result:
                     case True:
                         print('Succeed to resonate')

@@ -300,6 +300,22 @@ def eval_term_cache(term: Term,
     return result
 
 
+def delta_apply(x, tag: str):
+    tag = tag.lower()
+    match tag:
+        case "int":  # add one
+            return x + 1
+        case "float":  # add one
+            return x + 1.0
+        case "bool":  # flip
+            return False if x else True
+        case "str":  # add a suffix "_1"
+            return x + "_1"
+        case _ if tag.startswith("list[") and tag.endswith("]"):
+            subtype = tag[len("list["):-1].strip()
+            return [delta_apply(elem, subtype) for elem in x]
+
+
 def checker(formula: Formula, funcs: list[Callable], arity):
     interp = Interpretation(
         consts={},
@@ -310,7 +326,8 @@ def checker(formula: Formula, funcs: list[Callable], arity):
         preds={
             "Equals": (2, lambda x, y: x == y),
             "Equals_set": (2, lambda x, y: [x] == y),
-            "Includes": (2, lambda x, y: x in y if isinstance(y, Iterable) else False)
+            "Includes": (2, lambda x, y: x in y if isinstance(y, Iterable) else False),
+            "DeltaEq": (3, lambda x, y, tag: y == delta_apply(x, tag))
         }
     )
     ans = is_formula_true(formula, interp, {}, {})

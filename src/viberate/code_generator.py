@@ -16,7 +16,7 @@ import os
 
 class Generator(ABC):
     @abstractmethod
-    def generate(self, model, req: Requirements) -> Iterable['Program']:
+    def generate(self, model, req: Requirements, p_dir=None) -> Iterable['Program']:
         pass
 
 
