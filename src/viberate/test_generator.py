@@ -83,10 +83,17 @@ def generate_test_cases(model, req, executor=None):
     
     Present each test case as: input -> expected_output
     Wrap each test case with ``` like this:
+    # Test case 1
     ```
     input: [param1, param2, ...]
     output: expected_result
     ```
+    # Test case 2
+    ```
+    input: [param1, param2, ...]
+    output: expected_result
+    ```
+    ...
     
     # **Problem Description**:
     {req.description}

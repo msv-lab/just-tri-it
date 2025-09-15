@@ -33,7 +33,7 @@ class Plurality(Selector):
         self.generator = generator
         self.n = n
         
-    def generate_and_select(self, model, req: Requirements, p_dict, tests):
+    def generate_and_select(self, model, req: Requirements, p_dir, p_dict, tests):
         exp_results = {
             "generated_programs": [],
             "generated_inputs": None,
@@ -45,7 +45,7 @@ class Plurality(Selector):
         inputs = generate_inputs(model, req, self.executor)
         exp_results["generated_inputs"] = inputs
 
-        programs = list(islice(self.generator.generate(model, req), self.n))
+        programs = list(islice(self.generator.generate(model, req, p_dir), self.n))
         p_dict, exp_results["generated_programs"] = Selector.store_program_return_correctness(self.executor, programs, tests, p_dict)
 
         classes = []

@@ -1,14 +1,14 @@
 {
     "model_name": "gpt-4o",
     "temp": 1.0,
-    "generators": ["Vanilla"],
+    "generators": {
+        "Vanilla": {
+            "number_of_programs": 5
+        }
+    },
     "selectors": {
         "Plurality": {
             "number_of_programs": 5
-        },
-        "CodeT_assertion": {
-            "number_of_programs": 5,
-            "number_of_tests": 5
         },
         "CodeT_IOcompare": {
             "number_of_programs": 5,

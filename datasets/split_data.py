@@ -116,7 +116,7 @@ def save_data_batch(data_batch: List[Dict[str, Any]], batch_index: int, output_d
     os.makedirs(output_dir, exist_ok=True)
 
     # Create output file path
-    output_path = f"{output_dir}/batch_{batch_index}.json"
+    output_path = f"{output_dir}/lcb_{batch_index}.json"
 
     # Save the batch data to a JSON file
     with open(output_path, 'w', encoding='utf-8') as f:

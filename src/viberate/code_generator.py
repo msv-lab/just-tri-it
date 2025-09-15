@@ -7,10 +7,11 @@ from typing import Iterable
 from abc import ABC, abstractmethod
 
 from viberate.executor import Error
-from viberate.utils import extract_code
+from viberate.utils import extract_code, print_annotated_hr
 from viberate.program import Signature, Program
 from viberate.requirements import Requirements, specific_requirements
 from viberate.executor import Executor, passes_tests
+import os
 
 
 class Generator(ABC):
@@ -42,14 +43,17 @@ class Selector(ABC):
     def store_program(programs: list[Program]):
         code_list = []
         for p in programs:
-            code_list.append(hashlib.sha256(p.code.encode()).hexdigest())
+            p_code = hashlib.sha256(p.code.encode()).hexdigest()
+            code_list.append(p_code)
         return code_list
+    
 
     @staticmethod
     def store_program_return_correctness(executor: Executor, programs: list[Program], tests, p_dict: dict):
         code_list = []
         for p in programs:
             p_code = hashlib.sha256(p.code.encode()).hexdigest()
+            print("program " + p_code + " :")
             code_list.append(p_code)
             if p_code not in p_dict:
                 result = passes_tests(executor, p, tests)
@@ -102,7 +106,7 @@ def partitioning_generate(model, req: Requirements) -> Iterable[Program]:
 
 class Vanilla(Generator):
 
-    def generate(self, model, req: Requirements) -> Iterable[Program]:
+    def generate(self, model, req: Requirements, p_dir=None) -> Iterable[Program]:
         PROMPT = f""" Write a Python function
         {req.signature.pretty_print()} to solve the following problem.
         Include all necessary imports. Put the complete code inside a
@@ -119,7 +123,14 @@ class Vanilla(Generator):
         {req.description}
         """
         for s in model.sample(PROMPT):
-            yield Program(req.signature, extract_code(s))
+            code = extract_code(s)
+            p_code = hashlib.sha256(code.encode()).hexdigest()
+            if p_dir:
+                file_path = os.path.join(p_dir, f"{p_code}.py")
+                if not os.path.exists(file_path):
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(code)
+            yield Program(req.signature, code)
 
 
 @dataclass

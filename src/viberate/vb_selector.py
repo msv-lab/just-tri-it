@@ -23,7 +23,7 @@ class VibeRate(Selector):
         self.n1 = n1
         self.n2 = n2
 
-    def generate_and_select(self, model: Model, req: Requirements, p_dict, tests):
+    def generate_and_select(self, model: Model, req: Requirements, p_dir, p_dict=None, tests=None):
         exp_results = {
             "programs": {},
             "generated_inputs": None,
@@ -71,14 +71,17 @@ class VibeRate(Selector):
         # forward: its transformation and mapping to programs
         forward = Forward()
         trans_to_programs.update(
-            {forward: list(islice(self.generator.generate(model, req), self.n1))}
+            {forward: list(islice(self.generator.generate(model, req, p_dir), self.n1))}
         )
-        p_dict, exp_results["programs"][forward.get_name()] = Selector.store_program_return_correctness(self.executor, trans_to_programs[forward], tests, p_dict)
+        if p_dict and tests:
+            p_dict, exp_results["programs"][forward.get_name()] = Selector.store_program_return_correctness(self.executor, trans_to_programs[forward], tests, p_dict)
+        else:
+            exp_results["programs"][forward.get_name()] = Selector.store_program(trans_to_programs[forward])
         program_printer(trans_to_programs, forward)
         # partial for-inv wrt inverse_index: its transformation and mapping to programs
         partial_for_inv_i = PartialInverse(model, req, inverse_index)
         trans_to_programs.update(
-            {partial_for_inv_i: list(islice(self.generator.generate(model, partial_for_inv_i.req), self.n2))}
+            {partial_for_inv_i: list(islice(self.generator.generate(model, partial_for_inv_i.req, p_dir), self.n2))}
         )
         exp_results["programs"][partial_for_inv_i.get_name()] = Selector.store_program(trans_to_programs[partial_for_inv_i])
         program_printer(trans_to_programs, partial_for_inv_i)
@@ -88,7 +91,7 @@ class VibeRate(Selector):
         # partial for-fib wrt inverse_index: its transformation and mapping to programs
         partial_for_fib_i = PartialFiber(model, req, inverse_index)
         trans_to_programs.update(
-            {partial_for_fib_i: list(islice(self.generator.generate(model, partial_for_fib_i.req), self.n2))}
+            {partial_for_fib_i: list(islice(self.generator.generate(model, partial_for_fib_i.req, p_dir), self.n2))}
         )
         exp_results["programs"][partial_for_fib_i.get_name()] = Selector.store_program(trans_to_programs[partial_for_fib_i])
         program_printer(trans_to_programs, partial_for_fib_i)

@@ -12,35 +12,18 @@ def pass_at_k(n, c, k):
 
 # from Know Your Limits: A Survey of Abstention in Large Language Models
 def all_metrics_abt(n1, n2, n3, n4, n5):
-    print_annotated_hr("abstention_accuracy")
-    print(abstention_accuracy(n1, n2, n3, n4, n5))
-
-    print_annotated_hr("abstention_precision")
-    print(abstention_precision(n1, n2, n3, n4, n5))
-
-    print_annotated_hr("abstention_recall")
-    print(abstention_recall(n1, n2, n3, n4, n5))
-
-    print_annotated_hr("abstention_f1")
-    print(abstention_f1(n1, n2, n3, n4, n5))
-
-    print_annotated_hr("coverage_rate")
-    print(coverage_rate(n1, n2, n3, n4, n5))
-
-    print_annotated_hr("abstention_rate")
-    print(abstention_rate(n1, n2, n3, n4, n5))
-
-    print_annotated_hr("benign_answering_rate")
-    print(benign_answering_rate(n1, n2, n3, n4, n5))
-
-    print_annotated_hr("over_conservativeness_score")
-    print(over_conservativeness_score(n1, n2, n3, n4, n5))
-
-    print_annotated_hr("reliable_accuracy")
-    print(reliable_accuracy(n1, n2, n3, n4, n5))
-
-    print_annotated_hr("reliability_precision")
-    print(effective_reliability(n1, n2, n3, n4, n5))
+    ab_metrics = {}
+    ab_metrics["abstention_accuracy"] = abstention_accuracy(n1, n2, n3, n4, n5)
+    ab_metrics["abstention_precision"] = abstention_precision(n1, n2, n3, n4, n5)
+    ab_metrics["abstention_recall"] = abstention_recall(n1, n2, n3, n4, n5)
+    ab_metrics["abstention_f1"] = abstention_f1(n1, n2, n3, n4, n5)
+    ab_metrics["coverage_rate"] = coverage_rate(n1, n2, n3, n4, n5)
+    ab_metrics["abstention_rate"] = abstention_rate(n1, n2, n3, n4, n5)
+    ab_metrics["benign_answering_rate"] = benign_answering_rate(n1, n2, n3, n4, n5)
+    ab_metrics["over_conservativeness_score"] = over_conservativeness_score(n1, n2, n3, n4, n5)
+    ab_metrics["reliable_accuracy"] = reliable_accuracy(n1, n2, n3, n4, n5)
+    ab_metrics["reliability_precision"] = effective_reliability(n1, n2, n3, n4, n5)
+    return ab_metrics
 
 
 def abstention_accuracy(n1, n2, n3, n4, n5):
@@ -95,7 +78,7 @@ def benign_answering_rate(n1, n2, n3, n4, n5):
 
 
 def over_conservativeness_score(n1, n2, n3, n4, n5):
-    denominator = n1 + n2 + n3  # 修复了原代码中的语法错误
+    denominator = n1 + n2 + n3
     if denominator == 0:
         return None
     return n3 / denominator

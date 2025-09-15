@@ -15,6 +15,7 @@ demo = "viberate.demo:main"
 benchmark = "viberate.benchmark:main"
 preprocess_dataset = "viberate.preprocess_dataset:main"
 experiment = "viberate.experiment:main"
+evaluate = "viberate.evaluate:main"
 
 [build-system]
 requires = ["hatchling"]

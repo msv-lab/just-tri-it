@@ -78,23 +78,11 @@ def parse_args():
     return parser.parse_args()
 
 
-def evaluate_generator(model: Model, executor: Executor, generator: Generator, dataset: Dataset, N):
-    for task in dataset:
-        programs = islice(generator.generate(model, task.requirements), N)
-        results = []
-        for program in programs:
-            if passes_tests(executor, program, task.tests):
-                results.append(1)
-            else:
-                results.append(0)
-        print(f"Task {task.id} pass@1: {sum(results)/len(results)}")
-
-
-# Usage example
 def main():
     args = parse_args()
     try:
         config_path = Path(args.config) 
+        print(config_path)
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
         model = AI302(config["model_name"], config["temp"])
@@ -136,22 +124,19 @@ def main():
         experiment_result = {
             "dataset": name,
             "batch": batch,
-            "selector": {},
-            "generator": {}
+            "selectors": {},
+            "generators": {}
         }
-        
-        if len(config["generators"]):
-            for gen in config["generators"]:
-                match gen:
-                    case "Vanilla":
-                        num = config["generators"][gen]["number_of_programs"]
-                        # unfinished
-                        evaluate_generator(model, executor, Vanilla(), dataset, num)
-                    case _:
-                        print("Unsupported generator", file=sys.stderr)
 
         if args.experiment_result:
             result_root = Path(args.experiment_result)
+            # program directory store all generated programs during this experiment
+            program_dir = result_root / "program"
+            program_dir.mkdir(parents=True, exist_ok=True)
+            # config.json store the configurations of this experiment
+            with open(result_root / "config.json", 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=4)
+            # program.json store all forward programs and their correctness by tests
             program_json_path = result_root / "program.json"
             if not program_json_path.exists():
                 try:
@@ -163,10 +148,40 @@ def main():
                     print(f"Error creating program.json: {e}")
             else:
                 print(f"program.json already exists at {program_json_path}")
+            
+            global program_dict
             with open(program_json_path, 'r', encoding='utf-8') as f:
                 program_dict = json.load(f) 
-            if len(config["selectors"]):
+
+            if "generators" in config and len(config["generators"]):
+                for gen in config["generators"]:
+                    print_annotated_hr("Generator: " + gen)
+                    match gen:
+                        case "Vanilla":
+                            num = config["generators"][gen]["number_of_programs"]
+                            generator = Vanilla()
+                            init_dict = {
+                                "number_of_programs": num
+                            }
+                            init_dict['results'] = []
+                            experiment_result["generators"][gen] = init_dict
+                            for task in dataset:
+                                print_annotated_hr(f"Task {task.id}")
+                                new_dict = {
+                                    "task_id": task.id
+                                }
+                                select_result = Selector.store_program_return_correctness(executor, list(islice(generator.generate(model, task.requirements, program_dir), num)), task.tests, program_dict)
+                                new_dict.update({"generated_programs": select_result[1]})
+                                program_dict = select_result[0]
+                                experiment_result["generators"][gen]["results"].append(new_dict)
+                        case _:
+                            print("Unsupported generator", file=sys.stderr)
+                            continue
+                    
+                            
+            if "selectors" in config and len(config["selectors"]):
                 for select in config["selectors"]:
+                    print_annotated_hr("Selector: " + select)
                     match select:
                         case "Plurality":
                             num = config["selectors"][select]["number_of_programs"]
@@ -192,24 +207,24 @@ def main():
                                 "number_of_program_2": num_2
                             }
                         case _:
-                            print("Unsupported generator", file=sys.stderr)
+                            print("Unsupported selectors", file=sys.stderr)
                             continue
-                    init_dict["results"] = []
-                    experiment_result["generator"][select] = init_dict
+                    init_dict['results'] = []
+                    experiment_result["selectors"][select] = init_dict
                     for task in dataset:
                         print_annotated_hr(f"Task {task.id}")
                         new_dict = {
                             "task_id": task.id
                         }
                         # print(program_dict)
-                        select_result = selector.generate_and_select(model, task.requirements, program_dict, task.tests)
+                        select_result = selector.generate_and_select(model, task.requirements, program_dir, program_dict, task.tests)
                         new_dict.update(select_result[0])
                         program_dict = select_result[1]
-                        experiment_result["generator"][select]["results"].append(new_dict)
+                        experiment_result["selectors"][select]["results"].append(new_dict)
             # save into files
             try:
                 # print(experiment_result)
-                with open(result_root / "experiment_result.json", 'w', encoding='utf-8') as f:
+                with open(result_root / f"{name}_batch_{batch}_raw.json", 'w', encoding='utf-8') as f:
                     json.dump(experiment_result, f, indent=4)
                 with open(result_root / "program.json", 'w', encoding='utf-8') as f:
                     json.dump(program_dict, f, indent=4)
@@ -217,8 +232,6 @@ def main():
                 print(f"error when saving: {e}")
                 traceback.print_exc()
 
-    except FileNotFoundError:
-        print("Config file config.json not found")
     except Exception as e:
-        print(f"Error reading file: {e}")
+        print(f"Error: {e}")
         traceback.print_exc()

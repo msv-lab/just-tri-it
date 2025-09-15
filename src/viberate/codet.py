@@ -29,7 +29,7 @@ class CodeT(Selector):
         self.m = m
         self.mode = mode
 
-    def generate_and_select(self, model: Model, req: Requirements, p_dict, bench_tests):
+    def generate_and_select(self, model: Model, req: Requirements, p_dir, p_dict, bench_tests):
         exp_results = {
             "generated_programs": [],
             "generated_tests": [],
@@ -39,12 +39,13 @@ class CodeT(Selector):
         tests, tests_new_form = self._generate_tests(model, req, self.mode)
         exp_results["generated_tests"] = tests_new_form
 
-        programs = list(islice(self.generator.generate(model, req), self.n))
+        programs = list(islice(self.generator.generate(model, req, p_dir), self.n))
 
         p_dict, exp_results["generated_programs"] = Selector.store_program_return_correctness(self.executor, programs, bench_tests, p_dict)
 
         if not programs or not tests:
-            return Abstained()
+            exp_results["decision"] = "Abstained"
+            return exp_results, p_dict
         
         results: List[List[bool]] = [[False for _ in range(len(tests))] for _ in range(self.n)]
 

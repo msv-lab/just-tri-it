@@ -138,6 +138,7 @@ class Executor:
                 
             except subprocess.TimeoutExpired:
                 return Timeout()
+            
     
     def run_assertion_test(self, p: Program, assertion: Assertion) -> TestOutcome:
         with TemporaryDirectory() as tmp:
@@ -187,8 +188,6 @@ class Executor:
                         elif actual == expected:
                             return Pass()
                         else:
-                            print(f"Expected: {expected}")
-                            print(f"Actual: {actual}")
                             return Fail()
                     case _:
                         return execution_outcome
@@ -199,7 +198,7 @@ class Executor:
 
 def passes_tests(executor: Executor, program: Program, tests: List[Test]) -> bool:
     ok = True
-    for test in tests:
+    for index, test in enumerate(tests):
         match executor.run_test(program, test):
             case Pass():
                 pass
@@ -207,5 +206,7 @@ def passes_tests(executor: Executor, program: Program, tests: List[Test]) -> boo
                 pass
             case _:
                 ok = False
+                print(f"fail on test {index}")
                 break
+    print("pass on all tests")
     return ok
