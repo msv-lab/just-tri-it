@@ -39,26 +39,16 @@ class Selector(ABC):
     def generate_and_select(self, model, req: Requirements) -> SelectionOutcome:
         pass
     
-    @staticmethod
-    def store_program(programs: list[Program]):
-        code_list = []
-        for p in programs:
-            p_code = hashlib.sha256(p.code.encode()).hexdigest()
-            code_list.append(p_code)
-        return code_list
-    
 
     @staticmethod
-    def store_program_return_correctness(executor: Executor, programs: list[Program], tests, p_dict: dict):
-        code_list = []
+    def update_program_correctness(executor: Executor, programs: list[Program], tests, p_dict: dict):
         for p in programs:
-            p_code = hashlib.sha256(p.code.encode()).hexdigest()
+            p_code = p.hash()
             print("program " + p_code + " :")
-            code_list.append(p_code)
             if p_code not in p_dict:
                 result = passes_tests(executor, p, tests)
                 p_dict.update({p_code: result})
-        return p_dict, code_list
+        return p_dict
 
 
 def generate_no_input(model, req: Requirements) -> Iterable[Program]:

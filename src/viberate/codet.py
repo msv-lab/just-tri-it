@@ -40,8 +40,9 @@ class CodeT(Selector):
         exp_results["generated_tests"] = tests_new_form
 
         programs = list(islice(self.generator.generate(model, req, p_dir), self.n))
+        exp_results["generated_programs"] = [p.hash() for p in programs]
 
-        p_dict, exp_results["generated_programs"] = Selector.store_program_return_correctness(self.executor, programs, bench_tests, p_dict)
+        p_dict = Selector.update_program_correctness(self.executor, programs, bench_tests, p_dict)
 
         if not programs or not tests:
             exp_results["decision"] = "Abstained"
@@ -62,7 +63,7 @@ class CodeT(Selector):
                     pass
         
         best_score = -1
-        selected_program_id = []
+        selected_p_hash = []
         
         for i in range(self.n):
             for j in range(len(tests)):
@@ -73,13 +74,13 @@ class CodeT(Selector):
                     print(f"Program {i} passes test {j}: s_x={s_x_count}, s_y={s_y_count}, score={score}")
                     if score > best_score:
                         best_score = score
-                        selected_program_id = [i]
+                        selected_p_hash = [exp_results["generated_programs"][i]]
                     elif score == best_score:
-                        if i not in selected_program_id:
-                            selected_program_id.append(i)
+                        if exp_results["generated_programs"][i] not in selected_p_hash:
+                            selected_p_hash.append(exp_results["generated_programs"][i])
 
-        if selected_program_id is not None:
-            exp_results["chosen_programs"] = selected_program_id
+        if selected_p_hash is not None:
+            exp_results["chosen_programs"] = selected_p_hash
             exp_results["decision"] = "Selected"
         else:
             exp_results["decision"] = "Abstained"

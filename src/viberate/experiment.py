@@ -170,9 +170,9 @@ def main():
                                 new_dict = {
                                     "task_id": task.id
                                 }
-                                select_result = Selector.store_program_return_correctness(executor, list(islice(generator.generate(model, task.requirements, program_dir), num)), task.tests, program_dict)
-                                new_dict.update({"generated_programs": select_result[1]})
-                                program_dict = select_result[0]
+                                programs = list(islice(generator.generate(model, task.requirements, program_dir), num))
+                                new_dict.update({"generated_programs": [p.hash() for p in programs]})
+                                program_dict = Selector.update_program_correctness(executor, programs, task.tests, program_dict)    
                                 experiment_result["generators"][gen]["results"].append(new_dict)
                         case _:
                             print("Unsupported generator", file=sys.stderr)

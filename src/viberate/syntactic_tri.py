@@ -69,18 +69,16 @@ class OtherTri(Selector):
         trans_to_programs.update(
             {forward: list(islice(self.generator.generate(model, req, p_dir), self.n1))}
         )
+        exp_results["programs"][forward.get_name()] = [p.hash() for p in trans_to_programs[forward]]
         if p_dict and tests:
-            p_dict, exp_results["programs"][forward.get_name()] = Selector.store_program_return_correctness(
-                self.executor, trans_to_programs[forward], tests, p_dict)
-        else:
-            exp_results["programs"][forward.get_name()] = Selector.store_program(trans_to_programs[forward])
+            p_dict = Selector.update_program_correctness(self.executor, trans_to_programs[forward], tests, p_dict)
         program_printer(trans_to_programs, forward)
 
         syntactic_trans = SyntacticTrans(model, req)
         trans_to_programs.update(
             {syntactic_trans: list(islice(self.generator.generate(model, syntactic_trans.req, p_dir), self.n2))}
         )
-        exp_results["programs"][syntactic_trans.get_name()] = Selector.store_program(trans_to_programs[syntactic_trans])
+        exp_results["programs"][syntactic_trans.get_name()] = [p.hash() for p in trans_to_programs[syntactic_trans]]
         program_printer(trans_to_programs, syntactic_trans)
         syntactic_tri = Triangulation(forward, syntactic_trans, Property(syntactic_formula, Wrapper(self.executor)))
         ts.append(syntactic_tri)
@@ -98,7 +96,7 @@ class OtherTri(Selector):
             trans_to_programs.update(
                 {t_semantic_trans: list(islice(self.generator.generate(model, t_semantic_trans.req, p_dir), self.n2))}
             )
-            exp_results["programs"][t_semantic_trans.get_name()] = Selector.store_program(trans_to_programs[t_semantic_trans])
+            exp_results["programs"][t_semantic_trans.get_name()] = [p.hash() for p in trans_to_programs[t_semantic_trans]]
             program_printer(trans_to_programs, t_semantic_trans)
             t_semantic_tri = Triangulation(forward, t_semantic_trans, Property(t_semantic_formula, Wrapper(self.executor)))
             ts.append(t_semantic_tri)

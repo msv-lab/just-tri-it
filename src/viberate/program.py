@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import ast
 import re
+import hashlib
 from typing import Any, List
 
 from viberate.utils import extract_code
@@ -75,6 +76,9 @@ class Program:
 
     def add_imports(self, imports) -> 'Program':
         return Program(self.signature, imports + "\n" + self.code)
+
+    def hash(self) -> str:
+        return hashlib.sha256(self.code.encode()).hexdigest()
 
 
 @dataclass

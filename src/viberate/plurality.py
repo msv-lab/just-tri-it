@@ -46,14 +46,14 @@ class Plurality(Selector):
         exp_results["generated_inputs"] = inputs
 
         programs = list(islice(self.generator.generate(model, req, p_dir), self.n))
-        p_dict, exp_results["generated_programs"] = Selector.store_program_return_correctness(self.executor, programs, tests, p_dict)
+        p_dict = Selector.update_program_correctness(self.executor, programs, tests, p_dict)
 
         classes = []
         outputs = []
         generated = []
-        for p_id, p in enumerate(programs):
+        for p in enumerate(programs):
             results = []
-            generated.append(p_id)
+            generated.append(p.hash())
             for i in inputs:
                 match self.executor.run(p, i):
                     case Success(v):
@@ -71,11 +71,13 @@ class Plurality(Selector):
                     classes.append(max(classes) + 1)
             outputs.append(results)
         
-        class_to_pid = {}
-        for class_id, p_id in zip(classes, generated):
-            if class_id not in class_to_pid:
-                class_to_pid[class_id] = []
-            class_to_pid[class_id].append(p_id)
+        exp_results["generated_programs"] = generated
+        
+        class_to_phash = {}
+        for class_id, p_hash in zip(classes, generated):
+            if class_id not in class_to_phash:
+                class_to_phash[class_id] = []
+            class_to_phash[class_id].append(p_hash)
 
         class_to_outputs = {}
         for class_id, output in zip(classes, outputs):
@@ -89,11 +91,11 @@ class Plurality(Selector):
             if not all(isinstance(item, UncertainOutput) for item in outputs_list):
                 all_uncertain = False
             if not all_uncertain:
-                lst = class_to_pid[class_id]
+                lst = class_to_phash[class_id]
                 valid_classes[class_id] = lst
                 exp_results["classes"].append(
                     {
-                        "program_indexes": lst,
+                        "program_hashes": lst,
                         "outputs": outputs_list
                     }
                 )

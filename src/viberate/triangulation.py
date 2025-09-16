@@ -193,8 +193,9 @@ def enumerate_pair(trans_to_programs: dict, t: Triangulation, arity):
                 match result:
                     case True:
                         print('Succeed to resonate')
-                        resonating_pairs.append((i, j))
-                        selected_num.append(i)
+                        resonating_pairs.append((program_1.hash(), program_2.hash()))
+                        if program_1.hash() not in selected_num:
+                            selected_num.append(program_1.hash())
                     case False:
                         print('Fail to resonate')
                     case _:
