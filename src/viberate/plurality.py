@@ -51,7 +51,7 @@ class Plurality(Selector):
         classes = []
         outputs = []
         generated = []
-        for p in enumerate(programs):
+        for p in programs:
             results = []
             generated.append(p.hash())
             for i in inputs:

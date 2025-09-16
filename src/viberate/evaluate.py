@@ -26,18 +26,18 @@ def evaluate_selector_simple(results: list, p_dict: dict):
     n1, n2, n3, n4, n5 = 0, 0, 0, 0, 0
     for result in results:
         print_annotated_hr(f"Task {result['task_id']}")
-        program_list = result["generated_programs"] # hash
-        program_num = result["chosen_programs"] # index
+        all_p_hash = result["generated_programs"] # hash
+        chosen_p_hash = result["chosen_programs"] # hash
         decision = result["decision"]
 
-        correct_num = []
-        for index, program in enumerate(program_list):
-            if p_dict[program]:
-                correct_num.append(index)
+        correct_p_hash = []
+        for p_hash in all_p_hash:
+            if p_dict[p_hash]:
+                correct_p_hash.append(p_hash)
 
-        if len(correct_num) > 0:
+        if len(correct_p_hash) > 0:
             # GT: no abstention
-            if program_num and program_num[0] in correct_num:
+            if chosen_p_hash and chosen_p_hash[0] in correct_p_hash:
                 n1 += 1
             elif decision == "Abstained":
                 n3 += 1
@@ -52,6 +52,7 @@ def evaluate_selector_simple(results: list, p_dict: dict):
     return len(results), [n1, n2, n3, n4, n5], None
 
 def evaluate_selector_pair(results: list, p_dict: dict):
+    # unfinish for delete hash and reformating
     c_prob_lst = []
     n1, n2, n3, n4, n5 = 0, 0, 0, 0, 0
     for result in results:
@@ -104,26 +105,25 @@ def evaluate_selector_class(results: list, p_dict: dict):
     n1, n2, n3, n4, n5 = 0, 0, 0, 0, 0
     for result in results:
         print_annotated_hr(f"Task {result['task_id']}")
-        program_num = result["chosen_programs"] # index
         program_list = result["generated_programs"] # hash
         decision = result["decision"]
         classes = result["classes"]
 
-        correct_num = []
-        for index, program in enumerate(program_list):
-            if p_dict[program]:
-                correct_num.append(index)
+        correct_p_hash = []
+        for p_hash in program_list:
+            if p_dict[p_hash]:
+                correct_p_hash.append(p_hash)
 
         c_prob_denominator = 0
         c_prob_numerator = None
         if decision != "Abstained":
             for p_class in classes:
-                pid_list = p_class["program_indexes"]
-                c_prob_denominator += len(pid_list) * (len(pid_list) - 1)
+                p_hash_list = p_class["program_indexes"]
+                c_prob_denominator += len(p_hash_list) * (len(p_hash_list) - 1)
                 if c_prob_numerator is None:
-                    for pid in pid_list:
-                        if pid in correct_num:
-                            c_prob_numerator = len(pid_list) * (len(pid_list) - 1)
+                    for p_hash in p_hash_list:
+                        if p_hash in correct_p_hash:
+                            c_prob_numerator = len(p_hash_list) * (len(p_hash_list) - 1)
                             break
             if c_prob_numerator is None:
                 c_prob_numerator = 0
@@ -137,7 +137,7 @@ def evaluate_selector_class(results: list, p_dict: dict):
         print_annotated_hr("conditional probability")
         print(c_prob_lst, file=sys.stderr)
 
-        if len(correct_num) > 0:
+        if len(correct_p_hash) > 0:
             # GT: no abstention
             if c_prob_numerator and c_prob_numerator > 0:
                 n1 += 1
