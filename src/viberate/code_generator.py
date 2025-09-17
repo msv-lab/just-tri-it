@@ -36,18 +36,19 @@ type SelectionOutcome = Selected | Abstained
 class Selector(ABC):
 
     @abstractmethod
-    def generate_and_select(self, model, req: Requirements) -> SelectionOutcome:
+    def generate_and_select(self, model, req: Requirements):
         pass
-    
 
     @staticmethod
-    def update_program_correctness(executor: Executor, programs: list[Program], tests, p_dict: dict):
+    def update_program_correctness(task_id, executor: Executor, programs: list[Program], tests, p_dict: dict):
         for p in programs:
             p_code = p.hash()
             print("program " + p_code + " :")
             if p_code not in p_dict:
-                result = passes_tests(executor, p, tests)
-                p_dict.update({p_code: result})
+                result, test_lst = passes_tests(executor, p, tests)
+                if task_id not in p_dict:
+                    p_dict.update({task_id: {}})
+                p_dict[task_id].update({p_code: {"result": result, "test output": test_lst}})
         return p_dict
 
 

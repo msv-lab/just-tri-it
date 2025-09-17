@@ -196,17 +196,18 @@ class Executor:
                 return self.run_assertion_test(p, assertion)
 
 
-def passes_tests(executor: Executor, program: Program, tests: List[Test]) -> bool:
-    ok = True
+def passes_tests(executor: Executor, program: Program, tests: List[Test]):
+    output_lst = []
     for index, test in enumerate(tests):
         match executor.run_test(program, test):
             case Pass():
+                output_lst.append('pass')
                 pass
             case Timeout():
+                output_lst.append('timeout')
                 pass
             case _:
-                ok = False
+                output_lst.append('fail')
                 print(f"fail on test {index}")
-                break
-    print("pass on all tests")
-    return ok
+                return False, output_lst
+    return True, output_lst

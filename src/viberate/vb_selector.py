@@ -13,6 +13,7 @@ from viberate.triangulation import Triangulation, PartialFiber, PartialInverse, 
 from viberate.utils import print_annotated_hr
 from viberate.cached_llm import Model
 from viberate.logic import Var, ForAll, Pred, Func, And, FuncList
+from viberate.dataset import Task
 
 
 class VibeRate(Selector):
@@ -23,7 +24,9 @@ class VibeRate(Selector):
         self.n1 = n1
         self.n2 = n2
 
-    def generate_and_select(self, model: Model, req: Requirements, p_dir, p_dict=None, tests=None):
+    def generate_and_select(self, model: Model, task: Task, p_dir, p_dict=None):
+        req = task.requirements
+        tests = task.tests
         exp_results = {
             "programs": {},
             "generated_inputs": None,
@@ -73,7 +76,7 @@ class VibeRate(Selector):
         )
         exp_results["programs"][forward.get_name()] = [p.hash() for p in trans_to_programs[forward]]
         if p_dict and tests:
-            p_dict = Selector.update_program_correctness(self.executor, trans_to_programs[forward], tests, p_dict)
+            p_dict = Selector.update_program_correctness(task.id, self.executor, trans_to_programs[forward], tests, p_dict)
         program_printer(trans_to_programs, forward)
         # partial for-inv wrt inverse_index: its transformation and mapping to programs
         partial_for_inv_i = PartialInverse(model, req, inverse_index)
@@ -109,12 +112,14 @@ class VibeRate(Selector):
         # ts: list[Triangulation] = [for_inv, for_fib, spec_for_inv, spec_for_fib]
         ts: list[Triangulation] = [for_inv, for_fib]
         # ts: list[Triangulation] = [spec_for_inv, spec_for_fib]
+        exp_results["property"] = []
         for t in ts:
             print_annotated_hr(f"testing triangulation {t.print_name()}")
             new_selected, new_pairs = enumerate_pair(trans_to_programs, t, arity)
-            exp_results["property"][t.print_name()] = {
+            exp_results["property"].append({
+                "name": t.print_name(),
                 "chosen_programs": new_selected,
                 "pairs": new_pairs,
                 "decision": "Selected" if new_selected else "Abstained"
-            }
+            })
         return exp_results, p_dict

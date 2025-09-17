@@ -13,6 +13,7 @@ from viberate.code_generator import (
     Selected,
     Generator, Abstained
 )
+from viberate.dataset import Task
 
 @dataclass
 class UncertainOutput:
@@ -33,7 +34,9 @@ class Plurality(Selector):
         self.generator = generator
         self.n = n
         
-    def generate_and_select(self, model, req: Requirements, p_dir, p_dict, tests):
+    def generate_and_select(self, model, task: Task, p_dir, p_dict):
+        req = task.requirements
+        tests = task.tests
         exp_results = {
             "generated_programs": [],
             "generated_inputs": None,
@@ -46,7 +49,7 @@ class Plurality(Selector):
         exp_results["generated_inputs"] = inputs
 
         programs = list(islice(self.generator.generate(model, req, p_dir), self.n))
-        p_dict = Selector.update_program_correctness(self.executor, programs, tests, p_dict)
+        p_dict = Selector.update_program_correctness(task.id, self.executor, programs, tests, p_dict)
 
         classes = []
         outputs = []

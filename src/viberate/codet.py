@@ -14,6 +14,7 @@ from viberate.code_generator import (
     Abstained,
     Generator
 )
+from viberate.dataset import Task
 
 
 class MODE(Enum):
@@ -29,7 +30,9 @@ class CodeT(Selector):
         self.m = m
         self.mode = mode
 
-    def generate_and_select(self, model: Model, req: Requirements, p_dir, p_dict, bench_tests):
+    def generate_and_select(self, model: Model, task: Task, p_dir, p_dict):
+        req = task.requirements
+        bench_tests = task.tests
         exp_results = {
             "generated_programs": [],
             "generated_tests": [],
@@ -42,7 +45,7 @@ class CodeT(Selector):
         programs = list(islice(self.generator.generate(model, req, p_dir), self.n))
         exp_results["generated_programs"] = [p.hash() for p in programs]
 
-        p_dict = Selector.update_program_correctness(self.executor, programs, bench_tests, p_dict)
+        p_dict = Selector.update_program_correctness(task.id, self.executor, programs, bench_tests, p_dict)
 
         if not programs or not tests:
             exp_results["decision"] = "Abstained"

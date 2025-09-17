@@ -160,11 +160,7 @@ def main():
                         case "Vanilla":
                             num = config["generators"][gen]["number_of_programs"]
                             generator = Vanilla()
-                            init_dict = {
-                                "number_of_programs": num
-                            }
-                            init_dict['results'] = []
-                            experiment_result["generators"][gen] = init_dict
+                            experiment_result["generators"][gen] = {"number_of_programs": num, 'results': []}
                             for task in dataset:
                                 print_annotated_hr(f"Task {task.id}")
                                 new_dict = {
@@ -172,7 +168,7 @@ def main():
                                 }
                                 programs = list(islice(generator.generate(model, task.requirements, program_dir), num))
                                 new_dict.update({"generated_programs": [p.hash() for p in programs]})
-                                program_dict = Selector.update_program_correctness(executor, programs, task.tests, program_dict)    
+                                program_dict = Selector.update_program_correctness(task.id, executor, programs, task.tests, program_dict)
                                 experiment_result["generators"][gen]["results"].append(new_dict)
                         case _:
                             print("Unsupported generator", file=sys.stderr)
@@ -185,9 +181,10 @@ def main():
                     match select:
                         case "Plurality":
                             num = config["selectors"][select]["number_of_programs"]
-                            selector =  Plurality(executor, Vanilla(), num)
+                            selector = Plurality(executor, Vanilla(), num)
                             init_dict = {
-                                "number_of_programs": num
+                                "number_of_programs": num,
+                                "results": []
                             }
                         case "CodeT_assertion" | "CodeT_IOcompare":
                             num_p = config["selectors"][select]["number_of_programs"]
@@ -196,7 +193,8 @@ def main():
                             selector = CodeT(executor, Vanilla(), mode, num_p, num_t)
                             init_dict = {
                                 "number_of_programs": num_p,
-                                "number_of_tests": num_t
+                                "number_of_tests": num_t,
+                                "results": []
                             }
                         case "VibeRate":
                             num_1 = config["selectors"][select]["number_of_program_1"]
@@ -204,12 +202,12 @@ def main():
                             selector = VibeRate(executor, Vanilla(), num_1, num_2)
                             init_dict = {
                                 "number_of_program_1": num_1,
-                                "number_of_program_2": num_2
+                                "number_of_program_2": num_2,
+                                "results": []
                             }
                         case _:
                             print("Unsupported selectors", file=sys.stderr)
                             continue
-                    init_dict['results'] = []
                     experiment_result["selectors"][select] = init_dict
                     for task in dataset:
                         print_annotated_hr(f"Task {task.id}")
@@ -217,7 +215,7 @@ def main():
                             "task_id": task.id
                         }
                         # print(program_dict)
-                        select_result = selector.generate_and_select(model, task.requirements, program_dir, program_dict, task.tests)
+                        select_result = selector.generate_and_select(model, task, program_dir, program_dict)
                         new_dict.update(select_result[0])
                         program_dict = select_result[1]
                         experiment_result["selectors"][select]["results"].append(new_dict)

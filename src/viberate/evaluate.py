@@ -1,5 +1,4 @@
 
-
 import argparse
 import json
 from pathlib import Path
@@ -26,13 +25,13 @@ def evaluate_selector_simple(results: list, p_dict: dict):
     n1, n2, n3, n4, n5 = 0, 0, 0, 0, 0
     for result in results:
         print_annotated_hr(f"Task {result['task_id']}")
-        all_p_hash = result["generated_programs"] # hash
-        chosen_p_hash = result["chosen_programs"] # hash
+        all_p_hash = result["generated_programs"]  # hash
+        chosen_p_hash = result["chosen_programs"]  # hash
         decision = result["decision"]
 
         correct_p_hash = []
         for p_hash in all_p_hash:
-            if p_dict[p_hash]:
+            if p_dict[result['task_id']][p_hash]['result']:
                 correct_p_hash.append(p_hash)
 
         if len(correct_p_hash) > 0:
@@ -52,73 +51,90 @@ def evaluate_selector_simple(results: list, p_dict: dict):
     return len(results), [n1, n2, n3, n4, n5], None
 
 def evaluate_selector_pair(results: list, p_dict: dict):
-    # unfinish for delete hash and reformating
-    c_prob_lst = []
-    n1, n2, n3, n4, n5 = 0, 0, 0, 0, 0
+    # unfinished for delete hash and reformating
+    overall_n = [0, 0, 0, 0, 0]
+    overall_c_lst = []
+    metrics_dict = {}
     for result in results:
+        # for each task
         print_annotated_hr(f"Task {result['task_id']}")
-        program_list = result["programs"]["forward"] # hash
-        decision = result["decision"]
-        pairs = result["pairs"]
+        overall_c_denominator = 0
+        overall_c_numerator = 0
 
+        program_list = result["programs"]["forward"]  # hash
         correct_num = []
-        for index, program in enumerate(program_list):
-            if p_dict[program]:
-                correct_num.append(index)
+        for p_hash in program_list:
+            if p_dict[result['task_id']][p_hash]['result']:
+                correct_num.append(p_hash)
 
-        c_prob_denominator = 0
-        c_prob_numerator = 0
-        if decision != "Abstained":
-            for key, value in pairs.items():
-                c_prob_denominator += len(value)  # the number of resonating pairs
-                for pair in value:
+        for prop in result["property"]:
+            # for each property
+            c_denominator = 0
+            c_numerator = 0
+            if prop["name"] not in metrics_dict:
+                metrics_dict[prop["name"]] = {
+                    "c_prob_lst": [],
+                    "n_lst": [0, 0, 0, 0, 0]
+                }
+
+            if prop["decision"] != "Abstained":
+                c_denominator = len(prop["pairs"])
+                for pair in prop["pairs"]:
                     if pair[0] in correct_num:
-                        c_prob_numerator += 1  # the number of pair that contains a correct answer
-            if c_prob_denominator != 0:
-                c_prob_lst.append(c_prob_numerator / c_prob_denominator)
-            else:
-                c_prob_lst.append(None)
-        else:
-            c_prob_lst.append('Abstained')
+                        c_numerator += 1
 
-        print_annotated_hr("conditional probability")
-        print(c_prob_lst, file=sys.stderr)
+            if len(correct_num) > 0:
+                # GT: no abstention
+                if c_numerator > 0:
+                    metrics_dict[prop["name"]]["n_lst"][0] += 1
+                    overall_n[0] += 1
+                elif prop["decision"] == "Abstained":
+                    metrics_dict[prop["name"]]["n_lst"][2] += 1
+                    overall_n[2] += 1
+                else:
+                    metrics_dict[prop["name"]]["n_lst"][1] += 1
+                    overall_n[1] += 1
+            else:
+                # GT: abstention
+                if prop["decision"] == "Abstained":
+                    metrics_dict[prop["name"]]["n_lst"][4] += 1
+                    overall_n[4] += 1
+                else:
+                    metrics_dict[prop["name"]]["n_lst"][3] += 1
+                    overall_n[3] += 1
 
-        if len(correct_num) > 0:
-            # GT: no abstention
-            if c_prob_numerator and c_prob_numerator > 0:
-                n1 += 1
-            elif decision == "Abstained":
-                n3 += 1
+            overall_c_numerator += c_numerator
+            overall_c_denominator += c_denominator
+            if c_denominator > 0:
+                metrics_dict[prop["name"]]["c_prob_lst"].append(c_numerator / c_denominator)
             else:
-                n2 += 1
+                metrics_dict[prop["name"]]["c_prob_lst"].append('Abstained')
+
+        if overall_c_numerator > 0:
+            overall_c_lst.append(overall_c_numerator / overall_c_denominator)
         else:
-            # GT: abstention
-            if decision == "Abstained":
-                n5 += 1
-            else:
-                n4 += 1
-    return len(results), [n1, n2, n3, n4, n5], c_prob_lst
+            overall_c_lst.append('Abstained')
+    return len(results), overall_n, overall_c_lst, metrics_dict
 
 def evaluate_selector_class(results: list, p_dict: dict):
     c_prob_lst = []
     n1, n2, n3, n4, n5 = 0, 0, 0, 0, 0
     for result in results:
         print_annotated_hr(f"Task {result['task_id']}")
-        program_list = result["generated_programs"] # hash
+        program_list = result["generated_programs"]  # hash
         decision = result["decision"]
         classes = result["classes"]
 
         correct_p_hash = []
         for p_hash in program_list:
-            if p_dict[p_hash]:
+            if p_dict[result['task_id']][p_hash]['result']:
                 correct_p_hash.append(p_hash)
 
         c_prob_denominator = 0
         c_prob_numerator = None
         if decision != "Abstained":
             for p_class in classes:
-                p_hash_list = p_class["program_indexes"]
+                p_hash_list = p_class["program_hashes"]
                 c_prob_denominator += len(p_hash_list) * (len(p_hash_list) - 1)
                 if c_prob_numerator is None:
                     for p_hash in p_hash_list:
@@ -183,7 +199,9 @@ def main():
                     case "CodeT_IOcompare" | "CodeT_assertion":
                         num, n_lst, c_prob_lst = evaluate_selector_simple(select_dict[selector]["results"], p_dict)
                     case "VibeRate":
-                        num, n_lst, c_prob_lst = evaluate_selector_pair(select_dict[selector]["results"], p_dict)
+                        num, n_lst, c_prob_lst, separate_data = evaluate_selector_pair(select_dict[selector]["results"], p_dict)
+                        for key, value in separate_data.items():
+                            metrics[selector + "_" + key] = value
                     case _:
                         print(f"Unknown selector: {selector}")
                         continue
