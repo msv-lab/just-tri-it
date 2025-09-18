@@ -184,25 +184,46 @@ class Triangulation:
 def enumerate_pair(trans_to_programs: dict, t: Triangulation, arity):
     resonating_pairs = []
     selected_num = []
+    detailed_info = []
     for i, program_1 in enumerate(trans_to_programs[t.trans_1]):
         for j, program_2 in enumerate(trans_to_programs[t.trans_2]):
             print_annotated_hr(f"testing forward {i} and transformed {j}")
             try:
-                result = checker(t.property.formula, t.property.wrapper.function_wrapper(program_1, i, program_2, j),
-                                 arity)
+                result, check_result = checker(t.property.formula,
+                                               t.property.wrapper.function_wrapper(program_1, i, program_2, j),
+                                               arity)
+
                 match result:
                     case True:
                         print('Succeed to resonate')
                         resonating_pairs.append((program_1.hash(), program_2.hash()))
                         if program_1.hash() not in selected_num:
                             selected_num.append(program_1.hash())
+                        detailed_info.append({
+                            t.trans_1.get_name(): program_1.hash(),
+                            t.trans_2.get_name(): program_2.hash(),
+                            "each result": check_result,
+                            "final result": "Success"
+                        })
                     case False:
                         print('Fail to resonate')
+                        detailed_info.append({
+                            t.trans_1.get_name(): program_1.hash(),
+                            t.trans_2.get_name(): program_2.hash(),
+                            "each result": check_result,
+                            "final result": "Fail"
+                        })
                     case _:
                         print('Unknown result')
+                        detailed_info.append({
+                            t.trans_1.get_name(): program_1.hash(),
+                            t.trans_2.get_name(): program_2.hash(),
+                            "each result": check_result,
+                            "final result": "Unknown"
+                        })
             except Exception as e:
                 print(e)
-    return selected_num, resonating_pairs
+    return selected_num, resonating_pairs, detailed_info
 
 
 def program_printer(trans_to_programs: dict, t: Transformation):

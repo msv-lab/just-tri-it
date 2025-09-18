@@ -131,7 +131,7 @@ class Interpretation:
     preds: Dict[str, tuple[int, Callable[..., bool]]]
 
 
-def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any], cache=None) -> bool | UnknownValue:
+def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any], cache=None):
     match formula:
         case Pred(name, args):
             arity, p = interp.preds[name]
@@ -140,10 +140,10 @@ def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any
                 new_val = eval_term_cache(arg, interp, env, cache)
                 if new_val == TIMEOUT:
                     print("timeout")
-                    return UNKNOWN
+                    return UNKNOWN, None
                 elif new_val == ERROR:  # if we meet ERROR, the pred should be definitely false
                     print("error")
-                    return False
+                    return False, None
                 # only INVALID_IN can be compared
                 arg_vals.append(new_val)
             print(name, arg_vals)
@@ -151,47 +151,48 @@ def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any
                 raise ValueError(f"Predicate {name} expects {arity} arguments")
             ans = p(*arg_vals)
             print(ans)
-            return ans
+            return ans, None
         case Not(operand):
-            ans = is_formula_true(operand, interp, env)
+            ans, _ = is_formula_true(operand, interp, env)
             if ans == UNKNOWN:
-                return UNKNOWN
+                return UNKNOWN, None
             else:
-                return not ans
+                return (not ans), None
         case And(left, right):
-            ans_1 = is_formula_true(left, interp, env)
-            if ans_1 == False:
-                return False
-            ans_2 = is_formula_true(right, interp, env)
+            ans_1, _ = is_formula_true(left, interp, env)
+            if not ans_1:
+                return False, None
+            ans_2, _ = is_formula_true(right, interp, env)
             if ans_1 == UNKNOWN and ans_2 == UNKNOWN:
-                return UNKNOWN
+                return UNKNOWN, None
             elif ans_1 == UNKNOWN:
-                return ans_2
+                return ans_2, None
             elif ans_2 == UNKNOWN:
-                return ans_1
+                return ans_1, None
             else:
-                return ans_1 and ans_2
+                return (ans_1 and ans_2), None
         case Or(left, right):
-            ans_1 = is_formula_true(left, interp, env)
-            ans_2 = is_formula_true(right, interp, env)
+            ans_1, _ = is_formula_true(left, interp, env)
+            ans_2, _ = is_formula_true(right, interp, env)
             if ans_1 == UNKNOWN and ans_2 == UNKNOWN:
-                return UNKNOWN
+                return UNKNOWN, None
             elif ans_1 == UNKNOWN:
-                return ans_2
+                return ans_2, None
             elif ans_2 == UNKNOWN:
-                return ans_1
+                return ans_1, None
             else:
-                return ans_1 or ans_2
+                return (ans_1 or ans_2), None
         case ForAll(ele, domain, body):
             if isinstance(domain, Term):
                 domain = eval_term_cache(domain, interp, env, cache)
             if domain == ERROR:
-                return False
+                return False, None
             elif domain == TIMEOUT or domain == INVALID_IN:
-                return UNKNOWN
+                return UNKNOWN, None
             if not isinstance(domain, List):
                 domain = [domain]
             has_value = False
+            detailed_info = []
             for d in domain:
                 new_env = env.copy()
                 if isinstance(ele, Var):
@@ -199,15 +200,17 @@ def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any
                 else:
                     for index, var in enumerate(ele):
                         new_env[var.name] = d[index]
-                ans = is_formula_true(body, interp, new_env)
+                ans, _ = is_formula_true(body, interp, new_env)
                 if ans is False:
-                    return False
+                    detailed_info.append(False)
+                    return False, detailed_info
                 elif ans is True:
+                    detailed_info.append(True)
                     has_value = True
             if has_value:
-                return True
+                return True, detailed_info
             else:
-                return UNKNOWN
+                return UNKNOWN, detailed_info
         case _:
             raise ValueError(f"Unsupported formula type")
 
@@ -330,5 +333,5 @@ def checker(formula: Formula, funcs: list[Callable], arity):
             "DeltaEq": (3, lambda x, y, tag: y == delta_apply(x, tag))
         }
     )
-    ans = is_formula_true(formula, interp, {}, {})
-    return ans
+    ans, detailed_info = is_formula_true(formula, interp, {}, {})
+    return ans, detailed_info

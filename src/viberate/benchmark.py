@@ -95,7 +95,7 @@ def passes_tests(executor: Executor, program: Program, tests: List[Test]) -> boo
 def evaluate_generator(model: Model, executor: Executor, generator: Generator, dataset: Dataset):
     N = 5
     for task in dataset:
-        programs = islice(generator.generate(model, task.requirements), N)
+        programs = islice(generator.generate(model, task.requirements, N), N)
         results = []
         for program in programs:
             if passes_tests(executor, program, task.tests):

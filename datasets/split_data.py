@@ -5,15 +5,6 @@ from typing import List, Dict, Any
 
 
 def extract_all_ids_from_json(json_file_path: str) -> list:
-    """
-    Read a JSON file, traverse all dictionaries and extract the "id" field, return a list of all ids
-
-    Args:
-        json_file_path: Path to the JSON file (e.g., "./data.json")
-
-    Returns:
-        A list containing all extracted "id" values (dictionaries without the "id" field will be skipped)
-    """
     # 1. Read the contents of the JSON file
     try:
         with open(json_file_path, 'r', encoding='utf-8') as f:
@@ -61,6 +52,8 @@ def check_and_preprocess(id_value: str, output_dir: str = "./lcb_try") -> List[D
     Returns:
         The loaded JSON data if successful, None otherwise
     """
+    os.makedirs(output_dir, exist_ok=True)
+
     # Target file path
     target_path = f"{output_dir}/{id_value}.json"
 
@@ -116,7 +109,7 @@ def save_data_batch(data_batch: List[Dict[str, Any]], batch_index: int, output_d
     os.makedirs(output_dir, exist_ok=True)
 
     # Create output file path
-    output_path = f"{output_dir}/lcb_{batch_index}.json"
+    output_path = f"{output_dir}/lcb_batch_{batch_index}.json"
 
     # Save the batch data to a JSON file
     with open(output_path, 'w', encoding='utf-8') as f:

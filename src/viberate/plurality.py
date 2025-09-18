@@ -48,7 +48,7 @@ class Plurality(Selector):
         inputs = generate_inputs(model, req, self.executor)
         exp_results["generated_inputs"] = inputs
 
-        programs = list(islice(self.generator.generate(model, req, p_dir), self.n))
+        programs = list(islice(self.generator.generate(model, req, p_dir, self.n), self.n))
         p_dict = Selector.update_program_correctness(task.id, self.executor, programs, tests, p_dict)
 
         classes = []

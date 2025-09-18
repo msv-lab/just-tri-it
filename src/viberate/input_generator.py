@@ -37,23 +37,20 @@ def range_checker(executor, model, req, input_list):
     checker_sig = copy.deepcopy(req.signature)
     checker_sig.name = "is_valid_input"
     PROMPT = f"""
-    Given a problem description, please write a function based on the
-    provided function signature to check whether a input meets the range
-    and format requirements described in the problem. The function 
-    should return True/False, indicating whether the input is valid. 
-    You only need to check the explicitly mentioned data range 
-    constraints and formats, and do not need to verify the specific
-    logical relationships between various data points. 
-    Name your function 'is_valid_input'.
+Given a problem description, please write a function based on the
+provided function signature to check whether a input meets the range
+and format requirements described in the problem. The function 
+should return True/False, indicating whether the input is valid.
+Name your function 'is_valid_input'.
     
-    # **Problem Description**:
-    {req.description}
-    # **Function Signature**:
-    {checker_sig.pretty_print()}
-    
-    Please answer in the following format:
-    ```python
-    ```
+# **Problem Description**:
+{req.description}
+# **Function Signature**:
+{checker_sig.pretty_print()}
+
+Please answer in the following format:
+```python
+```
     """
     response = next(model.sample(PROMPT))
     # print(response)
@@ -77,49 +74,52 @@ def range_checker(executor, model, req, input_list):
 
 def generate_inputs(model, req, executor=None):
     # Define three different types of prompts
-    PROMPT_SMALL = f"""Given a problem description and the function signature, 
-    create 10 small-scale test inputs to test basic functionality. 
-    These inputs should have small integer values and short strings/lists.
-    Present each input as a list of parameters. Wrap each input with ``` as below:
+    PROMPT_SMALL = f"""
+Given a problem description and the function signature, create
+10 small-scale test inputs to test basic functionality. These
+inputs should have small integer values and short strings/lists.
 
-    ```
-    [input1_param1, input1_param2, ...]
-    ```
+Present each input as a list of parameters. Wrap each input with ``` as below:
+```
+[input1_param1, input1_param2, ...]
+```
 
-    # **Problem Description**:
-    {req.description}
-    # **Function Signature**:
-    {req.signature.pretty_print()}
+# **Problem Description**:
+{req.description}
+# **Function Signature**:
+{req.signature.pretty_print()}
     """
 
-    PROMPT_MEDIUM = f"""Given a problem description and the function signature, 
-    create 10 medium-scale test inputs to test moderate performance. 
-    These inputs should have medium integer values and medium-length strings/lists.
-    Present each input as a list of parameters. Wrap each input with ``` as below:
+    PROMPT_MEDIUM = f"""
+Given a problem description and the function signature, create
+10 medium-scale test inputs to test moderate performance. These
+inputs should have medium integer values and medium-length strings/lists.
 
-    ```
-    [input1_param1, input1_param2, ...]
-    ```
+Present each input as a list of parameters. Wrap each input with ``` as below:
+```
+[input1_param1, input1_param2, ...]
+```
 
-    # **Problem Description**:
-    {req.description}
-    # **Function Signature**:
-    {req.signature.pretty_print()}
+# **Problem Description**:
+{req.description}
+# **Function Signature**:
+{req.signature.pretty_print()}
     """
 
-    PROMPT_BOUNDARY = f"""Given a problem description and the function signature, 
-    create 10 boundary test inputs to test edge cases and special conditions. 
-    These should include minimum/maximum values, empty inputs, and other edge cases.
-    Present each input as a list of parameters. Wrap each input with ``` as below:
+    PROMPT_BOUNDARY = f"""
+Given a problem description and the function signature, create
+10 boundary test inputs to test edge cases and special conditions. These
+inputs should include minimum/maximum values, empty inputs, and other edge cases.
 
-    ```
-    [input1_param1, input1_param2, ...]
-    ```
+Present each input as a list of parameters. Wrap each input with ``` as below:
+```
+[input1_param1, input1_param2, ...]
+```
 
-    # **Problem Description**:
-    {req.description}
-    # **Function Signature**:
-    {req.signature.pretty_print()}
+# **Problem Description**:
+{req.description}
+# **Function Signature**:
+{req.signature.pretty_print()}
     """
 
     # Helper function to create hashable representation of input data
@@ -142,7 +142,7 @@ def generate_inputs(model, req, executor=None):
         inputs = []
         for attempt in range(num_retry):
             try:
-                response = next(ind_model.sample(prompt))
+                response = next(ind_model.sample(prompt, num_retry))
                 matches = re.findall(pattern, response, re.DOTALL)
                 inputs = [eval(block.strip()) for block in matches]
                 inputs = [i for i in inputs if not value_is_too_large(i, 10000, 10)]

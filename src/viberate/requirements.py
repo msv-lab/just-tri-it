@@ -3,7 +3,7 @@ import sys
 from itertools import islice
 
 from viberate.program import Signature, Parameter
-from viberate.utils import print_annotated_hr, extract_answer
+from viberate.utils import print_annotated_hr, extract_answer, gen_and_extract_answer_with_retry
 from viberate.cached_llm import Model
 
 
@@ -26,22 +26,15 @@ class NamedReturnSignature(Signature):
 
     @staticmethod
     def infer_name(model: Model, req: Requirements) -> 'NamedReturnSignature':
-        PROMPT = f""" For the problem below, name its return value
-        descriptively using Python's snake_case naming convention.
-        Enclose the name in <answer> tags.
+        PROMPT = f"""
+For the problem below, name its return value descriptively
+using Python's snake_case naming convention. Enclose the
+name in <answer> tags.
         
-        Problem:
-        {req.description}
+Problem:
+{req.description}
         """
-        return_name_lst = list(islice(model.sample(PROMPT), 3))
-        valid_name = None
-        for return_name in return_name_lst:
-            try:
-                valid_name = extract_answer(return_name)
-                if valid_name is not None:
-                    break
-            except:
-                continue
+        valid_name = gen_and_extract_answer_with_retry(model, PROMPT, 3)
         return NamedReturnSignature(req.signature.name,
                                     req.signature.params,
                                     req.signature.return_type,
@@ -53,32 +46,22 @@ def choose_parameter_to_invert(model: Model, req: Requirements) -> int:
     if len(req.signature.params) == 1:
         return 0
     else:
-        PROMPT = f""" For the problem below and its corresponding
-        function signature, I need to invert this problem, so I need
-        to select a parameter to swap with the return value.
-        Which parameter do you think would make the inverse
-        problem relatively easier to solve? Please pay attention that
-        you **must not** choose parameters that can be easily derived from other parameters.
-        Only answer the full name of this parameter (not its type) in <answer> tags.
-        In function signature, when type hints are used, the part
-        before the colon is exactly the name of that parameter. 
-        
-        Problem:
-        {req.description}
-        Function signature:
-        {req.signature.pretty_print()}
+        PROMPT = f"""
+For the problem below and its function signature, choose one parameter
+to swap with the return value to form the inverse problem. Which parameter
+do you think would make the inverse problem relatively easier to solve?
+Please pay attention that you **must not** choose parameters that can be
+easily derived from other parameters. Answer only the full name of this
+parameter (not its type) in <answer> tags. In function signature, when type
+hints are used, the part before the colon is exactly the name of that parameter. 
+
+Problem:
+{req.description}
+Function signature:
+{req.signature.pretty_print()}
         """
-        name_lst = list(islice(model.sample(PROMPT), 3))
-        valid_name = None
-        return_param = None
-        for n in name_lst:
-            try:
-                valid_name = extract_answer(n)
-                return_param = [p.name for p in req.signature.params].index(valid_name)
-                if valid_name is not None:
-                    return return_param
-            except:
-                continue
+        valid_name = gen_and_extract_answer_with_retry(model, PROMPT, 3)
+        return_param = [p.name for p in req.signature.params].index(valid_name)
         return return_param
 
 
@@ -113,37 +96,36 @@ def _inverse_signature(model: Model,
 def _inverse_description_single_arg(model: Model,
                                     req: Requirements,
                                     inverted_sig: Signature) -> str:
-    PROMPT = f""" Rewrite the given problem, which requires
-    implementing the function {req.signature.pretty_print()}, so that
-    it instead requires implementing the function
-    {inverted_sig.pretty_print()}. The new function should, for each
-    possible output of the original function, return the possible
-    input that produce that output. Try to maintain accuracy during
-    the conversion process. Enclose your rewritten problem in
-    <answer> tags.
+    PROMPT = f"""
+Rewrite the given problem, which requires implementing the function
+'{req.signature.pretty_print()}', so that it instead requires implementing
+the function '{inverted_sig.pretty_print()}'. The new function should,
+for each possible output of the original function, return the possible
+input that produce that output. Try to maintain accuracy during the
+conversion process. Enclose your rewritten problem in <answer> tags.
 
-    Problem:
-    {req.description}
+Problem:
+{req.description}
     """
-    return extract_answer(next(model.sample(PROMPT)))
+    return gen_and_extract_answer_with_retry(model, PROMPT, 3)
 
 
 def _inverse_description(model: Model,
                          req: Requirements,
                          inverted_sig: Signature,
                          inverse_index: int) -> str:
-    PROMPT = f""" Rewrite the given problem, which requires
-    implementing the function {req.signature.pretty_print()}, so that
-    it requiresimplementing the function {inverted_sig.pretty_print()}
-    instead. The new function should return the value of the parameter
-    {req.signature.params[inverse_index].name} that produce that given
-    output. Try to maintain accuracy during the conversion process. 
-    Enclose your rewritten problem in <answer> tags.
+    PROMPT = f"""
+Rewrite the given problem, which requires implementing the function
+'{req.signature.pretty_print()}', so that it requires implementing
+the function '{inverted_sig.pretty_print()}' instead. The new function
+should return the value of the parameter '{req.signature.params[inverse_index].name}'
+that produce that given output. Try to maintain accuracy during the
+conversion process. Enclose your rewritten problem in <answer> tags.
 
-    Problem:
-    {req.description}
+Problem:
+{req.description}
     """
-    return extract_answer(next(model.sample(PROMPT)))
+    return gen_and_extract_answer_with_retry(model, PROMPT, 3)
 
 
 def fiber_requirements(model: Model, req: Requirements, inverse_index: int) -> Requirements:
@@ -176,15 +158,15 @@ def specific_requirements(model, fiber_req, fiber_input, choice):
     if len(fiber_req.signature.params) == 1:
         specific_question += "?"
     REMOVE_PROMPT = f"""
-    Remove the sections such as Input, Output, Constraints, and Example from the
-    following problem description, leaving only the complete problem statement. Words like
-    "implement a function ..." should also be removed.
-    Enclose your rewritten problem in <answer> tags.
-    
-    Problem Description:
-    {fiber_req.description}
+Remove the sections such as Input, Output, Constraints, and Example from the
+following problem description, leaving only the complete problem statement.
+Words like "implement a function ..." should also be removed. Enclose your
+rewritten problem in <answer> tags.
+
+Problem Description:
+{fiber_req.description}
     """
-    revised_question = extract_answer(next(model.sample(REMOVE_PROMPT)))
+    revised_question = gen_and_extract_answer_with_retry(model, REMOVE_PROMPT, 3)
     if 'fiber' in choice:
         complete_question = (revised_question + "\n" + specific_question +
                              " Please return all possible answers in a list.")
@@ -211,54 +193,53 @@ def _fiber_signature(model: Model,
 def _fiber_description_single_arg(model: Model,
                                   req: Requirements,
                                   fiber_sig: Signature):
-    PROMPT = f""" Rewrite the given problem, which requires
-    implementing the function {req.signature.pretty_print()}, so that
-    it instead requires implementing the function
-    {fiber_sig.pretty_print()}. The new function should, for each
-    possible output of the original function, return the exhaustive
-    list of all inputs that produce that output. Try to maintain 
-    accuracy during the conversion process. Enclose your rewritten 
-    problem in <answer> tags.
+    PROMPT = f"""
+Rewrite the given problem, which requires implementing the function
+'{req.signature.pretty_print()}', so that it instead requires implementing
+the function '{fiber_sig.pretty_print()}'. The new function should, for each
+possible output of the original function, return the exhaustive list of all
+inputs that produce that output. Try to maintain accuracy during the
+conversion process. Enclose your rewritten problem in <answer> tags.
 
-    Problem:
-    {req.description}
+Problem:
+{req.description}
     """
-    return extract_answer(next(model.sample(PROMPT)))
+    return gen_and_extract_answer_with_retry(model, PROMPT, 3)
 
 
 def _fiber_description(model: Model,
                        req: Requirements,
                        fiber_sig: Signature,
                        inverse_index: int):
-    PROMPT = f""" Rewrite the given problem, which requires
-    implementing the function {req.signature.pretty_print()}, so that
-    it requires implementing the function {fiber_sig.pretty_print()}
-    instead. The new function should return the exhaustive list of all
-    possible values of the parameter
-    {req.signature.params[inverse_index].name} that produce the given
-    output. Try to maintain accuracy during the conversion process.
-    Enclose your rewritten problem in <answer> tags.
+    PROMPT = f"""
+Rewrite the given problem, which requires implementing the function 
+'{req.signature.pretty_print()}', so that it requires implementing
+the function '{fiber_sig.pretty_print()}' instead. The new function
+should return the exhaustive list of all possible values of the parameter
+'{req.signature.params[inverse_index].name}' that produce the given
+output. Try to maintain accuracy during the conversion process.
+Enclose your rewritten problem in <answer> tags.
 
-    Problem:
-    {req.description}
+Problem:
+{req.description}
     """
-    return extract_answer(next(model.sample(PROMPT)))
+    return gen_and_extract_answer_with_retry(model, PROMPT, 3)
 
 
 def _fiber_description_wo_example(model: Model,
                                   req: Requirements,
                                   fiber_sig: Signature,
                                   inverse_index: int):
-    PROMPT = f""" Rewrite the given problem, which requires
-    implementing the function {req.signature.pretty_print()}, so that
-    it requires implementing the function {fiber_sig.pretty_print()}
-    instead. The new function should return the exhaustive list of all
-    possible values of the parameter
-    {req.signature.params[inverse_index].name} that produce the given
-    output. The revised problem must not include input-output
-    examples. Enclose your rewritten problem in <answer> tags.
+    PROMPT = f"""
+Rewrite the given problem, which requires implementing the function
+'{req.signature.pretty_print()}', so that it requires implementing
+the function '{fiber_sig.pretty_print()}' instead. The new function
+should return the exhaustive list of all possible values of the parameter
+'{req.signature.params[inverse_index].name}' that produce the given
+output. The revised problem must not include input-output examples.
+Enclose your rewritten problem in <answer> tags.
 
-    Problem:
-    {req.description}
+Problem:
+{req.description}
     """
-    return extract_answer(next(model.sample(PROMPT)))
+    return gen_and_extract_answer_with_retry(model, PROMPT, 3)

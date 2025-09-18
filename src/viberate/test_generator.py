@@ -14,20 +14,20 @@ def validate_test_case(executor, model, req, test_case):
     validator_sig.params.append(("expected_output", req.signature.return_type))
     
     PROMPT = f"""
-    Given a problem description and a test case (input + expected output), 
-    please write a function to validate whether the expected output is 
-    correct for the given input according to the problem requirements.
-    The function should return True if the test case is valid, False otherwise.
-    Name your function 'validate_test_case'.
-    
-    # **Problem Description**:
-    {req.description}
-    # **Function Signature**:
-    {validator_sig}
-    
-    Please answer in the following format:
-    ```python
-    ```
+Given a problem description and a test case (input + expected output), 
+please write a function to validate whether the expected output is 
+correct for the given input according to the problem requirements.
+The function should return True if the test case is valid, False otherwise.
+Name your function 'validate_test_case'.
+
+# **Problem Description**:
+{req.description}
+# **Function Signature**:
+{validator_sig}
+
+Please answer in the following format:
+```python
+```
     """
     response = next(model.sample(PROMPT))
     print(response, file=sys.stderr)
@@ -73,34 +73,34 @@ def extract_test_case(matches):
 
 def generate_test_cases(model, req, executor=None):
     PROMPT = f"""
-    Given a problem description and function signature, create a comprehensive 
-    set of test cases that include both inputs and their corresponding expected 
-    outputs. The test cases should cover various scenarios including:
-    - Normal cases
-    - Edge cases
-    - Boundary conditions
-    - Corner cases
-    
-    Present each test case as: input -> expected_output
-    Wrap each test case with ``` like this:
-    # Test case 1
-    ```
-    input: [param1, param2, ...]
-    output: expected_result
-    ```
-    # Test case 2
-    ```
-    input: [param1, param2, ...]
-    output: expected_result
-    ```
-    ...
-    
-    # **Problem Description**:
-    {req.description}
-    # **Function Signature**:
-    {req.signature}
-    
-    Please provide at least 5-10 diverse test cases.
+Given a problem description and function signature, create a comprehensive 
+set of test cases that include both inputs and their corresponding expected 
+outputs. The test cases should cover various scenarios including:
+- Normal cases
+- Edge cases
+- Boundary conditions
+- Corner cases
+
+Present each test case as: input -> expected_output
+Wrap each test case with ``` like this:
+# Test case 1
+```
+input: [param1, param2, ...]
+output: expected_result
+```
+# Test case 2
+```
+input: [param1, param2, ...]
+output: expected_result
+```
+...
+
+# **Problem Description**:
+{req.description}
+# **Function Signature**:
+{req.signature}
+
+Please provide at least 5-10 diverse test cases.
     """
     
     response = next(model.sample(PROMPT))
@@ -136,24 +136,24 @@ def generate_additional_test_cases(model, req, existing_cases, executor=None):
     existing_inputs_str = "\n".join([str(case[0]) for case in existing_cases])
     
     PROMPT = f"""
-    Given a problem description and some existing test cases, generate 
-    additional diverse test cases that cover different scenarios not 
-    already covered. Focus on edge cases, boundary conditions, and 
-    corner cases that might be missing.
-    
-    # **Problem Description**:
-    {req.description}
-    # **Function Signature**:
-    {req.signature}
-    
-    # **Existing Test Cases (inputs only)**:
-    {existing_inputs_str}
-    
-    Generate 3-5 additional test cases in the same format:
-    ```
-    input: [param1, param2, ...]
-    output: expected_result
-    ```
+Given a problem description and some existing test cases, generate 
+additional diverse test cases that cover different scenarios not 
+already covered. Focus on edge cases, boundary conditions, and 
+corner cases that might be missing.
+
+# **Problem Description**:
+{req.description}
+# **Function Signature**:
+{req.signature}
+
+# **Existing Test Cases (inputs only)**:
+{existing_inputs_str}
+
+Generate 3-5 additional test cases in the same format:
+```
+input: [param1, param2, ...]
+output: expected_result
+```
     """
     
     response = next(model.sample(PROMPT))

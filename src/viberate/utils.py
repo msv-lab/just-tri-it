@@ -4,6 +4,8 @@ import mistletoe
 import json
 from pathlib import Path
 
+from viberate.cached_llm import Independent
+
 
 def print_hr():
     width = shutil.get_terminal_size(fallback=(80, 20)).columns
@@ -48,6 +50,20 @@ def extract_answer(s):
         return s.split("<answer>", 1)[1].split("</answer>", 1)[0]
     else:
         raise DataExtractionFailure
+
+
+def gen_and_extract_answer_with_retry(model, prompt, num_retry=3):
+    ind_model = Independent(model)
+    ans = None
+    for attempt in range(num_retry):
+        try:
+            ans = extract_answer(next(ind_model.sample(prompt, num_retry)))
+            break
+        except Exception as e:
+            if attempt == num_retry - 1:
+                raise Exception(f"did not get good response: {e}")
+        pass
+    return ans
 
 
 class CompactJSONEncoder(json.JSONEncoder):

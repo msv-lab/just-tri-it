@@ -85,7 +85,7 @@ def main():
         print(config_path)
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
-        model = AI302(config["model_name"], config["temp"])
+        model = AI302(config["model_name"], config["temp"], max_batch=50)
     
         if not args.no_cache:
             if args.cache_root:
@@ -110,11 +110,10 @@ def main():
 
         try:
             dataset_fullname = dataset_path.stem
-            split_index = dataset_fullname.rfind('_')
-            name = dataset_fullname[:split_index]
-            batch = int(dataset_fullname[split_index + 1:])
-        except:
-            print("can't parse dataset name")
+            name, batch_str = dataset_fullname.split("_batch_")
+            batch = int(batch_str)
+        except Exception as e:
+            print(f"can't parse dataset name: {e}")
             name = "unknown"
             batch = "unknown"
 
@@ -166,7 +165,7 @@ def main():
                                 new_dict = {
                                     "task_id": task.id
                                 }
-                                programs = list(islice(generator.generate(model, task.requirements, program_dir), num))
+                                programs = list(islice(generator.generate(model, task.requirements, program_dir, num), num))
                                 new_dict.update({"generated_programs": [p.hash() for p in programs]})
                                 program_dict = Selector.update_program_correctness(task.id, executor, programs, task.tests, program_dict)
                                 experiment_result["generators"][gen]["results"].append(new_dict)

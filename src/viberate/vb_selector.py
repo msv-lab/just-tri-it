@@ -72,7 +72,7 @@ class VibeRate(Selector):
         # forward: its transformation and mapping to programs
         forward = Forward()
         trans_to_programs.update(
-            {forward: list(islice(self.generator.generate(model, req, p_dir), self.n1))}
+            {forward: list(islice(self.generator.generate(model, req, p_dir, self.n1), self.n1))}
         )
         exp_results["programs"][forward.get_name()] = [p.hash() for p in trans_to_programs[forward]]
         if p_dict and tests:
@@ -81,7 +81,7 @@ class VibeRate(Selector):
         # partial for-inv wrt inverse_index: its transformation and mapping to programs
         partial_for_inv_i = PartialInverse(model, req, inverse_index)
         trans_to_programs.update(
-            {partial_for_inv_i: list(islice(self.generator.generate(model, partial_for_inv_i.req, p_dir), self.n2))}
+            {partial_for_inv_i: list(islice(self.generator.generate(model, partial_for_inv_i.req, p_dir, self.n2), self.n2))}
         )
         exp_results["programs"][partial_for_inv_i.get_name()] = [p.hash() for p in trans_to_programs[partial_for_inv_i]]
         program_printer(trans_to_programs, partial_for_inv_i)
@@ -91,7 +91,7 @@ class VibeRate(Selector):
         # partial for-fib wrt inverse_index: its transformation and mapping to programs
         partial_for_fib_i = PartialFiber(model, req, inverse_index)
         trans_to_programs.update(
-            {partial_for_fib_i: list(islice(self.generator.generate(model, partial_for_fib_i.req, p_dir), self.n2))}
+            {partial_for_fib_i: list(islice(self.generator.generate(model, partial_for_fib_i.req, p_dir, self.n2), self.n2))}
         )
         exp_results["programs"][partial_for_fib_i.get_name()] = [p.hash() for p in trans_to_programs[partial_for_fib_i]]
         program_printer(trans_to_programs, partial_for_fib_i)
@@ -115,11 +115,12 @@ class VibeRate(Selector):
         exp_results["property"] = []
         for t in ts:
             print_annotated_hr(f"testing triangulation {t.print_name()}")
-            new_selected, new_pairs = enumerate_pair(trans_to_programs, t, arity)
+            new_selected, new_pairs, detailed_result = enumerate_pair(trans_to_programs, t, arity)
             exp_results["property"].append({
                 "name": t.print_name(),
                 "chosen_programs": new_selected,
                 "pairs": new_pairs,
-                "decision": "Selected" if new_selected else "Abstained"
+                "decision": "Selected" if new_selected else "Abstained",
+                "detailed_info": detailed_result
             })
         return exp_results, p_dict

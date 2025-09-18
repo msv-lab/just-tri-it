@@ -42,7 +42,7 @@ class CodeT(Selector):
         tests, tests_new_form = self._generate_tests(model, req, self.mode)
         exp_results["generated_tests"] = tests_new_form
 
-        programs = list(islice(self.generator.generate(model, req, p_dir), self.n))
+        programs = list(islice(self.generator.generate(model, req, p_dir, self.n), self.n))
         exp_results["generated_programs"] = [p.hash() for p in programs]
 
         p_dict = Selector.update_program_correctness(task.id, self.executor, programs, bench_tests, p_dict)

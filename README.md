@@ -62,6 +62,36 @@ A specific task can be specified using `--task`:
     
     uv run benchmark --test-venv test_venv/ --dataset datasets/lcb_part6.json --generator Vanilla --model gpt-4o --task atcoder_abc387_b
 
+
+## Experiment
+
+To run LiveCodeBench v6, first decompress the dataset using:
+    
+    unzip datasets/lcb_part6.json.zip
+
+Then, run the script 'datasets/split_data.py' to divide all the experimental data into multiple batches, with 10 items in each batch.
+
+Then, run experiments on each batch using:
+
+    src/viberate/run.sh DATASET_PATH DATASET_NAME RUNNING_ID
+
+For example, if the batches data is under 'datasets/lcb_try_batches', please run:
+
+    ./src/viberate/run.sh datasets/lcb_try_batches lcb 1
+
+So you will get a result directory named 'lcb_1' under source root.
+
+Then, get the metrics based on the experiment results using:
+
+    uv run evaluate --experiment-results EXPERIMENT_RESULT_DIR
+
+For example:
+    
+    uv run evaluate --experiment-results lcb_1
+
+And you'll get a file named evaluation.json under directory 'lcb_1'.
+
+
 ## Reproducibility
 
 VibeRate's tools provide the following options to manage LLM cache:
