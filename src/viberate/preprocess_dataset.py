@@ -14,13 +14,11 @@ import jsonlines
 
 from viberate.dataset import Dataset
 from viberate.utils import panic
-from viberate.requirements import Requirements
 from viberate.cached_llm import Model, Persistent, Independent, AI302
 from viberate.utils import extract_code, extract_answer
-from viberate.program import Signature, Test, Parameter, Program, ExpectedOutput
+from viberate.program import Signature, Test, Parameter, Program, ExpectedOutput, Requirements
 from viberate.executor import Executor, Success
 from viberate.dataset import Task, Dataset, save_dataset, load_dataset, lcb_compress, lcb_decompress
-from viberate.config import LIVECODEBENCH_IMPORTS
 
 
 def parse_args():
@@ -238,11 +236,11 @@ def lcb_generate_input_formatter(model: Model, req: Requirements):
     s = extract_code(next(model.sample(PROMPT)))
     s = remove_top_level_function(s, solution_sig.name)
 
-    return Program(formatter_sig, stdin_extractor + "\n" + s).add_imports(LIVECODEBENCH_IMPORTS)
+    return Program(formatter_sig, stdin_extractor + "\n" + s)
 
 
 def lcb_input_sanity_check(executor: Executor, formatter: Program, stdin: str, parsed: Any):
-    result = executor.run(formatter, parsed)
+    result = executor.run(formatter, parsed, add_lcb_imports=True)
     match result:
         case Success(value):
             if value is None:
@@ -282,11 +280,11 @@ def lcb_generate_output_formatter(model: Model, req: Requirements) -> Program:
 
     s = extract_code(next(model.sample(PROMPT)))
 
-    return Program(formatter_sig, s).add_imports(LIVECODEBENCH_IMPORTS)
+    return Program(formatter_sig, s)
 
 
 def lcb_output_sanity_check(executor: Executor, formatter: Program, stdout: str, parsed: Any):
-    result = executor.run(formatter, [parsed])
+    result = executor.run(formatter, [parsed], add_lcb_imports=True)
     match result:
         case Success(value):
             if value is None:
@@ -337,11 +335,11 @@ def lcb_generate_input_parser(model: Model, req: Requirements):
     s = extract_code(next(model.sample(PROMPT)))
     s = remove_top_level_function(s, req.signature.name)
 
-    return Program(parser_sig, argument_extractor + "\n" + s).add_imports(LIVECODEBENCH_IMPORTS)
+    return Program(parser_sig, argument_extractor + "\n" + s)
 
 
 def lcb_parse_stdin_inputs(executor: Executor, parser: Program, stdin: str) -> list[Any]:
-    result = executor.run(parser, [stdin])
+    result = executor.run(parser, [stdin], add_lcb_imports=True)
     match result:
         case Success(value):
             if not isinstance(value, list):
@@ -377,11 +375,11 @@ def lcb_generate_output_parser(model: Model, req: Requirements):
     """
     
     s = extract_code(next(model.sample(PROMPT_PARSER)))
-    return Program(parser_sig, s).add_imports(LIVECODEBENCH_IMPORTS)
+    return Program(parser_sig, s)
 
     
 def lcb_parse_stdout_output(executor: Executor, parser: Program, stdout: str) -> Any:
-    result = executor.run(parser, [stdout])
+    result = executor.run(parser, [stdout], add_lcb_imports=True)
     match result:
         case Success(value):
             return value

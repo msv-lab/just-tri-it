@@ -2,231 +2,331 @@ import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable
-from viberate.executor import Success, Executor
+from itertools import islice
+from typing import Callable, Tuple
 
+from viberate.executor import Success, Executor
 from viberate.cached_llm import Model
-from viberate.code_generator import SpecificGenerator
-from viberate.logic import Formula, checker
-from viberate.requirements import Requirements, NamedReturnSignature, _inverse_signature, \
-    _inverse_description_single_arg, _inverse_description, _fiber_signature, _fiber_description_single_arg, \
-    _fiber_description
-from viberate.utils import print_annotated_hr
+from viberate.code_generator import Selector, Generator, SelectionOutcome, Selected, Abstained
+from viberate.input_generator import generate_inputs
+from viberate.logic import Formula, check, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, MapUnpack, Member
+from viberate.program import Requirements, NamedReturnSignature, Signature, Parameter
+from viberate.utils import (
+    print_annotated_hr,
+    gen_and_extract_answer_with_retry,
+    ExperimentFailure,
+    RawData
+)
+
+
+class TriSelector(Selector):
+    def __init__(self,
+                 executor: Executor,
+                 code_generator: Generator,
+                 triangulation: 'Triangulation',
+                 num_left_programs: int,
+                 num_right_programs: int):
+        self.executor = executor
+        self.code_generator = code_generator
+        self.triangulation = triangulation
+        self.num_left_programs = num_left_programs
+        self.num_right_programs = num_right_programs
+
+    def generate_and_select(self, model, req: Requirements) -> Tuple[SelectionOutcome, RawData]:
+        transformed_left = self.triangulation.left_trans.transform(model, req)
+        left_inputs = generate_inputs(model, transformed_left, self.executor)
+        left_programs = self.code_generator.generate(model, transformed_left, self.num_left_programs)
+        left_programs = islice(left_programs, self.num_left_programs)
+
+        transformed_right = self.triangulation.right_trans.transform(model, req)
+        right_inputs = generate_inputs(model, transformed_right, self.executor)        
+        right_programs = self.code_generator.generate(model, transformed_right, self.num_right_programs)
+        right_programs = islice(right_programs, self.num_right_programs)
+
+        selected_pairs = []
+
+        for p in left_programs:
+            for q in right_programs:
+                if check(self.executor,
+                         { Side.LEFT: left_inputs, Side.RIGHT: right_inputs },
+                         { Side.LEFT: p, Side.RIGHT: q },
+                         self.triangulation.hyperproperty):
+                    selected_pairs.append((p, q))
+
+        raw_data = {}
+
+        if len(selected_pairs) > 0:
+            #NOTE: assume that the left transformation is what we want to select:
+            return (Selected(list(map(lambda x: x[0], selected_pairs))), raw_data)
+        else:
+            return (Abstained(), raw_data)
 
 
 class Transformation(ABC):
+
     @abstractmethod
     def transform(self, model, req: Requirements) -> Requirements:
         pass
 
-    @abstractmethod
-    def get_name(self):
-        pass
 
-
-class Forward(Transformation):
-    req: Requirements
+class Identity(Transformation):
 
     def transform(self, model, req: Requirements) -> Requirements:
         return req
 
-    def get_name(self):
-        return 'forward'
 
-
-class SyntacticTrans(Transformation):
-    req: Requirements
-
-    def __init__(self, model, req):
-        self.req = self.transform(model, req)
+class Syntactic(Transformation):
 
     def transform(self, model, req: Requirements) -> Requirements:
-        # unfinished
-        return req
+        PROMPT = f"""Translate a given problem, which requires
+implementing the function '{req.signature.pretty_print()}', into
+Chinese. When mentioning each input parameter, include its original
+English name from the function signature in parentheses immediately
+after the Chinese description of that parameter. Keep technical terms
+(e.g., programming keywords, variable names) in English where
+necessary for clarity. Enclose your translated problem in <answer>
+tags.
 
-    def get_name(self):
-        return 'syntactic transformation'
+Problem description:
+{req.description}
+        """
+        translated_description = gen_and_extract_answer_with_retry(model, PROMPT, 3)
+        return Requirements(req.signature, translated_description)
 
 
-class TSemanticTrans(Transformation):
-    req: Requirements
-
-    def __init__(self, model, req):
-        self.req = self.transform(model, req)
+class TrivialSemantic(Transformation):
 
     def transform(self, model, req: Requirements) -> Requirements:
         return_type = req.signature.return_type
-        add_sentence = None
-        FIXED_WORD = "When you get the final answer, please {sth} and then return."
+        EXTRA_INSTR = "When you get the final answer, please {sth} and then return."
         match return_type:
-            case "int":  # add one
-                add_sentence = FIXED_WORD.format(sth="add 1 to it")
-            case "float":  # add one
-                add_sentence = FIXED_WORD.format(sth="add 1.0 to it")
-            case "bool":  # flip
-                add_sentence = FIXED_WORD.format(sth="negate it")
-            case "str":  # add a suffix "_1"
-                add_sentence = FIXED_WORD.format(sth="add a suffix '_1' to it")
-            case _ if return_type.startswith("list[") and return_type.endswith("]"):
-                if "int" in return_type:
-                    add_sentence = FIXED_WORD.format(sth="add 1 to each element")
-                if "float" in return_type:
-                    add_sentence = FIXED_WORD.format(sth="add 1.0 to each element")
-                if "bool" in return_type:
-                    add_sentence = FIXED_WORD.format(sth="negate each element")
-                if "str" in return_type:
-                    add_sentence = FIXED_WORD.format(sth="add a suffix '_1' to each element")
-        # unfinished
-        return Requirements(req.signature, req.description + add_sentence)
-
-    def get_name(self):
-        return 'trivial semantic transformation'
+            case "int":
+                add_sentence = EXTRA_INSTR.format(sth="add 1 to it")
+            case "float":
+                add_sentence = EXTRA_INSTR.format(sth="add 1.0 to it")
+            case "bool":
+                add_sentence = EXTRA_INSTR.format(sth="negate it")
+            case "str":
+                add_sentence = EXTRA_INSTR.format(sth="add a suffix '_1' to it")
+            case "list[int]" | "List[int]":
+                add_sentence = EXTRA_INSTR.format(sth="append 1 to it")
+            case _:
+                # troublesome to support more complex types
+                raise ExperimentFailure()
+        return Requirements(req.signature, req.description + "\n" + add_sentence)
 
 
+def choose_parameter_to_invert(model: Model, req: Requirements) -> int:
+    if len(req.signature.params) == 1:
+        return 0
+    else:
+        PROMPT = f"""The problem below is solved using a function with
+the signature {req.signature.pretty_print()}. Choose function one
+parameter to swap with the return value to form an inverse
+problem. Inversing which parameter do you think would make the inverse problem
+natural? Do not choose parameters that can be easily derived from other
+parameters. Answer only the full name of this parameter (not its type)
+in <answer> tags.
+
+Problem:
+{req.description}
+        """
+        valid_name = gen_and_extract_answer_with_retry(model, PROMPT, 3)
+        return_param = [p.name for p in req.signature.params].index(valid_name)
+        return return_param
+
+
+@dataclass
 class PartialInverse(Transformation):
     inverse_index: int
-    req: Requirements
 
-    def __init__(self, model, req, inverse_index):
+    def __init__(self, inverse_index):
         self.inverse_index = inverse_index
-        self.req = self.transform(model, req)
+
+    def _inverse_signature(self,
+                           model: Model,
+                           sig: NamedReturnSignature,
+                           inverse_index: int) -> Signature:
+        new_return_type = sig.params[inverse_index].type
+        new_params = [Parameter(sig.return_name, sig.return_type)]
+        new_params.extend(p for i, p in enumerate(sig.params) if i != inverse_index)
+        new_func_name = "inverse_" + sig.name + "_wrt_" + sig.params[inverse_index].name
+        new_sig = Signature(new_func_name, new_params, new_return_type)
+        return new_sig
+
+    def _inverse_description_single_arg(self,
+                                        model: Model,
+                                        req: Requirements,
+                                        inverted_sig: Signature) -> str:
+        PROMPT = f"""Rewrite the given problem, which requires
+implementing the function '{req.signature.pretty_print()}', so that it
+instead requires implementing the function
+'{inverted_sig.pretty_print()}'. The new function should, for each
+possible output of the original function, return the possible input
+that produce that output. Try to maintain accuracy during the
+conversion process. Enclose your rewritten problem in <answer> tags.
+
+Problem:
+{req.description}
+        """
+        return gen_and_extract_answer_with_retry(model, PROMPT, 3)
+
+    def _inverse_description(self,
+                             model: Model,
+                             req: Requirements,
+                             inverted_sig: Signature,
+                             inverse_index: int) -> str:
+        PROMPT = f"""Rewrite the given problem, which requires
+implementing the function '{req.signature.pretty_print()}', so that it
+requires implementing the function '{inverted_sig.pretty_print()}'
+instead. The new function should return the value of the parameter
+'{req.signature.params[inverse_index].name}' that produce that given
+output. Try to maintain accuracy during the conversion
+process. Enclose your rewritten problem in <answer> tags.
+
+Problem:
+{req.description}
+        """
+        return gen_and_extract_answer_with_retry(model, PROMPT, 3)
 
     def transform(self, model, req: Requirements) -> Requirements:
-        print_annotated_hr("Signature")
-        print(req.signature.pretty_print(), file=sys.stderr)
-        # step 1: infer the name of return value
         named_sig = NamedReturnSignature.infer_name(model, req)
-        # step 2: inverse the signature
-        inverse_sig = _inverse_signature(model, named_sig, self.inverse_index)
-        print_annotated_hr(f"Inverse signature wrt {self.inverse_index}")
-        print(inverse_sig.pretty_print(), file=sys.stderr)
-        # step 3: inverse the description
+        inverse_sig = self._inverse_signature(model, named_sig, self.inverse_index)
         if len(req.signature.params) == 1:
-            inverse_desc = _inverse_description_single_arg(model, req, inverse_sig)
+            inverse_desc = self._inverse_description_single_arg(model, req, inverse_sig)
         else:
-            inverse_desc = _inverse_description(model, req, inverse_sig, self.inverse_index)
+            inverse_desc = self._inverse_description(model, req, inverse_sig, self.inverse_index)
         return Requirements(inverse_sig, inverse_desc)
 
-    def get_name(self):
-        return "partial inverse wrt " + str(self.inverse_index)
 
-
+@dataclass
 class PartialFiber(Transformation):
     inverse_index: int
-    req: Requirements
 
-    def __init__(self, model, req, inverse_index):
+    def __init__(self, inverse_index):
         self.inverse_index = inverse_index
-        self.req = self.transform(model, req)
 
+    def _fiber_signature(self,
+                         model: Model,
+                         sig: NamedReturnSignature,
+                         inverse_index: int) -> Signature:
+        new_return_type = "list[" + sig.params[inverse_index].type + "]"
+        new_params = [Parameter(sig.return_name, sig.return_type)]
+        new_params.extend(p for i, p in enumerate(sig.params) if i != inverse_index)
+        new_func_name = "fiber_" + sig.name + "_wrt_" + sig.params[inverse_index].name
+        new_sig = Signature(new_func_name, new_params, new_return_type)
+        return new_sig
+        
+    def _fiber_description_single_arg(self,
+                                      model: Model,
+                                      req: Requirements,
+                                      fiber_sig: Signature):
+        PROMPT = f"""Rewrite the given problem, which requires
+implementing the function '{req.signature.pretty_print()}', so that it
+instead requires implementing the function
+'{fiber_sig.pretty_print()}'. The new function should, for each
+possible output of the original function, return the exhaustive list
+of all inputs that produce that output. Try to maintain accuracy
+during the conversion process. Enclose your rewritten problem in
+<answer> tags.
+
+Problem:
+{req.description}
+        """
+        return gen_and_extract_answer_with_retry(model, PROMPT, 3)
+
+    def _fiber_description(self,
+                           model: Model,
+                           req: Requirements,
+                           fiber_sig: Signature,
+                           inverse_index: int):
+        PROMPT = f"""Rewrite the given problem, which requires
+implementing the function '{req.signature.pretty_print()}', so that it
+requires implementing the function '{fiber_sig.pretty_print()}'
+instead. The new function should return the exhaustive list of all
+possible values of the parameter
+'{req.signature.params[inverse_index].name}' that produce the given
+output. Try to maintain accuracy during the conversion process.
+Enclose your rewritten problem in <answer> tags.
+
+Problem:
+{req.description}
+        """
+        return gen_and_extract_answer_with_retry(model, PROMPT, 3)
+        
     def transform(self, model, req: Requirements) -> Requirements:
-        print_annotated_hr("Signature")
-        print(req.signature.pretty_print(), file=sys.stderr)
-        # step 1: infer the name of return value
         named_sig = NamedReturnSignature.infer_name(model, req)
-        # step 2: fiber the signature
-        fiber_sig = _fiber_signature(model, named_sig, self.inverse_index)
-        print_annotated_hr(f"Fiber signature wrt {self.inverse_index}")
-        print(fiber_sig.pretty_print(), file=sys.stderr)
-        # step 3: fiber the description
+        fiber_sig = self._fiber_signature(model, named_sig, self.inverse_index)
         if len(req.signature.params) == 1:
-            fiber_desc = _fiber_description_single_arg(model, req, fiber_sig)
+            fiber_desc = self._fiber_description_single_arg(model, req, fiber_sig)
         else:
-            fiber_desc = _fiber_description(model, req, fiber_sig, self.inverse_index)
+            fiber_desc = self._fiber_description(model, req, fiber_sig, self.inverse_index)
         return Requirements(fiber_sig, fiber_desc)
-
-    def get_name(self):
-        return 'partial fiber wrt ' + str(self.inverse_index)
-
-
-@dataclass
-class Wrapper:
-    executor: Executor
-
-    @abstractmethod
-    def function_wrapper(self, program_1, num_1, program_2, num_2) -> list[Callable]:
-        return [partial(self.executor.run, program_1), partial(self.executor.run, program_2)]
-
-
-@dataclass
-class SpecificWrapper(Wrapper):
-    executor: Executor
-    model: Model
-    transformation: Transformation
-    n2: int
-    specific_generator: SpecificGenerator
-
-    def function_wrapper(self, program_1, num_1, program_2, num_2) -> list[Callable]:
-        return [partial(self.executor.run, program_1), partial(self.specific_generator.generate_specific_code_and_run,
-                                                               self.executor, self.model, self.transformation, num_2,
-                                                               self.n2)]
-
-
-@dataclass
-class Property:
-    formula: Formula
-    wrapper: Wrapper
 
 
 @dataclass
 class Triangulation:
-    trans_1: Transformation
-    trans_2: Transformation
-    property: Property
-
-    def print_name(self):
-        if isinstance(self.property.wrapper, SpecificWrapper):
-            return self.trans_1.get_name() + "_" + self.trans_2.get_name() + " (specific)"
-        else:
-            return self.trans_1.get_name() + "_" + self.trans_2.get_name()
+    left_trans: Transformation
+    right_trans: Transformation
+    hyperproperty: Formula
 
 
-def enumerate_pair(trans_to_programs: dict, t: Triangulation, arity):
-    resonating_pairs = []
-    selected_num = []
-    detailed_info = []
-    for i, program_1 in enumerate(trans_to_programs[t.trans_1]):
-        for j, program_2 in enumerate(trans_to_programs[t.trans_2]):
-            print_annotated_hr(f"testing forward {i} and transformed {j}")
-            try:
-                result, check_result = checker(t.property.formula,
-                                               t.property.wrapper.function_wrapper(program_1, i, program_2, j),
-                                               arity)
-
-                match result:
-                    case True:
-                        print('Succeed to resonate')
-                        resonating_pairs.append((program_1.hash(), program_2.hash()))
-                        if program_1.hash() not in selected_num:
-                            selected_num.append(program_1.hash())
-                        detailed_info.append({
-                            t.trans_1.get_name(): program_1.hash(),
-                            t.trans_2.get_name(): program_2.hash(),
-                            "each result": check_result,
-                            "final result": "Success"
-                        })
-                    case False:
-                        print('Fail to resonate')
-                        detailed_info.append({
-                            t.trans_1.get_name(): program_1.hash(),
-                            t.trans_2.get_name(): program_2.hash(),
-                            "each result": check_result,
-                            "final result": "Fail"
-                        })
-                    case _:
-                        print('Unknown result')
-                        detailed_info.append({
-                            t.trans_1.get_name(): program_1.hash(),
-                            t.trans_2.get_name(): program_2.hash(),
-                            "each result": check_result,
-                            "final result": "Unknown"
-                        })
-            except Exception as e:
-                print(e)
-    return selected_num, resonating_pairs, detailed_info
+def make_syntactic(arity):
+    args = [Var(f"x_{i}") for i in range(arity)]
+    f = Func(Side.LEFT)
+    g = Func(Side.RIGHT)
+    
+    return Triangulation(
+        Identity(),
+        Identity(),
+        ForAll(args, Side.LEFT, Equals([f(args), g(args)]))
+    )
 
 
-def program_printer(trans_to_programs: dict, t: Transformation):
-    for index, prog in enumerate(trans_to_programs[t]):
-        print_annotated_hr(f"{t.get_name()}: Program {index}")
-        print(prog.code)
+def make_trivial_semantic(arity):
+    args = [Var(f"x_{i}") for i in range(arity)]
+    f = Func(Side.LEFT)
+    g = Func(Side.RIGHT)
+    
+    return Triangulation(
+        Identity(),
+        TrivialSemantic(),
+        ForAll(args, Side.LEFT, Equals([OffByOne([f(args)]), g(args)]))
+    )
+
+
+def make_partial_for_inv(arity, inverse_index):
+    args = [Var(f"x_{i}") for i in range(arity)]
+    inv_arg = Var(f"x_{inverse_index}")
+    remaining_args = args[:inverse_index] + args[inverse_index + 1:]
+    f = Func(Side.LEFT)
+    g = Func(Side.RIGHT)
+    
+    return Triangulation(
+        Identity(),
+        PartialInverse(inverse_index),
+        ForAll(args, Side.LEFT, Equals([inv_arg, g([f(args)] + remaining_args)]))
+    )
+
+
+def make_partial_for_fib(arity, inverse_index):
+    args = [Var(f"x_{i}") for i in range(arity)]
+    inv_arg = Var(f"x_{inverse_index}")
+    remaining_args = args[:inverse_index] + args[inverse_index + 1:]
+    f = Func(Side.LEFT)
+    g = Func(Side.RIGHT)
+
+    ReplaceAt = Func(lambda v: args[:inverse_index] + [v] + args[inverse_index+1:], "replace_at")
+    Wrap = Func(lambda v: [v], "wrap")
+    def replace_at(l, i, v):
+        return 
+    
+    return Triangulation(
+        Identity(),
+        PartialFiber(inverse_index),
+        ForAll(args, Side.LEFT,
+               And(Member([inv_arg, g([f(args)] + remaining_args)]),
+                   SetEquals([MapUnpack(f,
+                                        Map(ReplaceAt, g([f(args)] + remaining_args))),
+                              [f(args)]])))
+    )

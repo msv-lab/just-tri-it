@@ -10,37 +10,18 @@ from typing import List
 from viberate.cached_llm import Model, Persistent, AI302, XMCP
 from viberate.metrics import all_metrics_abt
 from viberate.program import Program, Test
-from viberate.executor import Executor, Pass, Fail, Timeout, passes_tests
+from viberate.executor import Executor, Pass, Fail, Timeout
 from viberate.dataset import Dataset, load_dataset
 from viberate.code_generator import Vanilla, Generator, Selector, Abstained
 from viberate.plurality import Plurality
-from viberate.utils import print_annotated_hr
+from viberate.utils import print_annotated_hr, add_cache_options, setup_cache
 from viberate.codet import CodeT, MODE
 from viberate.vb_selector import VibeRate
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--cache-root",
-        type=str,
-        help="Set LLM cache root directory (default: ~/.viberate_cache/)."
-    )
-    parser.add_argument(
-        "--no-cache",
-        action="store_true",
-        help="Disable cache."
-    )
-    parser.add_argument(
-        "--replicate",
-        action="store_true",
-        help="Use cache only."
-    )
-    parser.add_argument(
-        "--export-cache",
-        type=str,
-        help="Explore all responsed generated during the run."
-    )
+    add_cache_options(parser)
     parser.add_argument(
         "--test-venv",
         type=str,
@@ -76,6 +57,12 @@ def parse_args():
         help="configurations of this experiment"
     )
     return parser.parse_args()
+
+
+def save_program(p: Program, dir_path: Path):
+    dir_path.mkdir(parents=True, exist_ok=True)
+    file_path = dir_path / f"{p.hash()}.py"
+    file_path.write_text(p.code, encoding="utf-8")
 
 
 def main():

@@ -26,32 +26,18 @@ Run linter and type checker:
 
 ## Usage
 
-VibeRate provides multiple tools to execute.
-
-### Demo
-
-The goal of the demo tool is to demonstrate how the approach works, and make small experiments
-
-To run a demo, execute
-
-    uv run demo --test-venv TESTING_ENVIRONMENT --input-file PROBLEM_DESCRIPTION
-
-For example
-
-    uv run demo --test-venv test_venv/ --input-file examples/test_prob1.md
+just-tri-it suppots multiple worlflows:
 
 ### Benchmarking
 
-The goal of the benchmarking tool is to compare various tool configurations on various code generation datasets and compute comprehensive statistics.
+The goal of the benchmarking tool is to compare various tool configurations on various code generation datasets and compute basic statistics.
 
 To run a benchmark, execute
 
-    uv run benchmark --test-venv TESTING_ENVIRONMENT --dataset DATASET [ --task TASK_ID ] [ --generator TOOL_CONFIG | --selector TOOL_CONFIG ] --model MODEL
+    uv run benchmark --test-venv TESTING_ENVIRONMENT --dataset DATASET [ --task TASK_ID ] --selector TOOL_CONFIG --model MODEL
 
 For example
 
-    uv run benchmark --test-venv test_venv/ --dataset datasets/test.json --generator Vanilla --model gpt-4o
-    
     uv run benchmark --test-venv test_venv/ --dataset datasets/test.json --selector Plurality --model gpt-4o
     
 For LiveCodeBench v6, first decompress the dataset using
@@ -60,43 +46,29 @@ For LiveCodeBench v6, first decompress the dataset using
     
 A specific task can be specified using `--task`:
     
-    uv run benchmark --test-venv test_venv/ --dataset datasets/lcb_part6.json --generator Vanilla --model gpt-4o --task atcoder_abc387_b
+    uv run benchmark --test-venv test_venv/ --dataset datasets/lcb_part6.json --selector CodeT_IO --model gpt-4o --task atcoder_abc387_b
 
-
-## Experiment
+### Experiments
 
 To run LiveCodeBench v6, first decompress the dataset using:
     
     unzip datasets/lcb_part6.json.zip
-
-Then, run the script 'datasets/split_data.py' to divide all the experimental data into multiple batches, with 10 items in each batch.
-
-Then, run experiments on each batch using:
-
-    src/viberate/run.sh DATASET_PATH DATASET_NAME RUNNING_ID
-
-For example, if the batches data is under 'datasets/lcb_try_batches', please run:
-
-    ./src/viberate/run.sh datasets/lcb_try_batches lcb 1
-
-So you will get a result directory named 'lcb_1' under source root.
-
-Then, get the metrics based on the experiment results using:
-
-    uv run evaluate --experiment-results EXPERIMENT_RESULT_DIR
-
-For example:
     
-    uv run evaluate --experiment-results lcb_1
+Then, to collect experimental results and save into `result_dir`, execute
 
-And you'll get a file named evaluation.json under directory 'lcb_1'.
+    uv run experiment --test-venv test_venv/ --dataset datasets/lcb_part6.json --model gpt-4o --experiment-results result_dir
 
+Optionally, you can specify the list of tasks to run via the option `--tasks task_list.txt`.
+
+Then, to compute measures and generate plots, execute
+
+    uv run analyse --experiment-results result_dir --analysis-results analysis_dir
 
 ## Reproducibility
 
-VibeRate's tools provide the following options to manage LLM cache:
+just-tri-ti provides the following options to manage LLM cache:
 
-- `--cache-root DIR` to set LLM cache (default: `~/.viberate_cache/`)
+- `--cache-root DIR` to set LLM cache (default: `~/.just_tri_it_cache/`)
 - `--export-cache DIR` to explore all cached samples used during the run to a different directory
 - `--no-cache` to disable cache
 - `--replicate` to use only cache; fail in case of cache misses
@@ -112,10 +84,10 @@ Additionally, to replicate the experiment, it is sufficient to provide:
 
 Cache can be downloaded from
 
-    https://github.com/msv-lab/VibeRate-cache-USER/archive/COMMIT.zip
+    https://github.com/msv-lab/just-tri-it-cache-USER/archive/COMMIT.zip
 
 where `USER` can be `yihan`, `haotian`, `sijie`, `sergey`.
 
 ## Experimental data
 
-Everything that is not trivially derivable from LLM cache, should be stored in https://github.com/msv-lab/VibeRate-data
+Everything that is not trivially derivable from LLM cache, should be stored in https://github.com/msv-lab/just-tri-it-data

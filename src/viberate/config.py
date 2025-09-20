@@ -1,36 +1,85 @@
-# from LiveCodeBench/lcb_runner/evaluation/utils_execute.py
-LIVECODEBENCH_IMPORTS = """from itertools import accumulate, chain, combinations, count, permutations, product, groupby, islice, repeat
-from copy import deepcopy
-from string import ascii_lowercase
-from math import floor, log2, log10, sqrt, comb, gcd, ceil, inf, isqrt
-from collections import defaultdict, deque, Counter
-from bisect import bisect, bisect_left, bisect_right, insort
-from heapq import heappush, heappop, heapify, merge
-from functools import reduce, cache, lru_cache
-from random import randrange, shuffle
-from operator import itemgetter, sub
-from re import search as re_search  # Assuming 're' refers to a regex search
-from os.path import commonprefix
-from typing import List, Tuple, Dict, Set, Optional, Union, Any, Callable, Iterable, Iterator, Generator
-import copy
-import string
-import math
-import collections
-import bisect
-import heapq
-import functools
-import random
-import itertools
-import operator
-import re
-import numpy as np
-import pandas as pd
-from math import log, prod  # 'log' and 'prod' are functions in the math module
-from collections import deque, defaultdict, Counter, OrderedDict
-from itertools import accumulate, permutations, combinations, product, groupby, islice, chain, repeat, zip_longest, cycle
-from functools import lru_cache, reduce, partial
-# from sortedcontainers import SortedList, SortedDict, SortedSet
-# import sortedcontainers
-from operator import iand
-import sys
-"""
+from viberate.executor import Executor
+from viberate.plurality import Plurality
+from viberate.codet import CodeT
+from viberate.triangulation import (
+    TriSelector,
+    choose_parameter_to_invert,
+    make_partial_for_fib,
+    make_partial_for_inv,
+    make_syntactic,
+    make_trivial_semantic
+)
+from viberate.code_generator import Generator
+from viberate.cached_llm import Model
+from viberate.test_generator import InputOutputGenerator, TestFunctionGenerator
+
+
+MINIMUM_NUM_INPUTS = 10
+MAXIMUM_NUM_INPUTS = 50
+
+NUM_LEFT_SAMPLES = 10
+NUM_RIGHT_SAMPLES = 10
+
+def init_selectors(executor: Executor, code_generator: Generator, model: Model):
+    return {
+        "Plurality": Plurality(executor, code_generator, NUM_LEFT_SAMPLES),
+
+        # "Test_Assertion": TestBasedSelector(executor,
+        #                                     code_generator,
+        #                                     TestFunctionGenerator(),
+        #                                     NUM_LEFT_SAMPLES),
+
+        # "Test_InputOutput": TestBasedSelector(executor,
+        #                                       code_generator,
+        #                                       InputOutputGenerator(),
+        #                                       NUM_LEFT_SAMPLES),
+
+        "CodeT_Assertion": CodeT(executor,
+                                 code_generator,
+                                 TestFunctionGenerator(),
+                                 NUM_LEFT_SAMPLES,
+                                 NUM_RIGHT_SAMPLES),
+
+        "CodeT_InputOutput": CodeT(executor,
+                                   code_generator,
+                                   InputOutputGenerator(),
+                                   NUM_LEFT_SAMPLES,
+                                   NUM_RIGHT_SAMPLES),
+
+        "Tri_Syntactic": (lambda t:
+                          TriSelector(executor,
+                                      code_generator,
+                                      make_syntactic(len(t.requirements.signature.params)),
+                                      NUM_LEFT_SAMPLES,
+                                      NUM_RIGHT_SAMPLES)),
+                          
+        "Tri_OffByOne": (lambda t:
+                         TriSelector(executor,
+                                     code_generator,
+                                     make_trivial_semantic(len(t.requirements.signature.params)),
+                                     NUM_LEFT_SAMPLES,
+                                     NUM_RIGHT_SAMPLES)),
+
+        # "Postcondition": (lambda t:
+        #                   TriSelector(executor,
+        #                               code_generator,
+        #                               make_postcondition(len(t.requirements.signature.params)),
+        #                               NUM_LEFT_SAMPLES,
+        #                               NUM_RIGHT_SAMPLES)),
+
+        "Tri_FOR_INV": (lambda t:
+                        TriSelector(executor,
+                                    code_generator,
+                                    make_partial_for_inv(len(t.requirements.signature.params),
+                                                         choose_parameter_to_invert(model, t.requirements)),
+                                    NUM_LEFT_SAMPLES,
+                                    NUM_RIGHT_SAMPLES)),
+
+        "Tri_FOR_FIB": (lambda t:
+                        TriSelector(executor,
+                                    code_generator,
+                                    make_partial_for_fib(len(t.requirements.signature.params),
+                                                         choose_parameter_to_invert(model, t.requirements)),
+                                    NUM_LEFT_SAMPLES,
+                                    NUM_RIGHT_SAMPLES))
+    }

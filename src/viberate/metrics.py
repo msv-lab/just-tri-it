@@ -1,7 +1,5 @@
 import numpy as np
 
-from viberate.utils import print_annotated_hr
-
 
 # from LiveCodeBench/evaluation/compute_code_execution_metrics.py
 def pass_at_k(n, c, k):

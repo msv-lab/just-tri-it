@@ -7,25 +7,37 @@
         },
         "tests": [
             {
-                "inputs": [1],
-                "oracle": {
-                    "type": "expected_output",
-                    "value": 1
-                }
+                "type": "InputOutput",
+                "inputs": ["1"],
+                "output": "1"
             },
             {
-                "inputs": [3],
-                "oracle": {
-                    "type": "expected_output",
-                    "value": 2
-                }
+                "type": "InputOutput",
+                "inputs": ["3"],
+                "output": "2"
             },
             {
-                "inputs": [6],
-                "oracle": {
-                    "type": "expected_output",
-                    "value": 8
-                }
+                "type": "InputOutput",
+                "inputs": ["6"],
+                "output": "8"
+            }
+        ],
+        "metadata": { }
+    },
+    {
+        "id": "1_plus",
+        "requirements": {
+            "signature": "def plus(a: int, b:int) -> int",
+            "description": "sum up two numbers"
+        },
+        "tests": [
+            {
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert plus(1, 2) == 3"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert plus(5, -1) == 4"
             }
         ],
         "metadata": { }

@@ -3,13 +3,72 @@ import shutil
 import mistletoe
 import json
 from pathlib import Path
+from typing import Any
+import hashlib
+from abc import ABC, abstractmethod
+from collections.abc import Mapping, Sequence
 
-from viberate.cached_llm import Independent
+from viberate.cached_llm import Independent, Persistent
+
+
+RawData = dict[str, Any]
+
+
+class ContentAddressable(ABC):
+    @abstractmethod
+    def get_content(self) -> str:
+        """
+        Must be implemented by child classes to return
+        the textual content that will be hashed.
+        """
+        pass
+
+    def hash_id(self) -> str:
+        """
+        Returns the SHA-256 hash hex digest of the content.
+        """
+        content = self.get_content()
+        return hashlib.sha256(content.encode()).hexdigest()
+
+
+def replace_with_hash_and_update_map(data, id_to_content):
+    """
+    Recursively traverses `data` (lists, tuples, dicts, etc.),
+    replacing ContentAddressable instances with their hash_id().
+    Also update the mapping hash_id -> content.
+    """
+    def recurse(obj):
+        # Handle ContentAddressable objects
+        if isinstance(obj, ContentAddressable):
+            hash_id = obj.hash_id()
+            if hash_id not in id_to_content:
+                id_to_content[hash_id] = obj.get_content()
+            return hash_id
+
+        # Handle dicts
+        elif isinstance(obj, Mapping):
+            return {
+                key: recurse(value)
+                for key, value in obj.items()
+            }
+
+        # Handle lists and tuples
+        elif isinstance(obj, Sequence) and not isinstance(obj, (str, bytes, bytearray)):
+            if isinstance(obj, tuple):
+                return tuple(recurse(item) for item in obj)
+            else:  # list
+                return [recurse(item) for item in obj]
+
+        # Base case: leave everything else as is
+        else:
+            return obj
+
+    return recurse(data)
 
 
 def print_hr():
     width = shutil.get_terminal_size(fallback=(80, 20)).columns
-    print('-' * width, file=sys.stderr)
+    print('-' * width, file=sys.stderr, flush=True)
 
 
 def print_annotated_hr(message):
@@ -22,7 +81,7 @@ def print_annotated_hr(message):
     left_dashes = dash_count // 2
     right_dashes = dash_count - left_dashes
     line = '-' * left_dashes + msg + '-' * right_dashes
-    print(line, file=sys.stderr)
+    print(line, file=sys.stderr, flush=True)
 
 
 def panic(msg):
@@ -33,7 +92,12 @@ def panic(msg):
 class DataExtractionFailure(Exception):
     "Raised when failed to parse LLM output"
     pass    
-    
+
+
+class ExperimentFailure(Exception):
+    "Raised when an experiment fails"
+    pass    
+
 
 def extract_code(content):
     """Extract first markdown code block"""
@@ -42,6 +106,16 @@ def extract_code(content):
         if child.__class__.__name__ == "CodeFence":
             return child.children[0].content
     raise DataExtractionFailure
+
+
+def extract_all_code(content) -> list[str]:
+    """Extract all markdown code blocks"""
+    parsed = mistletoe.Document(content)
+    fragments = []
+    for child in parsed.children:
+        if child.__class__.__name__ == "CodeFence":
+            fragments.append(child.children[0].content)
+    return fragments
 
 
 def extract_answer(s):
@@ -137,3 +211,63 @@ def write_dict_to_json(data_dict, file_path, indent=4, ensure_ascii=False):
     except Exception as e:
         print(f"写入JSON文件时出错: {e}")
         return False
+
+
+def add_cache_options(parser):
+    parser.add_argument(
+        "--cache-root",
+        type=str,
+        help="Set LLM cache root directory (default: ~/.viberate_cache/)."
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable cache."
+    )
+    parser.add_argument(
+        "--replicate",
+        action="store_true",
+        help="Use cache only."
+    )
+    parser.add_argument(
+        "--export-cache",
+        type=str,
+        help="Explore all responsed generated during the run."
+    )
+
+
+def setup_cache(model, args):
+    if not args.no_cache:
+        if args.cache_root:
+            cache_root = Path(args.cache_root)
+        else:
+            cache_root = Path.home() / ".just_tri_it_cache"
+        if args.replicate:
+            model = Persistent(model, cache_root, replication=True)
+        else:
+            model = Persistent(model, cache_root)
+
+    if not args.no_cache and args.export_cache:
+        export_root = Path(args.export_cache)
+        export_root.mkdir(parents=True, exist_ok=True)
+        model = Persistent(model, export_root)
+
+    return model
+
+
+def remove_duplicates(seq):
+    # when data is not hashable
+    result = []
+    for item in seq:
+        if not any(item == x for x in result):
+            result.append(item)
+    return result
+
+
+def print_legend():
+    l = """$ - LLM API call
+C - cached LLM call
+. - successful execution
+! - failed execution
+c - cached execution"""
+    print(l, file=sys.stderr, flush=True)

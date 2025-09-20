@@ -1,28 +1,27 @@
+import os
 import hashlib
 import sys
 import threading
 from dataclasses import dataclass
 from itertools import islice
-from typing import Iterable
+from typing import Iterable, Tuple, List
 from abc import ABC, abstractmethod
 
 from viberate.executor import Error
-from viberate.utils import extract_code, print_annotated_hr
-from viberate.program import Signature, Program
-from viberate.requirements import Requirements, specific_requirements
-from viberate.executor import Executor, passes_tests
-import os
+from viberate.utils import extract_code, print_annotated_hr, RawData
+from viberate.program import Signature, Program, Requirements
+from viberate.executor import Executor
 
 
 class Generator(ABC):
     @abstractmethod
-    def generate(self, model, req: Requirements, p_dir=None, batch=1) -> Iterable['Program']:
+    def generate(self, model, req: Requirements, batch=1) -> Iterable['Program']:
         pass
 
 
 @dataclass
 class Selected:
-    program: Program
+    programs: List[Program]
 
 
 @dataclass
@@ -36,102 +35,29 @@ type SelectionOutcome = Selected | Abstained
 class Selector(ABC):
 
     @abstractmethod
-    def generate_and_select(self, model, req: Requirements):
+    def generate_and_select(self, model, req: Requirements) -> Tuple[SelectionOutcome, RawData]:
         pass
-
-    @staticmethod
-    def update_program_correctness(task_id, executor: Executor, programs: list[Program], tests, p_dict: dict):
-        for p in programs:
-            p_code = p.hash()
-            print("program " + p_code + " :")
-            if p_code not in p_dict:
-                result, test_lst = passes_tests(executor, p, tests)
-                if task_id not in p_dict:
-                    p_dict.update({task_id: {}})
-                p_dict[task_id].update({p_code: {"result": result, "test output": test_lst}})
-        return p_dict
-
-
-def generate_no_input(model, req: Requirements) -> Iterable[Program]:
-    PROMPT = f"""Write a Python function '{req.signature.pretty_print()}'
-without any input to solve the following problem. Include all necessary
-imports. Put the complete code inside a Markdown code block. Please generate
-the program by implementing only the function, without using
-if __name__ == "__main__": or any code outside the function. Do not print anything
-and just correctly return what the function signature asks.
-
-Problem:
-{req.description}
-
-Please answer in the following format:
-```python
-```
-    """
-    for s in model.sample(PROMPT):
-        yield Program(req.signature, extract_code(s))
 
 
 @dataclass
 class Vanilla(Generator):
 
-    def generate(self, model, req: Requirements, p_dir=None, batch=1) -> Iterable[Program]:
+    def generate(self, model, req: Requirements, batch=1) -> Iterable[Program]:
         PROMPT = f""" Write a Python function '{req.signature.pretty_print()}'
 to solve the following problem. Include all necessary imports. Put the complete
-code inside a Markdown code block. Please generate the program by implementing
-only the function, without using if __name__ == "__main__": or any code outside
-the function. Do not print anything and just correctly return what the function
-signature asks.When handling invalid inputs that is not explicitly stated how to
-deal with in the problem description, please raise a ValueError with the message
-'Invalid input'.
+code inside a Markdown code block:
+```python
+```
+
+Please generate the program by implementing only the function, without
+using if __name__ == "__main__": or any code outside the function. Do
+not print anything and just return a value of the type specified in
+the function signature. When handling invalid inputs that are not
+explicitly stated how to deal with in the problem description, please
+raise a ValueError with the message 'Invalid input'.
          
 Problem:
 {req.description}
-
-Please answer in the following format:
-```python
-```
         """
         for s in model.sample(PROMPT, batch):
-            code = extract_code(s)
-            p_code = hashlib.sha256(code.encode()).hexdigest()
-            if p_dir:
-                file_path = os.path.join(p_dir, f"{p_code}.py")
-                if not os.path.exists(file_path):
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        f.write(code)
-            yield Program(req.signature, code)
-
-
-@dataclass
-class SpecificGenerator:
-    specific_dict = {}
-    series_dict = {}
-    lock = threading.Lock()
-
-    @staticmethod
-    def _generate_key(*args):
-        hash_obj = hashlib.sha256()
-        for arg in args:
-            hash_obj.update(repr(arg).encode('utf-8'))
-        return hash_obj.hexdigest()
-
-    def generate_specific_code_and_run(self, executor, model, t, num, n2, inputs):
-        base_key = self._generate_key(t.get_name(), inputs)
-        specific_key = self._generate_key(t.get_name(), inputs, num)
-
-        with self.lock:
-            if specific_key in self.specific_dict:
-                # print("hit")
-                return self.specific_dict[specific_key]
-
-            if base_key not in self.series_dict:
-                # print("miss and generate")
-                specific_req = specific_requirements(model, t.req, inputs, t.get_name())
-                self.series_dict[base_key] = islice(generate_no_input(model, specific_req), n2)
-
-            code_iterator = self.series_dict[base_key]
-
-            specific_code = next(code_iterator)
-            outcome = executor.run(specific_code, [])
-            self.specific_dict[specific_key] = outcome
-            return outcome
+            yield Program(req.signature, extract_code(s))

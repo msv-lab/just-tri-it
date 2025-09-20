@@ -1,21 +1,48 @@
-# This example can be executed with `uvx pytest example.py`
+import sys
 import hashlib
 import json
 from dataclasses import dataclass
 from functools import partial
 import random
+from enum import Enum
 from typing import Union, Set, Dict, List, Optional, Callable, Any, Iterable
 from viberate.executor import Success, Timeout, Error
 
+
+class Side(Enum):
+    LEFT = "left"
+    RIGHT = "right"
+
+
+def recursive_str(obj):
+    """Recursively converts any object into a single concatenated string."""
+    if isinstance(obj, dict):
+        return "{" + " ".join(recursive_str(k) + ": " + recursive_str(v) for k, v in obj.items()) + "}"
+    elif isinstance(obj, set):
+        return "{" + " ".join(recursive_str(item) for item in obj) + "}"
+    elif isinstance(obj, tuple):
+        return "(" + " ".join(recursive_str(item) for item in obj) + ")"
+    elif isinstance(obj, list):
+        return "[" + " ".join(recursive_str(item) for item in obj) + "]"
+    elif isinstance(obj, str):
+        return repr(obj)
+    else:
+        return str(obj)
 
 @dataclass
 class Var:
     name: str
 
+    def __str__(self):
+        return self.name    
+
 
 @dataclass
 class Not:
     operand: 'Formula'
+
+    def __str__(self):
+        return f"¬{self.operand}"
 
 
 @dataclass
@@ -23,11 +50,17 @@ class And:
     left: 'Formula'
     right: 'Formula'
 
+    def __str__(self):
+        return f"({self.left} ∧ {self.right})"
+
 
 @dataclass
 class Or:
     left: 'Formula'
     right: 'Formula'
+
+    def __str__(self):
+        return f"({self.left} ∨ {self.right})"
 
 
 Formula = Union[Var, Not, And, Or]
@@ -45,52 +78,65 @@ def get_vars(f: Formula) -> Set[str]:
 
 
 @dataclass
-class Const:
-    name: str
-
-
-@dataclass
 class Func:
-    name: str
-    args: List['Term']
+    semantics: Callable | Side
+    display: str = "OPAQUE"
+
+    def __call__(self, args: List['Term']) -> 'App':
+        return App(func=self, args=args)    
+
+    def __str__(self):
+        if self.semantics == Side.LEFT:
+            return "left_func"
+        elif self.semantics == Side.RIGHT:
+            return "right_func"
+        else:
+            return self.display
+
+@dataclass
+class App:
+    func: Func
+    args: 'Term'
+
+    def __str__(self):
+        if isinstance(self.args, list):
+            if len(self.func.display) <= 2 and len(self.args) == 2:
+                return f"({recursive_str(self.args[0])} {self.func.display} {recursive_str(self.args[1])})"
+            else:
+                args_str = ", ".join(map(recursive_str, self.args))
+                return f"{self.func}({args_str})"
+        else:
+            return f"{self.func}({recursive_str(self.args)})"
 
 
 @dataclass
-class FuncList:
-    name: str
-    index: int
-    args: List['Term']
-    enum_arg: 'Term'
+class Map:
+    func: Func
+    args: 'Term'
+
+    def __str__(self):
+        return f"map({str(self.func)}, {recursive_str(self.args)})"
 
 
 @dataclass
-class UnknownValue:
-    reason: str
+class MapUnpack:
+    func: Func
+    args: 'Term'
 
+    def __str__(self):
+        return f"map*({str(self.func)}, {recursive_str(self.args)})"
+    
 
-TIMEOUT = UnknownValue('timeout')
-INVALID_IN = UnknownValue('invalid input')
-# except timout and invalid_input errors
-ERROR = UnknownValue('other errors when evaluating')
-
-# only for is_formula_true: UNKNOWN, True, False
-# UNKNOWN will not affect the result of AND, OR...
-UNKNOWN = UnknownValue('unknown value for boolean')
-
-
-Term = Union[Var, Const, Func, FuncList]
-
-
-@dataclass
-class Pred:
-    name: str
-    args: List[Term]
+Term = Union[Var, App, int, bool, float, str, list]
 
 
 @dataclass
 class Implies:
     left: 'Formula'
     right: 'Formula'
+
+    def __str__(self):
+        return f"({self.left} → {self.right})"
 
 
 @dataclass
@@ -99,239 +145,136 @@ class Iff:
     right: 'Formula'
 
 
+    def __str__(self):
+        return f"({self.left} ↔ {self.right})"
+
+
 @dataclass
 class ForAll:
     vars: Var | list[Var]
-    domain: Term | Set[tuple[Any, ...]] | List[tuple[Any, ...]]
+    domain: Side
     body: 'Formula'
 
-
-@dataclass
-class Exists:
-    var: Var
-    body: 'Formula'
-
+    def __str__(self):
+        if isinstance(self.vars, list):
+            vars_str = ", ".join(str(v) for v in self.vars)
+        else:
+            vars_str = str(self.vars)
+        return f"∀{vars_str} ∈ {self.domain.value}_inputs: {self.body}"    
 
 Formula = Union[
-    Pred,
+    App, # here is an application of a boolean function
     Not,
     And,
     Or,
     Implies,
     Iff,
-    ForAll,
-    Exists,
+    ForAll
 ]
 
 
-@dataclass
-class Interpretation:
-    consts: Dict[str, Any]
-    funcs: Dict[str, tuple[int, Callable[..., Any]]]
-    preds: Dict[str, tuple[int, Callable[..., bool]]]
-
-
-def is_formula_true(formula: Formula, interp: Interpretation, env: Dict[str, Any], cache=None):
-    match formula:
-        case Pred(name, args):
-            arity, p = interp.preds[name]
-            arg_vals = []
-            for arg in args:
-                new_val = eval_term_cache(arg, interp, env, cache)
-                if new_val == TIMEOUT:
-                    print("timeout")
-                    return UNKNOWN, None
-                elif new_val == ERROR:  # if we meet ERROR, the pred should be definitely false
-                    print("error")
-                    return False, None
-                # only INVALID_IN can be compared
-                arg_vals.append(new_val)
-            print(name, arg_vals)
-            if len(arg_vals) != arity:
-                raise ValueError(f"Predicate {name} expects {arity} arguments")
-            ans = p(*arg_vals)
-            print(ans)
-            return ans, None
-        case Not(operand):
-            ans, _ = is_formula_true(operand, interp, env)
-            if ans == UNKNOWN:
-                return UNKNOWN, None
-            else:
-                return (not ans), None
-        case And(left, right):
-            ans_1, _ = is_formula_true(left, interp, env)
-            if not ans_1:
-                return False, None
-            ans_2, _ = is_formula_true(right, interp, env)
-            if ans_1 == UNKNOWN and ans_2 == UNKNOWN:
-                return UNKNOWN, None
-            elif ans_1 == UNKNOWN:
-                return ans_2, None
-            elif ans_2 == UNKNOWN:
-                return ans_1, None
-            else:
-                return (ans_1 and ans_2), None
-        case Or(left, right):
-            ans_1, _ = is_formula_true(left, interp, env)
-            ans_2, _ = is_formula_true(right, interp, env)
-            if ans_1 == UNKNOWN and ans_2 == UNKNOWN:
-                return UNKNOWN, None
-            elif ans_1 == UNKNOWN:
-                return ans_2, None
-            elif ans_2 == UNKNOWN:
-                return ans_1, None
-            else:
-                return (ans_1 or ans_2), None
-        case ForAll(ele, domain, body):
-            if isinstance(domain, Term):
-                domain = eval_term_cache(domain, interp, env, cache)
-            if domain == ERROR:
-                return False, None
-            elif domain == TIMEOUT or domain == INVALID_IN:
-                return UNKNOWN, None
-            if not isinstance(domain, List):
-                domain = [domain]
-            has_value = False
-            detailed_info = []
-            for d in domain:
-                new_env = env.copy()
-                if isinstance(ele, Var):
-                    new_env[ele.name] = d[0]
-                else:
-                    for index, var in enumerate(ele):
-                        new_env[var.name] = d[index]
-                ans, _ = is_formula_true(body, interp, new_env)
-                if ans is False:
-                    detailed_info.append(False)
-                    return False, detailed_info
-                elif ans is True:
-                    detailed_info.append(True)
-                    has_value = True
-            if has_value:
-                return True, detailed_info
-            else:
-                return UNKNOWN, detailed_info
-        case _:
-            raise ValueError(f"Unsupported formula type")
-
-
-def term_to_id(term: Term, env: Dict[str, Any], interp: Interpretation) -> str:
-    def encode(t: Term):
-        match t:
-            case Var(name):
-                return {"Var": (name, env.get(name))}
-            case Const(name):
-                return {"Const": (name, interp.consts.get(name))}
-            case Func(name, args):
-                return {"Func": (name, [encode(arg) for arg in args])}
-            case FuncList(name, index, args, enum_arg):
-                return {"FuncList": (name, index,
-                                     [encode(arg) for arg in args],
-                                     encode(enum_arg))}
-            case _:
-                return {"Unknown": str(t)}
-
-    raw = json.dumps(encode(term), sort_keys=True)
-    return hashlib.sha256(raw.encode()).hexdigest()[:16]
-
-
-def eval_term_cache(term: Term,
-                    interp: Interpretation,
-                    env: Dict[str, Any],
-                    cache: Optional[Dict[str, Any]] = None) -> Any:
-    if cache is None:
-        cache = {}
-
-    key = term_to_id(term, env, interp)
-
-    if key in cache:
-        return cache[key]
-
-    match term:
-        case Var(name):
-            result = env[name]
-        case Const(name):
-            result = interp.consts[name]
-        case Func(name, args):
-            arity, f = interp.funcs[name]
-            argvals = []
-            for arg in args:
-                new_val = eval_term_cache(arg, interp, env, cache)
-                if new_val == TIMEOUT or new_val == INVALID_IN or new_val == ERROR:
-                    cache[key] = new_val
-                    return new_val
-                argvals.append(new_val)
-            if len(argvals) != arity:
-                raise ValueError(f"Function {name} expects {arity} arguments")
-            # print(name, argvals)
-            outcome = f(argvals)
-            # print(outcome)
-            match outcome:
-                case Success(output):
-                    result = output
-                case Timeout():
-                    result = TIMEOUT
-                case Error("ValueError", "Invalid input"):
-                    result = INVALID_IN
-                case _:
-                    result = ERROR
-        case FuncList(name, index, args, enum_arg):
-            answer = []
-            enum_ele = eval_term_cache(enum_arg, interp, env, cache)
-            if enum_ele == TIMEOUT or enum_ele == INVALID_IN or enum_ele == ERROR:
-                cache[key] = enum_ele
-                return enum_ele
-            if not isinstance(enum_ele, List):
-                enum_ele = [enum_ele]
-            if len(enum_ele) > 10:
-                enum_ele = random.sample(enum_ele, 10)
-            for ele in enum_ele:
-                new_args = args.copy()
-                new_args[index] = Var("temp")
-                new_env = env.copy()
-                new_env["temp"] = ele
-                outcome = eval_term_cache(Func(name, new_args), interp, new_env, cache)
-                if outcome == TIMEOUT:  # if we meet ERROR or INVALID_IN, it can't be ignored
-                    continue
-                if outcome not in answer:
-                    answer.append(outcome)
-            result = answer
-        case _:
-            raise NotImplementedError("This term type has not been implemented yet")
-
-    cache[key] = result
+def eval_all(executor, env, programs, terms):
+    result = list(map(partial(eval_term, executor, env, programs), terms))
     return result
 
 
-def delta_apply(x, tag: str):
-    tag = tag.lower()
-    match tag:
-        case "int":  # add one
+def eval_app(executor, env, programs, func, args):
+    computed_args = eval_term(executor, env, programs, args)
+    # print()
+    # print("APPLY: " + str(func), flush=True)
+    # print("ARGS: " + ", ".join(map(recursive_str, computed_args)), flush=True)
+    if isinstance(func.semantics, Side):
+        execution_outcome = executor.run(programs[func.semantics], computed_args)
+        # print("RESULT: " + str(execution_outcome), flush=True)
+        match execution_outcome:
+            case Success(v):
+                return v
+            case _:
+                return None
+    else:
+        result = func.semantics(*computed_args)
+        # print("RESULT: " + recursive_str(result), flush=True)
+        return result
+
+
+def is_formula_true(executor,
+                    env: Dict[str, Any],
+                    inputs: Dict[Side, Any],
+                    programs: Dict[Side, 'Program'],
+                    formula: Formula) -> bool:
+    match formula:
+        case App(func, args):
+            return eval_app(executor, env, programs, func, args)
+        case Not(operand):
+            return is_formula_true(executor, env, inputs, programs, operand)
+        case And(left, right):
+            return is_formula_true(executor, env, inputs, programs, left) and \
+                is_formula_true(executor, env, inputs, programs, right)
+        case Or(left, right):
+            return is_formula_true(executor, env, inputs, programs, left) or \
+                is_formula_true(executor, env, inputs, programs, right)
+        case ForAll(ele, domain, body):
+            for inp in inputs[domain]:
+                new_env = env.copy()
+                if isinstance(ele, Var):
+                    new_env[ele.name] = inp[0]
+                else:
+                    for index, var in enumerate(ele):
+                        new_env[var.name] = inp[index]
+                if not is_formula_true(executor, new_env, inputs, programs, body):
+                    print(f"\n{formula} failed on {inp}", file=sys.stderr, flush=True)
+                    return False
+            return True
+        case _:
+            raise ValueError(f"Unsupported formula type {formula}")
+
+
+def eval_term(executor, env: Dict[str, Any], programs, term: Term) -> Any:
+    if isinstance(term, (str, int, bool, float)):
+        return term
+    if isinstance(term, list):
+        return eval_all(executor, env, programs, term)
+    match term:
+        case Var(name):
+            return env[name]
+        case Func():
+            return term
+        case Map(func, args):
+            computed_args = eval_term(executor, env, programs, args)
+            return [eval_term(executor, env, programs, func([a])) for a in computed_args]
+        case MapUnpack(func, args):
+            computed_args = eval_term(executor, env, programs, args)
+            return [eval_term(executor, env, programs, func(a)) for a in computed_args]
+        case App(func, args):
+            return eval_app(executor, env, programs, func, args)
+        case _:
+            raise NotImplementedError(f"This term type has not been implemented yet: {term}")
+
+        
+#FIXME: these do not work for floats:
+Equals = Func(lambda x, y: x == y, "=")
+SetEquals = Func(lambda x, y: set(x) == set(y), "=")
+Member = Func(lambda x, y: x in y, "∈")
+
+def off_by_one(x):
+    match x:
+        case int():
             return x + 1
-        case "float":  # add one
+        case float():
             return x + 1.0
-        case "bool":  # flip
-            return False if x else True
-        case "str":  # add a suffix "_1"
+        case bool():
+            return not x
+        case str():
             return x + "_1"
-        case _ if tag.startswith("list[") and tag.endswith("]"):
-            subtype = tag[len("list["):-1].strip()
-            return [delta_apply(elem, subtype) for elem in x]
+        case list() if all(isinstance(i, int) for i in x):
+            return x + [1]
 
+OffByOne = Func(off_by_one, "off-by-one")
 
-def checker(formula: Formula, funcs: list[Callable], arity):
-    interp = Interpretation(
-        consts={},
-        funcs={
-            "f": (arity, funcs[0]),
-            "g": (arity, funcs[1])
-        },
-        preds={
-            "Equals": (2, lambda x, y: x == y),
-            "Equals_set": (2, lambda x, y: [x] == y),
-            "Includes": (2, lambda x, y: x in y if isinstance(y, Iterable) else False),
-            "DeltaEq": (3, lambda x, y, tag: y == delta_apply(x, tag))
-        }
-    )
-    ans, detailed_info = is_formula_true(formula, interp, {}, {})
-    return ans, detailed_info
+def check(executor, inputs: Dict[Side, Any], programs: Dict[Side, 'Program'], formula: Formula):
+    # print("\nLEFT:")
+    # print(programs[Side.LEFT].get_content())
+    # print("RIGHT:")
+    # print(programs[Side.RIGHT].get_content())
+    result = is_formula_true(executor, {}, inputs, programs, formula)
+    return result

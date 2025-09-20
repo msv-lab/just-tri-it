@@ -2,61 +2,47 @@ import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from itertools import islice
-from typing import List, Any
+from typing import List, Any, Tuple
 from viberate.executor import Executor, Success, Pass, Fail
-from viberate.requirements import Requirements
 from viberate.input_generator import generate_inputs
-from viberate.program import Test, Assertion, ExpectedOutput
+from viberate.program import Test, Requirements
 from viberate.code_generator import (
     Selector,
     SelectionOutcome,
     Selected,
-    Generator, Abstained
+    Generator,
+    Abstained
 )
-from viberate.dataset import Task
+from viberate.utils import RawData, ExperimentFailure
+
 
 @dataclass
 class UncertainOutput:
     pass
 
-@dataclass
-class TestFailed:
-    pass
-
-@dataclass
-class TestPassed:
-    pass
-
 
 class Plurality(Selector):
-    def __init__(self, executor: Executor, generator: Generator, n: int):
+    def __init__(self, executor: Executor, generator: Generator, num_programs: int):
         self.executor = executor
         self.generator = generator
-        self.n = n
-        
-    def generate_and_select(self, model, task: Task, p_dir, p_dict):
-        req = task.requirements
-        tests = task.tests
-        exp_results = {
-            "generated_programs": [],
-            "generated_inputs": None,
-            "classes": [],
-            "chosen_class": None,
-            "chosen_programs": [],
-            "decision": None
-        }
-        inputs = generate_inputs(model, req, self.executor)
-        exp_results["generated_inputs"] = inputs
+        self.num_programs = num_programs
 
-        programs = list(islice(self.generator.generate(model, req, p_dir, self.n), self.n))
-        p_dict = Selector.update_program_correctness(task.id, self.executor, programs, tests, p_dict)
+    def generate_and_select(self, model, req: Requirements) -> Tuple[SelectionOutcome, RawData]:
+        """Schema:
+           {
+              "programs": ...,
+              "inputs": ...,
+              "classes": <mapping from ids of valid classes to programs>,
+              "outputs": <pairs of programs and corresponding output vectors>,
+           }
+        """
+        inputs = generate_inputs(model, req, self.executor)
+        programs = list(islice(self.generator.generate(model, req, self.num_programs), self.num_programs))
 
         classes = []
         outputs = []
-        generated = []
         for p in programs:
             results = []
-            generated.append(p.hash())
             for i in inputs:
                 match self.executor.run(p, i):
                     case Success(v):
@@ -66,47 +52,39 @@ class Plurality(Selector):
             if len(classes) == 0:
                 classes.append(0)
             else:
+                found = False
                 for i, outs in enumerate(outputs):
                     if outs == results:
                         classes.append(classes[i])
+                        found = True
                         break
-                if len(classes) < len(generated):
+                if not found:
                     classes.append(max(classes) + 1)
             outputs.append(results)
-        
-        exp_results["generated_programs"] = generated
-        
-        class_to_phash = {}
-        for class_id, p_hash in zip(classes, generated):
-            if class_id not in class_to_phash:
-                class_to_phash[class_id] = []
-            class_to_phash[class_id].append(p_hash)
+     
+        valid_class_to_programs = {}
+        for i in range(len(programs)):
+            class_id = classes[i]
+            program = programs[i]
+            output = outputs[i]
+            if not all(isinstance(o, UncertainOutput) for o in output):
+                if class_id not in valid_class_to_programs:
+                    valid_class_to_programs[class_id] = []
+                valid_class_to_programs[class_id].append(program)
 
-        class_to_outputs = {}
-        for class_id, output in zip(classes, outputs):
-            if class_id not in class_to_outputs:
-                class_to_outputs[class_id] = output
+        raw_data = {
+            "programs": programs,
+            "inputs": inputs,
+            "classes": valid_class_to_programs,
+            "outputs": zip(programs, outputs),
+        }
 
-        valid_classes = {}
-        print(class_to_outputs)
-        for class_id, outputs_list in class_to_outputs.items():
-            all_uncertain = True
-            if not all(isinstance(item, UncertainOutput) for item in outputs_list):
-                all_uncertain = False
-            if not all_uncertain:
-                lst = class_to_phash[class_id]
-                valid_classes[class_id] = lst
-                exp_results["classes"].append(
-                    {
-                        "program_hashes": lst,
-                        "outputs": outputs_list
-                    }
-                )
-        if not valid_classes:
-            exp_results["decision"] = "Abstained"
+        if not valid_class_to_programs:
+            raise ExperimentFailure()
         else:
-            largest_class_id = max(valid_classes.items(), key=lambda x: len(x[1]))[0]
-            exp_results["chosen_class"] = largest_class_id
-            exp_results["chosen_programs"] = valid_classes[largest_class_id]
-            exp_results["decision"] = "Selected"
-        return exp_results, p_dict
+            largest_class_id = max(valid_class_to_programs.items(), key=lambda x: len(x[1]))[0]
+            selected_programs = []
+            for i, c in enumerate(classes):
+                if c == largest_class_id:
+                    selected_programs.append(programs[i])
+            return (Selected(selected_programs), raw_data)

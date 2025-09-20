@@ -2,9 +2,16 @@ from dataclasses import dataclass
 import ast
 import re
 import hashlib
-from typing import Any, List
+import sys
+from typing import Any, List, Tuple
+from itertools import islice
 
-from viberate.utils import extract_code
+from viberate.cached_llm import Model
+from viberate.utils import (
+    extract_code, extract_all_code, RawData,
+    print_annotated_hr, extract_answer, gen_and_extract_answer_with_retry,
+    ContentAddressable
+)
 
 
 @dataclass
@@ -44,19 +51,19 @@ class Signature:
     @staticmethod
     def from_description(model, desc: str) -> 'Signature':
         PROMPT_CODE = f"""
-        For the problem below, write a Python function signature with:
-        - Descriptive parameter names
-        - Type annotations for all parameters
-        - Specified return type
+For the problem below, write a Python function signature with:
+- Descriptive parameter names
+- Type annotations for all parameters
+- Specified return type
         
-        If the problem description instructs to read from stdin or
-        write to stdout, please ignore. All inputs should be
-        explicitly represented as parameters, and the output as the
-        return value. Please return only the function definition (with
-        'pass' as the body) inside a Markdown code block.
+If the problem description instructs to read from stdin or
+write to stdout, please ignore. All inputs should be
+explicitly represented as parameters, and the output as the
+return value. Please return only the function definition (with
+'pass' as the body) inside a Markdown code block.
 
-        Problem:
-        {desc}
+Problem:
+{desc}
         """
         code = extract_code(next(model.sample(PROMPT_CODE)))
         tree = ast.parse(code)
@@ -64,15 +71,96 @@ class Signature:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 return Signature.from_function_ast(node)
         raise ValueError("No function definition found in code")        
- 
+
+
+@dataclass
+class TestFunction(ContentAddressable):
+    test_function_name: str
+    test_function_code: str
+    target_signature: Signature
+
+    def get_content(self) -> str:
+        return "# signature: " + self.target_signature.pretty_print() + "\n"\
+            + "# test name: " + self.test_function_name + "\n"\
+            + self.test_function_code
+    
+    @staticmethod
+    def from_code(code: str, target_signature: Signature) -> 'TestFunction':
+        tree = ast.parse(code)
+        for node in tree.body:
+            if isinstance(node, ast.FunctionDef) and node.name.startswith('test_'):
+                return TestFunction(
+                    test_function_name=node.name,
+                    test_function_code=code,
+                    target_signature=target_signature,
+                )
+        raise ValueError("No test function found in code")
+
+
+@dataclass
+class InputOutput(ContentAddressable):
+    inputs: List[Any]
+    output: Any
+
+    def get_content(self) -> str:
+        return "inputs: " + repr(self.inputs) + "\n"\
+            + "output: " + repr(self.output)
+
+
+type Test = TestFunction | InputOutput
+
+
+@dataclass
+class Pass:
+    pass
+    
+
+@dataclass
+class Fail:
+    pass
+
+
+@dataclass
+class Requirements(ContentAddressable):
+    signature: Signature
+    description: str
+
+    def get_content(self) -> str:
+        return "# signature: " + self.signature.pretty_print() + "\n" + self.description
+
+    @staticmethod
+    def from_description(model: Model, desc: str) -> 'Requirements':
+        return Requirements(Signature.from_description(model, desc), desc)
+
+
+@dataclass
+class NamedReturnSignature(Signature):
+    return_name: str
+
+    @staticmethod
+    def infer_name(model: Model, req: Requirements) -> 'NamedReturnSignature':
+        PROMPT = f"""
+For the problem below, name its return value descriptively
+using Python's snake_case naming convention. Enclose the
+name in <answer> tags.
+        
+Problem:
+{req.description}
+        """
+        valid_name = gen_and_extract_answer_with_retry(model, PROMPT, 3)
+        return NamedReturnSignature(req.signature.name,
+                                    req.signature.params,
+                                    req.signature.return_type,
+                                    valid_name)
+
 
 @dataclass    
-class Program:
+class Program(ContentAddressable):
     signature: Signature
     code: str
 
-    def __str__(self):
-        return self.code
+    def get_content(self) -> str:
+        return "# signature: " + self.signature.pretty_print() + "\n" + self.code
 
     def add_imports(self, imports) -> 'Program':
         return Program(self.signature, imports + "\n" + self.code)
@@ -80,162 +168,24 @@ class Program:
     def hash(self) -> str:
         return hashlib.sha256(self.code.encode()).hexdigest()
 
-
-@dataclass
-class ExpectedOutput:
-    value: Any
-
-
-@dataclass
-class Assertion:
-    test_function_code: str
-    target_signature: Signature
-    test_function_name: str
-    
-    @staticmethod
-    def from_code(code: str, target_signature: Signature) -> 'Assertion':
-        tree = ast.parse(code)
-        for node in tree.body:
-            if isinstance(node, ast.FunctionDef) and node.name.startswith('test_'):
-                return Assertion(
-                    test_function_code=code,
-                    target_signature=target_signature,
-                    test_function_name=node.name
-                )
-        raise ValueError("No test function found in code")
-    
-    @staticmethod
-    def generate_from_problem(model, problem_description: str, target_signature: Signature, num_tests: int = 1) -> List['Assertion']:        
-        PROMPT_ASSERTIONS = f"""
-        For the problem below, write {num_tests} unit test function(s) to verify the correctness of the solution.
-
-        Problem:
-        {problem_description}
-
-        Function signature: {target_signature.pretty_print()}
-
-        Each test should be a function whose name starts with test_, calls the target function, 
-        and contains assertions to verify correctness. The tests should cover:
-        - Normal/typical cases
-        - Edge cases and boundary conditions  
-        - Error conditions (if applicable)
-
-        For problems where exact output cannot be predetermined, use assertions that check 
-        properties, constraints, or relationships rather than exact values.
-
-        Example formats:
-        ```python
-        def test_basic_functionality():
-            result = {target_signature.name}(typical_input)
-            assert result == expected_value
-        ```
-
-        ```python  
-        def test_boundary_condition():
-            result = {target_signature.name}(edge_case_input)
-            assert some_property_holds(result)
-        ```
-
-        Return each test function in a separate Python code block.
+    def passes(self, executor, tests: List[Test]) -> Tuple[bool, RawData]:
         """
-        
-        try:
-            response = next(model.sample(PROMPT_ASSERTIONS))
-
-            code_blocks = re.findall(r'```python\n(.*?)\n```', response, re.DOTALL)
-            if not code_blocks:
-                code_blocks = re.findall(r'```\n(.*?)\n```', response, re.DOTALL)
-                
-            assertions = []
-            for code in code_blocks:
-                if code and code.strip():
-                    try:
-                        assertion = Assertion.from_code(code.strip(), target_signature)
-                        assertions.append(assertion)
-                    except ValueError as e:
-                        print(f"Failed to create assertion from code: {e}")
-                        continue
-                        
-            return assertions[:num_tests]
-            
-        except Exception as e:
-            print(f"Error in generate_from_problem: {e}")
-            return []
-    
-    def execute(self, program: Program) -> bool:
-        try:
-            exec_globals = {}
-            
-            exec(program.code, exec_globals)
-            
-            exec(self.test_function_code, exec_globals)
-            
-            test_func = exec_globals[self.test_function_name]
-            test_func()
-            
-            return True
-        except Exception as e:
-            return False
-    
-    def extract_inputs(self, program: Program) -> List[List[Any]]:
-        inputs_collected = []
-        
-        def create_dummy_function(signature: Signature):
-            def dummy(*args, **kwargs):
-                param_values = []
-                for i, param in enumerate(signature.params):
-                    if i < len(args):
-                        param_values.append(args[i])
-                    elif param.name in kwargs:
-                        param_values.append(kwargs[param.name])
-                inputs_collected.append(param_values)
-                return None
-            return dummy
-        
-        try:
-            exec_globals = {}
-            
-            dummy_func = create_dummy_function(self.target_signature)
-            exec_globals[self.target_signature.name] = dummy_func
-            
-            exec(self.test_function_code, exec_globals)
-            test_func = exec_globals[self.test_function_name]
-            
-            try:
-                test_func()
-            except:
-                pass
-                
-        except Exception as e:
-            pass
-            
-        return inputs_collected
-    
-
-type Oracle = ExpectedOutput | Assertion
-
-
-@dataclass
-class Test:
-    inputs: List[Any]
-    oracle: Oracle
-
-    @staticmethod
-    def from_assertion(assertion: Assertion) -> 'Test':
-        return Test(inputs=[], oracle=assertion)
-    
-    @staticmethod
-    def from_expected_output(inputs: List[Any], expected: Any) -> 'Test':
-        return Test(inputs=inputs, oracle=ExpectedOutput(expected))
-    
-    def special_reformat(self):
-        if isinstance(self.oracle, ExpectedOutput):
-            return {
-                "expexted_input": self.inputs,
-                "expexted_output": self.oracle.value
-            }
-        if isinstance(self.oracle, Assertion):
-            return {
-                "function_code": self.oracle.test_function_code,
-                "function_name": self.oracle.test_function_name
-            }
+        Timeout is a failure.
+        Raw data schema:
+        {
+          "outcomes": ["pass", "pass", "fail", "timeout", ...]
+        {
+        """
+        outcomes = []
+        never_fails = True
+        for index, test in enumerate(tests):
+            match executor.run_test(self, test):
+                case Pass():
+                    outcomes.append('pass')
+                case Timeout():
+                    outcomes.append('timeout')
+                    never_fails = False
+                case _:
+                    outcomes.append('fail')
+                    never_fails = False
+        return never_fails, outcomes

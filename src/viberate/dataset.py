@@ -7,8 +7,8 @@ import zlib
 import pickle
 import base64
 
-from viberate.program import Test, Signature, ExpectedOutput, Assertion
-from viberate.requirements import Requirements
+from viberate.program import Test, Signature, InputOutput, TestFunction, Requirements
+from viberate.utils import panic
 
 
 @dataclass
@@ -50,11 +50,14 @@ def load_dataset(file: Path) -> Dataset:
           },
           "tests": [
               {
-                  "inputs": [ ... ],
-                  "oracle": {
-                       "type": "...",
-                       "value": "..."
-                  }
+                  "type": "InputOutput",
+                  "inputs": [ ... ],   # strings containing Python expressions
+                  "output": ...        # string with a Python expression
+              },
+              {
+                  "type": "TestFunction",
+                  "name": ...,
+                  "code": ...
               },
               ...
           ],
@@ -85,15 +88,14 @@ def load_dataset(file: Path) -> Dataset:
         else:
             test_data = task["tests"]
         for t in test_data:
-            inputs = t["inputs"]
-            oracle_d = t["oracle"]
-            if oracle_d["type"] == "expected_output":
-                oracle = ExpectedOutput(oracle_d["value"])
-            elif oracle_d["type"] == "assertion":
-                oracle = Assertion(oracle_d["value"])
+            if t["type"] == "InputOutput":
+                inputs = list(map(eval, t["inputs"]))
+                output = eval(t["output"])
+                tests.append(InputOutput(inputs, output))
+            elif t["type"] == "TestFunction":
+                tests.append(TestFunction.from_code(t["code"], signature))
             else:
-                raise ValueError(f"Unknown oracle type: {oracle_d['type']}")
-            tests.append(Test(inputs, oracle))
+                panic("Test assertions are not supported!")
 
         task_obj = Task(
             id=task["id"],
@@ -117,22 +119,15 @@ def save_dataset(dataset: List[Task], file: Path, compress=False):
         tests = []
         for test in task.tests:
             oracle = None
-            match test.oracle:
-                case ExpectedOutput(value):
-                    oracle = {
-                        "type": "expected_output",
-                        "value": value
-                    }
-                case Assertion(code):
-                    oracle = {
-                        "type": "assertion",
-                        "value": code
-                    }
-            tests.append({
-                "inputs": test.inputs,
-                "oracle": oracle
-            })
-
+            match test:
+                case InputOutput(inputs, output):
+                    tests.append({
+                        "type": "InputOutput",
+                        "inputs": list(map(repr, inputs)),
+                        "output": repr(oracle)
+                    })
+                case TestFunction():
+                    panic("Test assertions are not supported!")
         task_dict = {
             "id": task.id,
             "requirements": requirements,

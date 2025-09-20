@@ -1,13 +1,53 @@
 import pickle
 import math
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 import subprocess
 from tempfile import TemporaryDirectory
 from typing import Any, List
+import functools
 
-from viberate.program import Program, Test, ExpectedOutput, Assertion
-from viberate.utils import panic
+from viberate.program import Program, Test, InputOutput, TestFunction, Pass, Fail
+from viberate.utils import panic, ContentAddressable
+
+
+# from LiveCodeBench/lcb_runner/evaluation/utils_execute.py
+LIVECODEBENCH_IMPORTS = """from itertools import accumulate, chain, combinations, count, permutations, product, groupby, islice, repeat
+from copy import deepcopy
+from string import ascii_lowercase
+from math import floor, log2, log10, sqrt, comb, gcd, ceil, inf, isqrt
+from collections import defaultdict, deque, Counter
+from bisect import bisect, bisect_left, bisect_right, insort
+from heapq import heappush, heappop, heapify, merge
+from functools import reduce, cache, lru_cache
+from random import randrange, shuffle
+from operator import itemgetter, sub
+from re import search as re_search  # Assuming 're' refers to a regex search
+from os.path import commonprefix
+from typing import List, Tuple, Dict, Set, Optional, Union, Any, Callable, Iterable, Iterator, Generator
+import copy
+import string
+import math
+import collections
+import bisect
+import heapq
+import functools
+import random
+import itertools
+import operator
+import re
+import numpy as np
+import pandas as pd
+from math import log, prod  # 'log' and 'prod' are functions in the math module
+from collections import deque, defaultdict, Counter, OrderedDict
+from itertools import accumulate, permutations, combinations, product, groupby, islice, chain, repeat, zip_longest, cycle
+from functools import lru_cache, reduce, partial
+# from sortedcontainers import SortedList, SortedDict, SortedSet
+# import sortedcontainers
+from operator import iand
+import sys
+"""
 
 
 @dataclass
@@ -36,16 +76,6 @@ class Timeout:
 type ExecutionOutcome = Success | Error | Panic | Timeout
 
 
-@dataclass
-class Pass:
-    pass
-    
-
-@dataclass
-class Fail:
-    pass
-
-
 type TestOutcome = Pass | Fail | Error | Panic | Timeout
 
 
@@ -72,7 +102,7 @@ if __name__ == '__main__':
     """
 
 
-def assertion_test_harness(p: Program, assertion: Assertion, output_file: Path):
+def assertion_test_harness(p: Program, assertion: TestFunction, output_file: Path):
     return f"""
 import pickle
 
@@ -99,13 +129,53 @@ if __name__ == '__main__':
         pickle.dump(report, f)
     """
 
+def cache_content_addressable(func):
+    """
+    Decorator that caches method results using ContentAddressable.hash_id()
+    for ContentAddressable arguments, and repr() for others.
+    The cache is stored on the instance as _cache_<funcname>.
+    """
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        # Build the cache storage on first use
+        cache_attr = f"_cache_{func.__name__}"
+        if not hasattr(self, cache_attr):
+            setattr(self, cache_attr, {})
+        cache = getattr(self, cache_attr)
+
+        # Convert arguments to a key
+        def arg_key(arg):
+            if isinstance(arg, ContentAddressable):
+                return f"CA:{arg.hash_id()}"
+            else:
+                return f"VAL:{repr(arg)}"
+
+        key_parts = tuple(arg_key(a) for a in args) + \
+                    tuple(f"{k}={arg_key(v)}" for k, v in sorted(kwargs.items()))
+
+        # Check cache
+        if key_parts in cache:
+            print("c", end="", file=sys.stderr, flush=True)            
+            return cache[key_parts]
+
+        # Call original function and store result
+        result = func(self, *args, **kwargs)
+        cache[key_parts] = result
+        return result
+
+    return wrapper
+
+
 class Executor:
 
     def __init__(self, test_venv: Path):
         self.test_venv = test_venv
 
-    def run(self, p: Program, inputs: list[Any]) -> ExecutionOutcome:
+    @cache_content_addressable
+    def run(self, p: Program, inputs: list[Any], add_lcb_imports=True) -> ExecutionOutcome:
         assert isinstance(inputs, list)
+        if add_lcb_imports:
+            p = p.add_imports(LIVECODEBENCH_IMPORTS)
         with TemporaryDirectory() as tmp:
             exec_dir = Path(tmp)
             input_file = exec_dir / 'input.pkl'
@@ -125,22 +195,26 @@ class Executor:
                     check=False            # Don't raise exception for nonzero status
                 )
                 if result.returncode != 0:
+                    print("!", end="", file=sys.stderr, flush=True)
                     return Panic(result.stderr)
                 if not output_file.exists():
+                    print("!", end="", file=sys.stderr, flush=True)
                     return Panic("no output")
                 with output_file.open('rb') as f:
                     report = pickle.load(f)
                     if report['status'] == 'success':
+                        print(".", end="", file=sys.stderr, flush=True)
                         return Success(report['value'])
                     else:
+                        print("!", end="", file=sys.stderr, flush=True)
                         assert report['status'] == 'error'
                         return Error(report['error_type'], report['error_message'])
                 
             except subprocess.TimeoutExpired:
-                return Timeout()
-            
+                print("!", end="", file=sys.stderr, flush=True)
+                return Timeout()          
     
-    def run_assertion_test(self, p: Program, assertion: Assertion) -> TestOutcome:
+    def _run_test_function(self, p: Program, assertion: TestFunction) -> TestOutcome:
         with TemporaryDirectory() as tmp:
             exec_dir = Path(tmp)
             output_file = exec_dir / 'output.pkl'
@@ -168,19 +242,25 @@ class Executor:
                     report = pickle.load(f)
                     if report['status'] == 'success':
                         if report['test_passed']:
+                            print(".", end="", file=sys.stderr, flush=True)
                             return Pass()
                         else:
+                            print("!", end="", file=sys.stderr, flush=True)
                             return Fail()
                     else:
+                        print("!", end="", file=sys.stderr, flush=True)
                         return Error(report['error_type'], report['error_message'])
                         
             except subprocess.TimeoutExpired:
                 return Timeout()
 
-    def run_test(self, p: Program, t: Test) -> TestOutcome:
-        match t.oracle:
-            case ExpectedOutput(expected):
-                execution_outcome = self.run(p, t.inputs)
+    @cache_content_addressable
+    def run_test(self, p: Program, t: Test, add_lcb_imports=True) -> TestOutcome:
+        if add_lcb_imports:
+            p = p.add_imports(LIVECODEBENCH_IMPORTS)
+        match t:
+            case InputOutput(inputs, expected):
+                execution_outcome = self.run(p, inputs)
                 match execution_outcome:
                     case Success(actual):
                         if isinstance(actual, float) and isinstance(expected, float) and math.isclose(actual, expected):
@@ -192,22 +272,5 @@ class Executor:
                     case _:
                         return execution_outcome
             
-            case Assertion() as assertion:
-                return self.run_assertion_test(p, assertion)
-
-
-def passes_tests(executor: Executor, program: Program, tests: List[Test]):
-    output_lst = []
-    for index, test in enumerate(tests):
-        match executor.run_test(program, test):
-            case Pass():
-                output_lst.append('pass')
-                pass
-            case Timeout():
-                output_lst.append('timeout')
-                pass
-            case _:
-                output_lst.append('fail')
-                print(f"fail on test {index}")
-                return False, output_lst
-    return True, output_lst
+            case TestFunction():
+                return self._run_test_function(p, t)

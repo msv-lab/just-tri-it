@@ -1,4 +1,3 @@
-
 import argparse
 import json
 from pathlib import Path
@@ -110,7 +109,7 @@ def evaluate_selector_pair(results: list, p_dict: dict):
             else:
                 metrics_dict[prop["name"]]["c_prob_lst"].append('Abstained')
 
-        if overall_c_numerator > 0:
+         if overall_c_numerator > 0:
             overall_c_lst.append(overall_c_numerator / overall_c_denominator)
         else:
             overall_c_lst.append('Abstained')
