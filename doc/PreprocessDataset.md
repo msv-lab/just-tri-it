@@ -2,7 +2,7 @@
 
 First, download LiveCodeBench (fast) data file `test6.jsonl`.
 
-Second, download GPT-4o cache: https://github.com/msv-lab/VibeRate-cache-sergey/archive/livecodebench_part6_conversion.zip
+Second, download GPT-4o cache: https://github.com/msv-lab/just-tri-it-cache-sergey/archive/livecodebench_part6_conversion.zip
 
 Then, on the commit 02209a156dc48c9b98f9ba7e44e81c0945c373cf, execute
 

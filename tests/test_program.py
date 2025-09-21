@@ -1,4 +1,4 @@
-from viberate.program import Signature
+from just_tri_it.program import Signature
 import ast
 
 

@@ -1,5 +1,5 @@
 [project]
-name = "viberate"
+name = "just-tri-it"
 version = "0.1.0"
 description = "Enhancing confidence in LLM-generated code via resonance check"
 readme = "README.md"
@@ -11,10 +11,10 @@ dependencies = [
 ]
 
 [project.scripts]
-benchmark = "viberate.benchmark:main"
-preprocess_dataset = "viberate.preprocess_dataset:main"
-experiment = "viberate.experiment:main"
-analyse = "viberate.analyse:main"
+benchmark = "just_tri_it.benchmark:main"
+preprocess_dataset = "just_tri_it.preprocess_dataset:main"
+experiment = "just_tri_it.experiment:main"
+analyse = "just_tri_it.analyse:main"
 
 [build-system]
 requires = ["hatchling"]
