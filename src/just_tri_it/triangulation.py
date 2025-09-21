@@ -344,9 +344,6 @@ def make_partial_for_fib(arity, inverse_index):
     g = Func(Side.RIGHT)
 
     ReplaceAt = Func(lambda v: args[:inverse_index] + [v] + args[inverse_index+1:], "replace_at")
-    Wrap = Func(lambda v: [v], "wrap")
-    def replace_at(l, i, v):
-        return 
     
     return Triangulation(
         Identity(),
