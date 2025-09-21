@@ -7,7 +7,9 @@ from functools import partial
 import random
 from enum import Enum
 from typing import Union, Set, Dict, List, Optional, Callable, Any, Iterable
+
 from just_tri_it.executor import Success, Timeout, Error
+from just_tri_it.utils import ExperimentFailure
 
 
 class Side(Enum):
@@ -252,7 +254,6 @@ def eval_term(executor, env: Dict[str, Any], programs, term: Term) -> Any:
             raise NotImplementedError(f"This term type has not been implemented yet: {term}")
 
         
-#FIXME: these do not work for floats:
 def _off_by_one(x):
     match x:
         case int():
@@ -265,6 +266,8 @@ def _off_by_one(x):
             return x + "_1"
         case list() if all(isinstance(i, int) for i in x):
             return x + [1]
+        case _:
+            raise ExperimentFailure(f"off-by-one does not support this type: {x}")
 
         
 OffByOne = Func(_off_by_one, "off-by-one")
