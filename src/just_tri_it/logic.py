@@ -165,6 +165,7 @@ class ForAll:
             vars_str = str(self.vars)
         return f"∀{vars_str} ∈ {self.domain.value}_inputs: {self.body}"    
 
+
 Formula = Union[
     App, # here is an application of a boolean function
     Not,
@@ -174,6 +175,34 @@ Formula = Union[
     Iff,
     ForAll
 ]
+
+
+# Error Model:
+#
+# - If a program throws an invalid input exception, its output is
+#   considered Undefined.
+#
+# - If any part of any input is Undefined, then the output of 
+#   the program is automatically Undefined.
+#
+# - Any values containing Undefined as their subcomponents are
+#   considered Undefined.
+#
+# - Programs are only allowed to produce Undefined on non-Undefined
+#   arguments if the arguments come from generated inputs, but not
+#   intermediate values.
+#
+# - The only true predicates on Undefined values is Undefined =
+#   Undefined and Undefined ∈ Undefined.
+
+@dataclass
+class Undefined():
+    pass
+
+
+class PropertyFalseDueToErrors(Exception):
+    "Raised when the property is false due to errors"
+    pass    
 
 
 def eval_all(executor, env, programs, terms):
