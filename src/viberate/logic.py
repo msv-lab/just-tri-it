@@ -1,4 +1,5 @@
 import sys
+import math
 import hashlib
 import json
 from dataclasses import dataclass
@@ -252,11 +253,7 @@ def eval_term(executor, env: Dict[str, Any], programs, term: Term) -> Any:
 
         
 #FIXME: these do not work for floats:
-Equals = Func(lambda x, y: x == y, "=")
-SetEquals = Func(lambda x, y: set(x) == set(y), "=")
-Member = Func(lambda x, y: x in y, "∈")
-
-def off_by_one(x):
+def _off_by_one(x):
     match x:
         case int():
             return x + 1
@@ -269,7 +266,57 @@ def off_by_one(x):
         case list() if all(isinstance(i, int) for i in x):
             return x + [1]
 
-OffByOne = Func(off_by_one, "off-by-one")
+        
+OffByOne = Func(_off_by_one, "off-by-one")
+
+
+def _equals_func(x, y):
+    """Check equality, using math.isclose for floats."""
+    if isinstance(x, float) and isinstance(y, float):
+        return math.isclose(x, y)
+    return x == y
+
+
+Equals = Func(_equals_func, "=")
+
+
+def _set_equals_func(x, y):
+    """
+    Check equality of two iterables.
+    - If all elements are floats (in both x and y), compare sorted lists with math.isclose.
+    - Otherwise, compare as sets.
+    """
+    x_list = list(x)
+    y_list = list(y)
+
+    if all(isinstance(v, float) for v in x_list + y_list):
+        x_sorted = sorted(x_list)
+        y_sorted = sorted(y_list)
+
+        if len(x_sorted) != len(y_sorted):
+            return False
+
+        return all(math.isclose(a, b) for a, b in zip(x_sorted, y_sorted))
+
+    return set(x_list) == set(y_list)
+
+
+SetEquals = Func(_set_equals_func, "=")
+
+
+def _member_func(x, y):
+    """Check membership, using math.isclose for floats."""
+    for item in y:
+        if isinstance(x, float) and isinstance(item, float):
+            if math.isclose(x, item):
+                return True
+        elif x == item:
+            return True
+    return False
+
+
+Member = Func(_member_func, "∈")
+
 
 def check(executor, inputs: Dict[Side, Any], programs: Dict[Side, 'Program'], formula: Formula):
     # print("\nLEFT:")
