@@ -60,25 +60,27 @@ class MaxWitness(ABC):
         {
            "method": "max_witness",
            "max_witness_sets": [ (program, witnesses), ...],
+           "argeement": ...
            "agreement_raw_data": ...
         }
         """
-        agreement_output, agreement_raw_data = self.agreement.compute_witnesses(model, req)
+        agreement, agreement_raw_data = self.agreement.compute_witnesses(model, req)
 
         raw_data = {
            "method": "max_witness",
            "max_witness_sets": [],
+           "agreement": agreement,
            "agreement_raw_data": agreement_raw_data
         }
 
-        if len(agreement_output) == 0:
+        if len(agreement) == 0:
             return (Abstained(), raw_data)
         
-        max_size = max(len(witnesses) for _, witnesses in agreement_output)
+        max_size = max(len(witnesses) for _, witnesses in agreement)
         
         max_witness_sets = [
             (program, witnesses)
-            for program, witnesses in agreement_output
+            for program, witnesses in agreement
             if len(witnesses) == max_size
         ]
 
@@ -97,22 +99,24 @@ class Ransac(ABC):
         {
            "method": "ransac",
            "ransac_scores": [ (score, program, witnesses), ...],
+           "argeement": ...        
            "agreement_raw_data": ...
         }
         """
-        agreement_output, agreement_raw_data = self.agreement.compute_witnesses(model, req)
+        agreement, agreement_raw_data = self.agreement.compute_witnesses(model, req)
 
         raw_data = {
            "method": "ransac",
            "ransac_scores": [],
+           "agreement": agreement,
            "agreement_raw_data": agreement_raw_data
         }
 
-        if len(agreement_output) == 0:
+        if len(agreement) == 0:
             return (Abstained(), raw_data)
 
         #NOTE: sorted hashlist is important, because we want identical samples to contribute to the score
-        programs_to_witness_hashlists = [(p, tuple(sorted([w.hash_id() for w in ws]))) for p, ws in agreement_output]
+        programs_to_witness_hashlists = [(p, tuple(sorted([w.hash_id() for w in ws]))) for (p, ws) in agreement]
 
         groups = defaultdict(list)
 
@@ -124,7 +128,7 @@ class Ransac(ABC):
         for witness_hashlist, programs in groups.items():
             score = len(witness_hashlist) * len(programs)
             for p in programs:
-                for q, ws in agreement_output:
+                for q, ws in agreement:
                     if p.hash_id() == q.hash_id():
                         ransac_scores.append((score, p, ws))
 

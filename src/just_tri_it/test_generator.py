@@ -43,7 +43,6 @@ class InputOutputGenerator(TestGenerator):
             new_test = InputOutput(adjusted_inputs, t.output)
             adjusted_tests.append(new_test)
             
-        print(f"InputOutputGenerator: generated {len(adjusted_tests)} tests", file=sys.stderr)
         return adjusted_tests
 
     def _extract_test_case(self, blocks):
@@ -104,7 +103,7 @@ output: expected_output
 
 
     def _generate_additional_tests(self, model, req, existing_cases, executor=None):
-        existing_inputs_str = "\n".join([str(case[0]) for case in existing_cases])
+        existing_inputs_str = "\n".join([repr(c.inputs) for c in existing_cases])
 
         PROMPT = f"""Given a problem description, a function
 signature, and a list of existing test inputs, generate additional
@@ -186,7 +185,5 @@ def test_boundary_condition():
 
         if len(tests) == 0:
             raise ExperimentFailure("Failed to generate test functions")
-
-        print(f"TestFunctionGenerator: generated {len(tests)} tests", file=sys.stderr)        
 
         return tests

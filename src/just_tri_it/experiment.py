@@ -1,22 +1,28 @@
+from dataclasses import dataclass
 import argparse
 import sys
 import json
 import hashlib
 from pathlib import Path
 from itertools import islice
-import traceback
-from typing import List
+import jsonlines
+from typing import List, Any, Dict
 
-from just_tri_it.cached_llm import Model, Persistent, AI302, XMCP
-from just_tri_it.metrics import all_metrics_abt
+from just_tri_it.cached_llm import Model, Repeatable, AI302, XMCP
 from just_tri_it.program import Program, Test
 from just_tri_it.executor import Executor, Pass, Fail, Timeout
 from just_tri_it.dataset import Dataset, load_dataset
-from just_tri_it.code_generator import Vanilla, Generator, Selector, Abstained
-from just_tri_it.plurality import Plurality
-from just_tri_it.utils import print_annotated_hr, add_cache_options, setup_cache
-from just_tri_it.codet import CodeT, MODE
-from just_tri_it.vb_selector import Just_Tri_It
+from just_tri_it.utils import (
+    print_annotated_hr,
+    add_cache_options,
+    setup_cache,
+    replace_with_hash_and_update_map,
+    ExperimentFailure,
+    print_legend
+)
+from just_tri_it.config import init_selectors, NUM_LEFT_SAMPLES
+from just_tri_it.code_generator import Vanilla
+from just_tri_it.selection import Selected, Abstained
 
 
 def parse_args():
@@ -34,9 +40,9 @@ def parse_args():
         help="Input file containing the dataset."
     )
     parser.add_argument(
-        "--task",
+        "--task-list",
         type=str,
-        help="Identifier of task to run (all by default)."
+        help="File with task IDs to run (all by default)."
     )
     parser.add_argument(
         "--model",
@@ -45,177 +51,155 @@ def parse_args():
         help="LLM to use."
     )
     parser.add_argument(
-        "--experiment-result",
+        "--data",
         type=str,
         required=True,
         help="Store your experiment result."
     )
-    parser.add_argument(
-        "--config",
-        type=str,
-        required=True,
-        help="configurations of this experiment"
-    )
     return parser.parse_args()
 
 
-def save_program(p: Program, dir_path: Path):
-    dir_path.mkdir(parents=True, exist_ok=True)
-    file_path = dir_path / f"{p.hash()}.py"
-    file_path.write_text(p.code, encoding="utf-8")
+SELECTOR_IDS = [
+    "Plurality",
+    "MaxTest_Assert",
+    "MaxTest_IO",
+    "CodeT_Assert",
+    "CodeT_IO",
+    "Syntactic",
+    "OffByOne",
+    "Postcondition",
+    "FOR_INV",
+    "FOR_FIB"
+]
+
+
+@dataclass
+class Database:
+    objects: List[Any]
+    content: Dict[str, str]
+
+    @staticmethod
+    def load(directory: Path) -> 'Database':
+        content_dir = directory / "content"
+        object_file = directory / "data.jsonl"
+        object_file.touch(exist_ok=True)
+        with jsonlines.open(object_file) as reader:
+            objects = list(reader)
+        id_to_content: Dict[str, str] = {
+            file_path.stem: file_path.read_text(encoding="utf-8")
+            for file_path in content_dir.glob("*.txt")
+        }
+        return Database(objects, id_to_content)
+                
+
+    def save(self, directory: Path):
+        content_dir = directory / "content"
+        content_dir.mkdir(parents=True, exist_ok=True)
+        object_file = directory / "data.jsonl"
+        with jsonlines.open(object_file, mode='w', flush=True) as writer:
+            writer.write_all(self.objects)
+
+        for file_id, content in self.content.items():
+            file_path = content_dir / f"{file_id}.txt"
+            file_path.write_text(content, encoding="utf-8")
 
 
 def main():
     args = parse_args()
-    try:
-        config_path = Path(args.config) 
-        print(config_path)
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-        model = AI302(config["model_name"], config["temp"], max_batch=50)
     
-        if not args.no_cache:
-            if args.cache_root:
-                cache_root = Path(args.cache_root)
-            else:
-                cache_root = Path.home() / ".just_tri_it_cache"
-            if args.replicate:
-                model = Persistent(model, cache_root, replication=True)
-            else:
-                model = Persistent(model, cache_root)
+    model = AI302(args.model, 1.0)
+    # model = XMCP(args.model, 1.0)
 
-        if not args.no_cache and args.export_cache:
-            export_root = Path(args.export_cache)
-            export_root.mkdir(parents=True, exist_ok=True)
-            model.start_slicing(export_root)
-                
-        test_venv = Path(args.test_venv)
-        executor = Executor(test_venv)
+    model = setup_cache(model, args)
 
-        dataset_path = Path(args.dataset)
-        dataset = load_dataset(dataset_path)
+    # even without persistent cache, we need to ensure that we always
+    # sample the same programs for a consistent database:
+    model = Repeatable(model)
+    
+    executor = Executor(Path(args.test_venv))
+    dataset = load_dataset(Path(args.dataset))
+    data_dir = Path(args.data)
+    data_dir.mkdir(parents=True, exist_ok=True)
+    database = Database.load(data_dir)
 
-        try:
-            dataset_fullname = dataset_path.stem
-            name, batch_str = dataset_fullname.split("_batch_")
-            batch = int(batch_str)
-        except Exception as e:
-            print(f"can't parse dataset name: {e}")
-            name = "unknown"
-            batch = "unknown"
+    if args.task_list:
+        task_list_file = Path(args.task_list)
+        with task_list_file.open("r", encoding="utf-8") as f:
+            task_ids = [line.strip() for line in f]
+            dataset = [t for t in dataset if t.id in task_ids]
 
-        if args.task:
-            dataset = [t for t in dataset if t.id == args.task]
-        
-        experiment_result = {
-            "dataset": name,
-            "batch": batch,
-            "selectors": {},
-            "generators": {}
+    execute_experiment(model, executor, dataset, database, data_dir)
+
+
+def execute_experiment(model, executor, dataset, db, data_dir):
+    """Schema (for objects):
+    {
+        "task_id": ...,
+        "requirements": ...,
+        "sample_correctness": [
+            [..., True, ['pass', 'pass', ...]],
+            [..., False, ['pass', 'fail', ...]],
+            ...
+        ],
+        "selectors": [
+            {
+                "id": ...,
+                "outcome": ...,  # "selected" or "abstained"
+                "selected": ...,
+                "witnesses": ...,
+                "raw_data": ...
+            },
+        ]
+    }
+    """
+
+    print_legend()
+    for task in dataset:
+        if task.id in map(lambda o: o["task_id"], db.objects):
+            continue
+
+        obj = {
+            "task_id": task.id,
+            "requirements": task.requirements,
+            "sample_correctness": [],
+            "selectors": []
         }
+        
+        print()
+        print_annotated_hr(f"Task {task.id}")
 
-        if args.experiment_result:
-            result_root = Path(args.experiment_result)
-            # program directory store all generated programs during this experiment
-            program_dir = result_root / "program"
-            program_dir.mkdir(parents=True, exist_ok=True)
-            # config.json store the configurations of this experiment
-            with open(result_root / "config.json", 'w', encoding='utf-8') as f:
-                json.dump(config, f, indent=4)
-            # program.json store all forward programs and their correctness by tests
-            program_json_path = result_root / "program.json"
-            if not program_json_path.exists():
-                try:
-                    result_root.mkdir(parents=True, exist_ok=True)
-                    with open(program_json_path, 'w', encoding='utf-8') as f:
-                        json.dump({}, f, indent=4)
-                    print(f"Created program.json at {program_json_path}")
-                except Exception as e:
-                    print(f"Error creating program.json: {e}")
-            else:
-                print(f"program.json already exists at {program_json_path}")
+        print(f"\n[Sample correctness]", end="", file=sys.stderr, flush=True)
+        samples = list(islice(Vanilla().generate(model, task.requirements, NUM_LEFT_SAMPLES), NUM_LEFT_SAMPLES))
+        for s in samples:
+            status, details = s.passes(executor, task.tests)
+            obj["sample_correctness"].append((s, status, details))
+
+        all_selectors = init_selectors(executor, Vanilla(), model)
+        
+        for selector_id in SELECTOR_IDS:
+            print(f"\n[{selector_id}]", end="", file=sys.stderr, flush=True)
             
-            global program_dict
-            with open(program_json_path, 'r', encoding='utf-8') as f:
-                program_dict = json.load(f) 
-
-            if "generators" in config and len(config["generators"]):
-                for gen in config["generators"]:
-                    print_annotated_hr("Generator: " + gen)
-                    match gen:
-                        case "Vanilla":
-                            num = config["generators"][gen]["number_of_programs"]
-                            generator = Vanilla()
-                            experiment_result["generators"][gen] = {"number_of_programs": num, 'results': []}
-                            for task in dataset:
-                                print_annotated_hr(f"Task {task.id}")
-                                new_dict = {
-                                    "task_id": task.id
-                                }
-                                programs = list(islice(generator.generate(model, task.requirements, program_dir, num), num))
-                                new_dict.update({"generated_programs": [p.hash() for p in programs]})
-                                program_dict = Selector.update_program_correctness(task.id, executor, programs, task.tests, program_dict)
-                                experiment_result["generators"][gen]["results"].append(new_dict)
-                        case _:
-                            print("Unsupported generator", file=sys.stderr)
-                            continue
-                    
-                            
-            if "selectors" in config and len(config["selectors"]):
-                for select in config["selectors"]:
-                    print_annotated_hr("Selector: " + select)
-                    match select:
-                        case "Plurality":
-                            num = config["selectors"][select]["number_of_programs"]
-                            selector = Plurality(executor, Vanilla(), num)
-                            init_dict = {
-                                "number_of_programs": num,
-                                "results": []
-                            }
-                        case "CodeT_assertion" | "CodeT_IOcompare":
-                            num_p = config["selectors"][select]["number_of_programs"]
-                            num_t = config["selectors"][select]["number_of_tests"]
-                            mode = MODE.ASSERTION if select == "CodeT_assertion" else MODE.IO_COMPARE
-                            selector = CodeT(executor, Vanilla(), mode, num_p, num_t)
-                            init_dict = {
-                                "number_of_programs": num_p,
-                                "number_of_tests": num_t,
-                                "results": []
-                            }
-                        case "Just_Tri_It":
-                            num_1 = config["selectors"][select]["number_of_program_1"]
-                            num_2 = config["selectors"][select]["number_of_program_2"]
-                            selector = Just_Tri_It(executor, Vanilla(), num_1, num_2)
-                            init_dict = {
-                                "number_of_program_1": num_1,
-                                "number_of_program_2": num_2,
-                                "results": []
-                            }
-                        case _:
-                            print("Unsupported selectors", file=sys.stderr)
-                            continue
-                    experiment_result["selectors"][select] = init_dict
-                    for task in dataset:
-                        print_annotated_hr(f"Task {task.id}")
-                        new_dict = {
-                            "task_id": task.id
-                        }
-                        # print(program_dict)
-                        select_result = selector.generate_and_select(model, task, program_dir, program_dict)
-                        new_dict.update(select_result[0])
-                        program_dict = select_result[1]
-                        experiment_result["selectors"][select]["results"].append(new_dict)
-            # save into files
+            selector_data = { "id": selector_id }
             try:
-                # print(experiment_result)
-                with open(result_root / f"{name}_batch_{batch}_raw.json", 'w', encoding='utf-8') as f:
-                    json.dump(experiment_result, f, indent=4)
-                with open(result_root / "program.json", 'w', encoding='utf-8') as f:
-                    json.dump(program_dict, f, indent=4)
-            except Exception as e:
-                print(f"error when saving: {e}")
-                traceback.print_exc()
+                selector = all_selectors[selector_id]
 
-    except Exception as e:
-        print(f"Error: {e}")
-        traceback.print_exc()
+                if callable(selector):
+                    s = selector(task)
+                else:
+                    s = selector
+                outcome, raw_data = s.generate_and_select(model, task.requirements)
+                selector_data["raw_data"] = raw_data
+                match outcome:
+                    case Selected(program, witnesses):
+                        selector_data["outcome"] = "selected"
+                        selector_data["selected"] = program
+                        selector_data["witnesses"] = witnesses
+                    case Abstained():
+                        selector_data["outcome"] = "abstained"
+                obj["selectors"].append(selector_data)
+            except ExperimentFailure as e:
+                print(f"\n{selector_id} failed on {task.id} with {e}", file=sys.stderr, flush=True)
+    
+        dbobj = replace_with_hash_and_update_map(obj, db.content)
+        db.objects.append(dbobj)
+        db.save(data_dir)

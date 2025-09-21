@@ -8,34 +8,15 @@ from typing import Iterable, Tuple, List
 from abc import ABC, abstractmethod
 
 from just_tri_it.executor import Error
-from just_tri_it.utils import extract_code, print_annotated_hr, RawData
+from just_tri_it.utils import extract_code, print_annotated_hr, RawData, ContentAddressable
 from just_tri_it.program import Signature, Program, Requirements
 from just_tri_it.executor import Executor
 
 
 class Generator(ABC):
+
     @abstractmethod
     def generate(self, model, req: Requirements, batch=1) -> Iterable['Program']:
-        pass
-
-
-@dataclass
-class Selected:
-    programs: List[Program]
-
-
-@dataclass
-class Abstained:
-    pass
-
-
-type SelectionOutcome = Selected | Abstained
-
-
-class Selector(ABC):
-
-    @abstractmethod
-    def generate_and_select(self, model, req: Requirements) -> Tuple[SelectionOutcome, RawData]:
         pass
 
 
@@ -43,7 +24,7 @@ class Selector(ABC):
 class Vanilla(Generator):
 
     def generate(self, model, req: Requirements, batch=1) -> Iterable[Program]:
-        PROMPT = f""" Write a Python function '{req.signature.pretty_print()}'
+        PROMPT = f"""Write a Python function '{req.signature.pretty_print()}'
 to solve the following problem. Include all necessary imports. Put the complete
 code inside a Markdown code block:
 ```python

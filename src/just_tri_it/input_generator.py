@@ -10,6 +10,11 @@ from just_tri_it.program import Program, Requirements
 from just_tri_it.utils import print_annotated_hr, extract_all_code, remove_duplicates, ExperimentFailure
 
 
+#FIXME: control number of inputs:
+MINIMUM_NUM_INPUTS = 10
+MAXIMUM_NUM_INPUTS = 50
+
+
 def value_is_too_large(data, int_bound, seq_bound):
     if isinstance(data, int):
         if data < -int_bound or data > int_bound:

@@ -26,7 +26,7 @@ Run linter and type checker:
 
 ## Usage
 
-just-tri-it suppots multiple worlflows:
+just-tri-it supports multiple workflows:
 
 ### Benchmarking
 
@@ -47,26 +47,41 @@ For LiveCodeBench v6, first decompress the dataset using
 A specific task can be specified using `--task`:
     
     uv run benchmark --test-venv test_venv/ --dataset datasets/lcb_part6.json --selector CodeT_IO --model gpt-4o --task atcoder_abc387_b
+    
+List of configurations:
+
+- `Plurality`
+- `MaxTest_Assert`
+- `MaxTest_IO`
+- `CodeT_Assert`
+- `CodeT_IO`
+- `Syntactic`
+- `OffByOne`
+- `Postcondition`
+- `FOR_INV`
+- `FOR_FIB`
 
 ### Experiments
+
+The goal of the experimentation tool is to provide comprehensive measurements and allow for iterative improvements.
 
 To run LiveCodeBench v6, first decompress the dataset using:
     
     unzip datasets/lcb_part6.json.zip
     
-Then, to collect experimental results and save into `result_dir`, execute
+Then, to collect experimental results and save (append) into `data_dir`, execute
 
-    uv run experiment --test-venv test_venv/ --dataset datasets/lcb_part6.json --model gpt-4o --experiment-results result_dir
+    uv run experiment --test-venv test_venv/ --dataset datasets/lcb_part6.json --model gpt-4o --data data_dir
 
-Optionally, you can specify the list of tasks to run via the option `--tasks task_list.txt`.
+Optionally, you can specify the list of tasks to run via the option `--task-list datasets/lcb_top30.txt`.
 
 Then, to compute measures and generate plots, execute
 
-    uv run analyse --experiment-results result_dir --analysis-results analysis_dir
+    uv run analyse --data data_dir --report report_dir
 
 ## Reproducibility
 
-just-tri-ti provides the following options to manage LLM cache:
+just-tri-it provides the following options to manage LLM cache:
 
 - `--cache-root DIR` to set LLM cache (default: `~/.just_tri_it_cache/`)
 - `--export-cache DIR` to explore all cached samples used during the run to a different directory

@@ -3,16 +3,13 @@ from collections import defaultdict
 from dataclasses import dataclass
 from itertools import islice
 from typing import List, Any, Tuple
+
+from just_tri_it.cached_llm import Model
 from just_tri_it.executor import Executor, Success, Pass, Fail
 from just_tri_it.input_generator import generate_inputs
 from just_tri_it.program import Test, Requirements
-from just_tri_it.code_generator import (
-    Selector,
-    SelectionOutcome,
-    Selected,
-    Generator,
-    Abstained
-)
+from just_tri_it.code_generator import Generator
+from just_tri_it.selection import Agreement, AgreementOutcome
 from just_tri_it.utils import RawData, ExperimentFailure
 
 
@@ -21,15 +18,17 @@ class UncertainOutput:
     pass
 
 
-class Plurality(Selector):
+class Plurality(Agreement):
+
     def __init__(self, executor: Executor, generator: Generator, num_programs: int):
         self.executor = executor
         self.generator = generator
         self.num_programs = num_programs
 
-    def generate_and_select(self, model, req: Requirements) -> Tuple[SelectionOutcome, RawData]:
+    def compute_witnesses(self, model: Model, req: Requirements) -> Tuple[AgreementOutcome, RawData]:
         """Schema:
            {
+              "method": "plurality",
               "programs": ...,
               "inputs": ...,
               "classes": <mapping from ids of valid classes to programs>,
@@ -73,18 +72,20 @@ class Plurality(Selector):
                 valid_class_to_programs[class_id].append(program)
 
         raw_data = {
+            "method": "plurality",            
             "programs": programs,
             "inputs": inputs,
             "classes": valid_class_to_programs,
-            "outputs": zip(programs, outputs),
+            "outputs": [(programs[i], outputs[i]) for i in range(len(programs))]
         }
 
         if not valid_class_to_programs:
             raise ExperimentFailure()
-        else:
-            largest_class_id = max(valid_class_to_programs.items(), key=lambda x: len(x[1]))[0]
-            selected_programs = []
-            for i, c in enumerate(classes):
-                if c == largest_class_id:
-                    selected_programs.append(programs[i])
-            return (Selected(selected_programs), raw_data)
+
+        programs_and_witnesses = []
+
+        for class_id, programs in valid_class_to_programs.items():
+            with_witnesses = [(p, [q for q in programs if p.hash_id() != q.hash_id()]) for p in programs]
+            programs_and_witnesses.extend(with_witnesses)
+
+        return (programs_and_witnesses, raw_data)

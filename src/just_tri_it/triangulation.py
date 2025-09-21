@@ -7,9 +7,12 @@ from typing import Callable, Tuple
 
 from just_tri_it.executor import Success, Executor
 from just_tri_it.cached_llm import Model
-from just_tri_it.code_generator import Selector, Generator, SelectionOutcome, Selected, Abstained
+from just_tri_it.code_generator import Generator
+from just_tri_it.selection import Agreement, AgreementOutcome
 from just_tri_it.input_generator import generate_inputs
-from just_tri_it.logic import Formula, check, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, MapUnpack, Member
+from just_tri_it.logic import (
+    Formula, check, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, MapUnpack, Member
+)
 from just_tri_it.program import Requirements, NamedReturnSignature, Signature, Parameter
 from just_tri_it.utils import (
     print_annotated_hr,
@@ -19,7 +22,7 @@ from just_tri_it.utils import (
 )
 
 
-class TriSelector(Selector):
+class Triangulator(Agreement):
     def __init__(self,
                  executor: Executor,
                  code_generator: Generator,
@@ -32,34 +35,43 @@ class TriSelector(Selector):
         self.num_left_programs = num_left_programs
         self.num_right_programs = num_right_programs
 
-    def generate_and_select(self, model, req: Requirements) -> Tuple[SelectionOutcome, RawData]:
+    def compute_witnesses(self, model: Model, req: Requirements) -> Tuple[AgreementOutcome, RawData]:
+        """Schema:
+        {
+            "method": "triangulation",
+            "left_programs": ...,
+            "right_programs": ...
+        }
+        """
         transformed_left = self.triangulation.left_trans.transform(model, req)
         left_inputs = generate_inputs(model, transformed_left, self.executor)
         left_programs = self.code_generator.generate(model, transformed_left, self.num_left_programs)
-        left_programs = islice(left_programs, self.num_left_programs)
+        left_programs = list(islice(left_programs, self.num_left_programs))
 
         transformed_right = self.triangulation.right_trans.transform(model, req)
         right_inputs = generate_inputs(model, transformed_right, self.executor)        
         right_programs = self.code_generator.generate(model, transformed_right, self.num_right_programs)
-        right_programs = islice(right_programs, self.num_right_programs)
+        right_programs = list(islice(right_programs, self.num_right_programs))
 
-        selected_pairs = []
+        programs_and_witnesses = []
 
         for p in left_programs:
+            p_witnesses = []
             for q in right_programs:
                 if check(self.executor,
                          { Side.LEFT: left_inputs, Side.RIGHT: right_inputs },
                          { Side.LEFT: p, Side.RIGHT: q },
                          self.triangulation.hyperproperty):
-                    selected_pairs.append((p, q))
+                    p_witnesses.append(q)
+            programs_and_witnesses.append((p, p_witnesses))
 
-        raw_data = {}
+        raw_data = {
+            "method": "triangulation",
+            "left_programs": left_programs,
+            "right_programs": right_programs
+        }
 
-        if len(selected_pairs) > 0:
-            #NOTE: assume that the left transformation is what we want to select:
-            return (Selected(list(map(lambda x: x[0], selected_pairs))), raw_data)
-        else:
-            return (Abstained(), raw_data)
+        return (programs_and_witnesses, raw_data)
 
 
 class Transformation(ABC):
@@ -257,7 +269,7 @@ Rewrite this problem so that it instead requires implementing the set-valued inv
 
 {fiber_sig.pretty_print()}
 
-Given the desired output value `{inverted_sig.params[0].name}` (corresponding to the original function's return value), the new function should return a comprehensive list of values for the parameter `{req.signature.params[inverse_index].name}` such that if the original function were called with any of these values (and the other parameters unchanged), it would produce `{inverted_sig.params[0].name}` as the result.
+Given the desired output value `{fiber_sig.params[0].name}` (corresponding to the original function's return value), the new function should return a comprehensive list of values for the parameter `{req.signature.params[inverse_index].name}` such that if the original function were called with any of these values (and the other parameters unchanged), it would produce `{fiber_sig.params[0].name}` as the result.
 
 Important points to follow:
 1. Preserve all constraints, domain assumptions, and rules from the original problem.
