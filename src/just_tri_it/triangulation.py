@@ -63,7 +63,8 @@ class Triangulator(Agreement):
                          { Side.LEFT: p, Side.RIGHT: q },
                          self.triangulation.hyperproperty):
                     p_witnesses.append(q)
-            programs_and_witnesses.append((p, p_witnesses))
+            if len(p_witnesses) > 0:
+                programs_and_witnesses.append((p, p_witnesses))
 
         raw_data = {
             "method": "triangulation",
@@ -355,7 +356,7 @@ def make_partial_for_fib(arity, inverse_index):
     f = Func(Side.LEFT)
     g = Func(Side.RIGHT)
 
-    ReplaceAt = Func(lambda v: args[:inverse_index] + [v] + args[inverse_index+1:], "replace_at")
+    ReplaceInv = Func(lambda v: args[:inverse_index] + [v] + args[inverse_index+1:], "replace_inv")
     
     return Triangulation(
         Identity(),
@@ -363,6 +364,6 @@ def make_partial_for_fib(arity, inverse_index):
         ForAll(args, Side.LEFT,
                And(Member([inv_arg, g([f(args)] + remaining_args)]),
                    SetEquals([MapUnpack(f,
-                                        Map(ReplaceAt, g([f(args)] + remaining_args))),
+                                        Map(ReplaceInv, g([f(args)] + remaining_args))),
                               [f(args)]])))
     )

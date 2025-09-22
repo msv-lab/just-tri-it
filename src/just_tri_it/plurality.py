@@ -86,6 +86,7 @@ class Plurality(Agreement):
 
         for class_id, programs in valid_class_to_programs.items():
             with_witnesses = [(p, [q for q in programs if p.hash_id() != q.hash_id()]) for p in programs]
-            programs_and_witnesses.extend(with_witnesses)
+            if len(with_witnesses[1]) > 0:
+                programs_and_witnesses.extend(with_witnesses)
 
         return (programs_and_witnesses, raw_data)

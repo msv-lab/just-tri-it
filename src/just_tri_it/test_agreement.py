@@ -54,6 +54,7 @@ class TestAgreement(Agreement):
                         agreed_tests.append(test)
                     case _:
                         pass
-            agreement.append((program, agreed_tests))
+            if len(agreed_tests) > 0:
+                agreement.append((program, agreed_tests))
 
         return agreement, raw_data
