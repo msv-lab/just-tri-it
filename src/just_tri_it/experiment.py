@@ -145,8 +145,8 @@ def execute_experiment(model, executor, dataset, db, data_dir):
             {
                 "id": ...,
                 "outcome": ...,  # "selected" or "abstained"
-                "selected": ...,
-                "witnesses": ...,
+                "selected": ...,  # if selected
+                "witnesses": ...,  # if selected
                 "raw_data": ...
             },
         ]

@@ -77,7 +77,7 @@ Optionally, you can specify the list of tasks to run via the option `--task-list
 
 Then, to compute measures and generate plots, execute
 
-    uv run analyse --data data_dir --report report_dir
+    uv run analyze --data data_dir --report report_dir
 
 ## Reproducibility
 
