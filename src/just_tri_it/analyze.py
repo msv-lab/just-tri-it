@@ -10,7 +10,7 @@ from typing import Dict
 import matplotlib.pyplot as plt
 
 from just_tri_it.experiment import Database
-from just_tri_it.metrics import all_metrics_abt
+from just_tri_it.metrics import all_abstention_metrics
 from just_tri_it.utils import print_annotated_hr
 
 
@@ -180,12 +180,56 @@ def parse_args():
 #     return len(results), [n1, n2, n3, n4, n5], c_prob_lst
 
 
-def plot_probabilities(probs, output_file):
+def abstention_measures(db):
+    """
+    from "Know Your Limits: A Survey of Abstention in Large Language Models"
+    +--------------+---------+-----------+-----------+
+    | GT \\ Answer | Correct | Incorrect | Abstained |
+    +--------------+---------+-----------+-----------+
+    | Select       | N[1]    | N[2]      | N[3]      |
+    +--------------+---------+-----------+-----------+
+    | Abstain      |         | N[4]      | N[5]      |
+    +--------------+---------+-----------+-----------+
+    """
+    matrix_per_method = {}
+
+    for obj in db.objects:
+        correct_samples = [ p for p, correct, _ in obj["sample_correctness"] if correct ]
+        ground_truth_is_select = len(correct_samples) > 0
+        for selector_data in obj["selectors"]:
+            method = selector_data["id"]
+            if method not in matrix_per_method:
+                matrix_per_method[method] = [0, 0, 0, 0, 0]
+
+            if ground_truth_is_select:
+                if selector_data["outcome"] == "selected":
+                    correctly_selected = selector_data["selected"] in correct_samples
+                    if correctly_selected:
+                        matrix_per_method[method][0] += 1
+                    else:
+                        matrix_per_method[method][1] += 1
+                else:
+                    assert selector_data["outcome"] == "abstained"
+                    matrix_per_method[method][3] += 1
+            else:
+                if selector_data["outcome"] == "selected":
+                    matrix_per_method[method][4] += 1
+                else:
+                    assert selector_data["outcome"] == "abstained"
+                    matrix_per_method[method][5] += 1
+
+    return { method: all_abstention_metrics(*matrix) for method, matrix in matrix_per_method.items() } 
+
+
+def plot_sorted_percentages(probs, label, output_file):
+    probs = {k: v for k, v in probs.items() if v is not None}
+    if len(probs) == 0:
+        return
     sorted_items = sorted(probs.items(), key=lambda x: x[1], reverse=True)
     methods, values = zip(*sorted_items)
     percentages = [v * 100 for v in values]
 
-    colors = ["grey" if m == "base" else "skyblue" for m in methods]    
+    colors = ["grey" if m == "unconditional" else "skyblue" for m in methods]    
 
     plt.figure(figsize=(8, 5))
     bars = plt.bar(methods, percentages, color=colors, edgecolor='black')
@@ -195,7 +239,7 @@ def plot_probabilities(probs, output_file):
                  f"{pct:.1f}%", ha='center', va='bottom', fontsize=9)
 
     plt.xticks(rotation=45)
-    plt.ylabel("Probability (%)")
+    plt.ylabel(f"{label} (%)")
     plt.ylim(0, 100)
 
     plt.tight_layout()
@@ -203,17 +247,16 @@ def plot_probabilities(probs, output_file):
     plt.close()
 
 
-def probability_correct(db) -> float:
+def prob_correct(db) -> float:
     probs = []
     for obj in db.objects:
         correct_samples = [ p for p, correct, _ in obj["sample_correctness"] if correct ]
         probs.append(len(correct_samples) / len(obj["sample_correctness"]))
                 
     return mean(probs)
-    
 
 
-def probability_correct_under_agreement(db) -> Dict[str, float]:
+def prob_correct_under_agreement(db) -> Dict[str, float]:
     probs_per_agreement_method = defaultdict(list)
     
     for obj in db.objects:
@@ -234,8 +277,11 @@ def probability_correct_under_agreement(db) -> Dict[str, float]:
                         num_faithful_agreements += len(witnesses)
                 prob = num_faithful_agreements / num_total_agreements
                 probs_per_agreement_method[method].append(prob)
+
+    probs = { method: mean(probs) for method, probs in probs_per_agreement_method.items() }
+    probs["unconditional"] = prob_correct(db)
                 
-    return { method: mean(probs) for method, probs in probs_per_agreement_method.items() }
+    return probs
 
 
 def main():
@@ -245,9 +291,22 @@ def main():
     report_dir = Path(args.report)
     report_dir.mkdir(parents=True, exist_ok=True)
 
-    probs = probability_correct_under_agreement(db)
-    probs["base"] = probability_correct(db)
-    plot_probabilities(probs, report_dir/"prob_correct_under_agreement.png")
+    method_to_measures = abstention_measures(db)
+
+    # transposing table:
+    measure_to_methods = {
+        k2: {k1: method_to_measures[k1][k2] for k1 in method_to_measures}
+        for k2 in next(iter(method_to_measures.values()))
+    }
+    measure_to_methods["prob_correct_under_agreement"] = prob_correct_under_agreement(db)
+
+    for measure in measure_to_methods:
+        plot_sorted_percentages(measure_to_methods[measure],
+                                measure,
+                                report_dir/f"{measure}.png")
+
+    with (report_dir/f"metrics.json").open("w", encoding="utf-8") as f:
+        json.dump(measure_to_methods, f, indent=4)
 
 
 if __name__ == "__main__":
