@@ -29,6 +29,10 @@ class Signature:
         return f"def {self.name}({params_str}) -> {self.return_type}"
 
     @staticmethod
+    def from_function_code(code) -> 'Signature':
+        return Signature.from_function_ast(ast.parse(code).body[0])
+
+    @staticmethod
     def from_function_ast(fn_ast) -> 'Signature':
         params = []
         temp_dict = {}
@@ -202,3 +206,10 @@ class Program(ContentAddressable):
                     outcomes.append(type(result).__name__)                    
                     never_fails = False
         return never_fails, outcomes
+
+    @staticmethod
+    def from_function_code(code) -> 'Program':
+        """The code must be the function and nothing else. The
+        function must have a complete type annotation"""
+        return Program(Signature.from_function_code(code), code)
+    

@@ -16,6 +16,7 @@ benchmark = "just_tri_it.benchmark:main"
 preprocess_dataset = "just_tri_it.preprocess_dataset:main"
 experiment = "just_tri_it.experiment:main"
 analyze = "just_tri_it.analyze:main"
+triangulate = "just_tri_it.triangulate:main"
 
 [build-system]
 requires = ["hatchling"]

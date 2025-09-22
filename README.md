@@ -17,7 +17,7 @@ When runnig the project for the first time, please create an environment for tes
     
 Run unit tests with
 
-    uv run pytest
+    JTI_TEST_ENV=$PWD/test_env uv run pytest
 
 Run linter and type checker:
 
