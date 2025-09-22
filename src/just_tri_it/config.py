@@ -24,6 +24,11 @@ def init_selectors(executor: Executor, code_generator: Generator, model: Model):
     return {
         "Plurality": MaxWitness(Plurality(executor, code_generator, NUM_LEFT_SAMPLES)),
 
+        "MajorityVote": MaxWitness(Plurality(executor,
+                                             code_generator,
+                                             NUM_LEFT_SAMPLES,
+                                             prob_threshold=0.5)),
+
         "MaxTest_Assert": MaxWitness(TestAgreement(executor,
                                                    code_generator,
                                                    TestFunctionGenerator(),

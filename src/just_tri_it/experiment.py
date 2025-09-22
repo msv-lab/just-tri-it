@@ -59,17 +59,8 @@ def parse_args():
     return parser.parse_args()
 
 
-SELECTOR_IDS = [
-    "Plurality",
-    "MaxTest_Assert",
-    "MaxTest_IO",
-    "CodeT_Assert",
-    "CodeT_IO",
-    "Syntactic",
-    "OffByOne",
-    "Postcondition",
-    "FOR_INV",
-    "FOR_FIB"
+# to skip running some configurations:
+SKIP_SELECTORS = [
 ]
 
 
@@ -175,8 +166,12 @@ def execute_experiment(model, executor, dataset, db, data_dir):
             obj["sample_correctness"].append((s, status, details))
 
         all_selectors = init_selectors(executor, Vanilla(), model)
+        selector_ids = all_selectors.keys()
         
-        for selector_id in SELECTOR_IDS:
+        for selector_id in selector_ids:
+            if selector_ids in SKIP_SELECTORS:
+                continue
+            
             print(f"\n[{selector_id}]", end="", file=sys.stderr, flush=True)
             
             selector_data = { "id": selector_id }

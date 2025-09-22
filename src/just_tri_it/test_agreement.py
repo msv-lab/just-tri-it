@@ -27,8 +27,7 @@ class TestAgreement(Agreement):
     def compute_witnesses(self, model: Model, req: Requirements) -> Tuple[AgreementOutcome, RawData]:
         """Schema:
         {
-          "method": "test"
-          "test_generator": ...,
+          "method": "test_<generator>"  # where generator is "assert" or "IO"
           "programs": ...,
           "tests": ...
         }
@@ -38,8 +37,7 @@ class TestAgreement(Agreement):
         tests = list(self.test_generator.generate(model, req))
 
         raw_data = {
-            "method": "test",
-            "test_generator": type(self.test_generator).__name__,
+            "method": "test_" + self.test_generator.display_name(),
             "programs": programs,
             "tests": tests
         }

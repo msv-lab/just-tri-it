@@ -8,6 +8,7 @@ dependencies = [
     "mistletoe>=1.4.0",
     "numpy>=1.26.0",
     "jsonlines>=4.0.0",
+    "matplotlib>=3.10.6",
 ]
 
 [project.scripts]

@@ -7,6 +7,8 @@ from collections import defaultdict
 from statistics import mean
 from typing import Dict
 
+import matplotlib.pyplot as plt
+
 from just_tri_it.experiment import Database
 from just_tri_it.metrics import all_metrics_abt
 from just_tri_it.utils import print_annotated_hr
@@ -178,6 +180,39 @@ def parse_args():
 #     return len(results), [n1, n2, n3, n4, n5], c_prob_lst
 
 
+def plot_probabilities(probs, output_file):
+    sorted_items = sorted(probs.items(), key=lambda x: x[1], reverse=True)
+    methods, values = zip(*sorted_items)
+    percentages = [v * 100 for v in values]
+
+    colors = ["grey" if m == "base" else "skyblue" for m in methods]    
+
+    plt.figure(figsize=(8, 5))
+    bars = plt.bar(methods, percentages, color=colors, edgecolor='black')
+
+    for bar, pct in zip(bars, percentages):
+        plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
+                 f"{pct:.1f}%", ha='center', va='bottom', fontsize=9)
+
+    plt.xticks(rotation=45)
+    plt.ylabel("Probability (%)")
+    plt.ylim(0, 100)
+
+    plt.tight_layout()
+    plt.savefig(output_file, dpi=300)
+    plt.close()
+
+
+def probability_correct(db) -> float:
+    probs = []
+    for obj in db.objects:
+        correct_samples = [ p for p, correct, _ in obj["sample_correctness"] if correct ]
+        probs.append(len(correct_samples) / len(obj["sample_correctness"]))
+                
+    return mean(probs)
+    
+
+
 def probability_correct_under_agreement(db) -> Dict[str, float]:
     probs_per_agreement_method = defaultdict(list)
     
@@ -186,16 +221,18 @@ def probability_correct_under_agreement(db) -> Dict[str, float]:
         seen_methods = set()
         
         for selector_data in obj["selectors"]:
+            if selector_data["outcome"] == "abstained":
+                continue
             method = selector_data["raw_data"]["agreement_raw_data"]["method"]
             if method not in seen_methods:
                 seen_methods.add(method)
-                num_total_witnesses = 0
-                num_correct_program_witnesses = 0
+                num_total_agreements = 0
+                num_faithful_agreements = 0
                 for (program, witnesses) in selector_data["raw_data"]["agreement"]:
-                    num_total_witnesses += len(witnesses)
+                    num_total_agreements += len(witnesses)
                     if program in correct_samples:
-                        num_correct_program_witnesses += len(witnesses)
-                prob = num_correct_program_witnesses / num_total_witnesses
+                        num_faithful_agreements += len(witnesses)
+                prob = num_faithful_agreements / num_total_agreements
                 probs_per_agreement_method[method].append(prob)
                 
     return { method: mean(probs) for method, probs in probs_per_agreement_method.items() }
@@ -205,8 +242,12 @@ def main():
     args = parse_args()
     data_dir = Path(args.data)
     db = Database.load(data_dir)
+    report_dir = Path(args.report)
+    report_dir.mkdir(parents=True, exist_ok=True)
 
-    print(probability_correct_under_agreement(db))
+    probs = probability_correct_under_agreement(db)
+    probs["base"] = probability_correct(db)
+    plot_probabilities(probs, report_dir/"prob_correct_under_agreement.png")
 
 
 if __name__ == "__main__":

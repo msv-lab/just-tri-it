@@ -20,15 +20,16 @@ class UncertainOutput:
 
 class Plurality(Agreement):
 
-    def __init__(self, executor: Executor, generator: Generator, num_programs: int):
+    def __init__(self, executor: Executor, generator: Generator, num_programs: int, prob_threshold=0.0):
         self.executor = executor
         self.generator = generator
         self.num_programs = num_programs
+        self.prob_threshold = prob_threshold
 
     def compute_witnesses(self, model: Model, req: Requirements) -> Tuple[AgreementOutcome, RawData]:
         """Schema:
            {
-              "method": "plurality",
+              "method": "plurality_<prob_threshold>",
               "programs": ...,
               "inputs": ...,
               "classes": <mapping from ids of valid classes to programs>,
@@ -72,7 +73,7 @@ class Plurality(Agreement):
                 valid_class_to_programs[class_id].append(program)
 
         raw_data = {
-            "method": "plurality",            
+            "method": "plurality_" + str(self.prob_threshold),            
             "programs": programs,
             "inputs": inputs,
             "classes": valid_class_to_programs,
@@ -82,11 +83,13 @@ class Plurality(Agreement):
         if not valid_class_to_programs:
             raise ExperimentFailure()
 
+        total_valid_samples = sum(len(v) for v in valid_class_to_programs.values())
+
         programs_and_witnesses = []
 
         for class_id, programs in valid_class_to_programs.items():
             with_witnesses = [(p, [q for q in programs if p.hash_id() != q.hash_id()]) for p in programs]
-            if len(with_witnesses[1]) > 0:
+            if len(with_witnesses[1]) > 0 and len(programs) / total_valid_samples > self.prob_threshold:
                 programs_and_witnesses.extend(with_witnesses)
 
         return (programs_and_witnesses, raw_data)

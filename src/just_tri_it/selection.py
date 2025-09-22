@@ -15,7 +15,7 @@ from just_tri_it.program import Signature, Program, Requirements
 from just_tri_it.executor import Executor
 
 
-# for each program list all its witnesses
+# for each program list all its plausibility witnesses
 type AgreementOutcome = List[Program, List[ContentAddressable]]
 
 
@@ -63,6 +63,8 @@ class MaxWitness(ABC):
            "argeement": ...
            "agreement_raw_data": ...
         }
+
+        Note: "witness set" refers to a set of independent samples, not their values. Values may repeat.
         """
         agreement, agreement_raw_data = self.agreement.compute_witnesses(model, req)
 

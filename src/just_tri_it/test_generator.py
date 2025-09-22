@@ -10,7 +10,7 @@ from just_tri_it.input_generator import value_is_too_large
 
 
 MINIMUM_NUM_TESTS = 10
-MAXIMUM_NUM_TESTS = 50
+MAXIMUM_NUM_TESTS = 50  #FIXME: too many?
 
 
 class TestGenerator(ABC):
@@ -19,8 +19,15 @@ class TestGenerator(ABC):
     def generate(self, model, req: Requirements) -> Iterator[Test]:
         pass
 
+    @abstractmethod
+    def display_name(self) -> str:
+        pass
+
 
 class InputOutputGenerator(TestGenerator):
+
+    def display_name(self) -> str:
+        return "IO"
 
     def generate(self, model, req: Requirements) -> Iterator[Test]:
         tests = self._generate_initial_tests(model, req)
@@ -139,6 +146,9 @@ Output only new tests.
 
 
 class TestFunctionGenerator(TestGenerator):
+
+    def display_name(self) -> str:
+        return "assert"
 
     def generate(self, model, req: Requirements) -> Iterator[Test]:
         target_signature = req.signature

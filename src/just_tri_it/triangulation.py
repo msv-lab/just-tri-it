@@ -38,7 +38,7 @@ class Triangulator(Agreement):
     def compute_witnesses(self, model: Model, req: Requirements) -> Tuple[AgreementOutcome, RawData]:
         """Schema:
         {
-            "method": "triangulation",
+            "method": "tri_<triangulation>",
             "left_programs": ...,
             "right_programs": ...
         }
@@ -67,7 +67,7 @@ class Triangulator(Agreement):
                 programs_and_witnesses.append((p, p_witnesses))
 
         raw_data = {
-            "method": "triangulation",
+            "method": "tri_" + self.triangulation.name,
             "left_programs": left_programs,
             "right_programs": right_programs
         }
@@ -294,6 +294,7 @@ Original Problem:
 
 @dataclass
 class Triangulation:
+    name: str
     left_trans: Transformation
     right_trans: Transformation
     hyperproperty: Formula
@@ -305,6 +306,7 @@ def make_syntactic(arity):
     g = Func(Side.RIGHT)
     
     return Triangulation(
+        "syntactic",
         Identity(),
         Identity(),
         ForAll(args, Side.LEFT, Equals([f(args), g(args)]))
@@ -317,6 +319,7 @@ def make_trivial_semantic(arity):
     g = Func(Side.RIGHT)
     
     return Triangulation(
+        "off-by-one",
         Identity(),
         TrivialSemantic(),
         ForAll(args, Side.LEFT, Equals([OffByOne([f(args)]), g(args)]))
@@ -329,6 +332,7 @@ def make_postcondition(arity):
     g = Func(Side.RIGHT)
     
     return Triangulation(
+        "post",
         Identity(),
         Postcondition(),
         ForAll(args, Side.LEFT, g(args + [f(args)]))
@@ -343,6 +347,7 @@ def make_partial_for_inv(arity, inverse_index):
     g = Func(Side.RIGHT)
     
     return Triangulation(
+        "for-inv",
         Identity(),
         PartialInverse(inverse_index),
         ForAll(args, Side.LEFT, Equals([inv_arg, g([f(args)] + remaining_args)]))
@@ -359,6 +364,7 @@ def make_partial_for_fib(arity, inverse_index):
     ReplaceInv = Func(lambda v: args[:inverse_index] + [v] + args[inverse_index+1:], "replace_inv")
     
     return Triangulation(
+        "for-fib",
         Identity(),
         PartialFiber(inverse_index),
         ForAll(args, Side.LEFT,
