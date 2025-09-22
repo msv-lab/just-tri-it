@@ -1,10 +1,6 @@
-import textwrap
-import re
 import ast
 import json
 import math
-from enum import Enum
-from dataclasses import dataclass
 from typing import Any, Optional
 from pathlib import Path
 import argparse
@@ -15,10 +11,10 @@ import jsonlines
 from just_tri_it.dataset import Dataset
 from just_tri_it.utils import panic
 from just_tri_it.cached_llm import Model, Persistent, Independent, AI302
-from just_tri_it.utils import extract_code, extract_answer
-from just_tri_it.program import Signature, Test, Parameter, Program, ExpectedOutput, Requirements
+from just_tri_it.utils import extract_code
+from just_tri_it.program import Signature, Test, Parameter, Program, InputOutput, Requirements
 from just_tri_it.executor import Executor, Success
-from just_tri_it.dataset import Task, Dataset, save_dataset, load_dataset, lcb_compress, lcb_decompress
+from just_tri_it.dataset import Task, save_dataset, load_dataset, lcb_decompress
 
 
 def parse_args():
@@ -111,7 +107,7 @@ def main():
     executor = Executor(test_venv)
 
     if args.format == 'LiveCodeBench':
-        dataset = lcb_convert(model, executor, Path(args.dataset), Path(args.output))
+        lcb_convert(model, executor, Path(args.dataset), Path(args.output))
     else:
         panic("unsupported dataset format")
 
@@ -390,7 +386,7 @@ def lcb_parse_stdout_output(executor: Executor, parser: Program, stdout: str) ->
 def lcb_convert(model: Model,
                 executor: Executor,
                 input_file: Path,
-                output_file: Path) -> Dataset:
+                output_file: Path):
     tasks: Dataset = []
     
     skip = set()
@@ -410,6 +406,7 @@ def lcb_convert(model: Model,
                 try:
                     if entry["starter_code"] != "":
                         signature = lcb_signature_from_starter_code(entry["starter_code"])
+                        assert signature is not None
                         req = Requirements(signature, entry["question_content"])
                     else:
                         req = Requirements.from_description(ind_model, entry["question_content"])
@@ -436,7 +433,7 @@ def lcb_convert(model: Model,
                             o = lcb_parse_functional_output(t["output"])
                         else:
                             panic("unsupported test type")
-                        tests.append(Test(i, ExpectedOutput(o)))
+                        tests.append(InputOutput(i, o))
                     task = Task(
                         id=unique_id,
                         requirements=req,

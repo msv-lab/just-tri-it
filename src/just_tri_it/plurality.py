@@ -1,13 +1,11 @@
-import sys
-from collections import defaultdict
 from dataclasses import dataclass
 from itertools import islice
-from typing import List, Any, Tuple
+from typing import Tuple
 
 from just_tri_it.cached_llm import Model
-from just_tri_it.executor import Executor, Success, Pass, Fail
+from just_tri_it.executor import Executor, Success
 from just_tri_it.input_generator import generate_inputs
-from just_tri_it.program import Test, Requirements
+from just_tri_it.program import Requirements
 from just_tri_it.code_generator import Generator
 from just_tri_it.selection import Agreement, AgreementOutcome
 from just_tri_it.utils import RawData, ExperimentFailure
@@ -87,7 +85,7 @@ class Plurality(Agreement):
 
         programs_and_witnesses = []
 
-        for class_id, programs in valid_class_to_programs.items():
+        for _, programs in valid_class_to_programs.items():
             with_witnesses = [(p, [q for q in programs if p.hash_id() != q.hash_id()]) for p in programs]
             if len(with_witnesses[1]) > 0 and len(programs) / total_valid_samples > self.prob_threshold:
                 programs_and_witnesses.extend(with_witnesses)

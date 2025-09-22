@@ -118,13 +118,12 @@ def save_dataset(dataset: List[Task], file: Path, compress=False):
 
         tests = []
         for test in task.tests:
-            oracle = None
             match test:
                 case InputOutput(inputs, output):
                     tests.append({
                         "type": "InputOutput",
                         "inputs": list(map(repr, inputs)),
-                        "output": repr(oracle)
+                        "output": repr(output)
                     })
                 case TestFunction():
                     panic("Test assertions are not supported!")

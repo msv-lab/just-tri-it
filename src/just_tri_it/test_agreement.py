@@ -1,16 +1,13 @@
-import sys
-from dataclasses import dataclass
-from enum import Enum
 from itertools import islice
-from typing import Iterator, List, Tuple
+from typing import Tuple
 
 from just_tri_it.cached_llm import Model
 from just_tri_it.executor import Executor, Pass
-from just_tri_it.program import Test, Requirements
+from just_tri_it.program import Requirements
 from just_tri_it.test_generator import TestGenerator
 from just_tri_it.selection import Agreement, AgreementOutcome
 from just_tri_it.code_generator import Generator
-from just_tri_it.utils import ExperimentFailure, RawData
+from just_tri_it.utils import RawData
 
 
 class TestAgreement(Agreement):

@@ -1,18 +1,11 @@
-import os
-import hashlib
-import sys
-import threading
 from dataclasses import dataclass
-from itertools import islice
-from typing import Iterable, Tuple, List
+from typing import Tuple, List
 from abc import ABC, abstractmethod
 from collections import defaultdict
 
 from just_tri_it.cached_llm import Model
-from just_tri_it.executor import Error
-from just_tri_it.utils import extract_code, print_annotated_hr, RawData, ContentAddressable
-from just_tri_it.program import Signature, Program, Requirements
-from just_tri_it.executor import Executor
+from just_tri_it.utils import RawData, ContentAddressable
+from just_tri_it.program import Program, Requirements
 
 
 # for each program list all its plausibility witnesses
@@ -50,7 +43,7 @@ class Selector(ABC):
         pass
 
 
-class MaxWitness(ABC):
+class MaxWitness(Selector):
 
     def __init__(self, agreement):
         self.agreement = agreement
@@ -91,7 +84,7 @@ class MaxWitness(ABC):
         return (Selected(*max_witness_sets[0]), raw_data)
 
 
-class Ransac(ABC):
+class Ransac(Selector):
 
     def __init__(self, agreement):
         self.agreement = agreement

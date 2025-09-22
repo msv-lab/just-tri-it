@@ -156,7 +156,7 @@ class OpenAICompatibleHTTPModel(_BaseBufferedModel):
             "messages": [{"role": "user", "content": prompt}]
         }
         resp = self._post_json("/chat/completions", payload)
-        print(f"$", end="", file=sys.stderr, flush=True)
+        print("$", end="", file=sys.stderr, flush=True)
         return [str(c["message"]["content"]) for c in resp["choices"]]
 
 
@@ -252,7 +252,7 @@ class _BaseBatchedCache(Model):
         def __next__(self) -> str:
             cache = self.base._load(self.pid)
             if len(cache) > self.current_index:
-                print(f"C", end="", file=sys.stderr, flush=True)
+                print("C", end="", file=sys.stderr, flush=True)
                 self.current_index += 1
                 return cache[self.current_index - 1]
             if self.base.fail_on_miss:

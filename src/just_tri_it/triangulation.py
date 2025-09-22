@@ -1,11 +1,9 @@
-import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from functools import partial
 from itertools import islice
-from typing import Callable, Tuple
+from typing import Tuple
 
-from just_tri_it.executor import Success, Executor
+from just_tri_it.executor import Executor
 from just_tri_it.cached_llm import Model
 from just_tri_it.code_generator import Generator
 from just_tri_it.selection import Agreement, AgreementOutcome
@@ -15,7 +13,6 @@ from just_tri_it.logic import (
 )
 from just_tri_it.program import Requirements, NamedReturnSignature, Signature, Parameter
 from just_tri_it.utils import (
-    print_annotated_hr,
     gen_and_extract_answer_with_retry,
     ExperimentFailure,
     RawData

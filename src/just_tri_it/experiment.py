@@ -1,17 +1,14 @@
 from dataclasses import dataclass
 import argparse
 import sys
-import json
-import hashlib
 from pathlib import Path
 from itertools import islice
 import jsonlines
 from typing import List, Any, Dict
 
-from just_tri_it.cached_llm import Model, Repeatable, AI302, XMCP
-from just_tri_it.program import Program, Test
-from just_tri_it.executor import Executor, Pass, Fail, Timeout
-from just_tri_it.dataset import Dataset, load_dataset
+from just_tri_it.cached_llm import Repeatable, AI302, XMCP
+from just_tri_it.executor import Executor
+from just_tri_it.dataset import load_dataset
 from just_tri_it.utils import (
     print_annotated_hr,
     add_cache_options,
@@ -128,8 +125,8 @@ def execute_experiment(model, executor, dataset, db, data_dir):
         "task_id": ...,
         "requirements": ...,
         "sample_correctness": [
-            [..., True, ['pass', 'pass', ...]],
-            [..., False, ['pass', 'fail', ...]],
+            [..., True, ['Pass', 'Pass', ...]],
+            [..., False, ['Pass', 'Fail', ...]],
             ...
         ],
         "selectors": [
@@ -159,7 +156,7 @@ def execute_experiment(model, executor, dataset, db, data_dir):
         print()
         print_annotated_hr(f"Task {task.id}")
 
-        print(f"\n[Sample correctness]", end="", file=sys.stderr, flush=True)
+        print("\n[Sample correctness]", end="", file=sys.stderr, flush=True)
         samples = list(islice(Vanilla().generate(model, task.requirements, NUM_LEFT_SAMPLES), NUM_LEFT_SAMPLES))
         for s in samples:
             status, details = s.passes(executor, task.tests)

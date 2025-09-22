@@ -1,11 +1,9 @@
-import copy
 import sys
 from typing import Iterator, List
 from abc import ABC, abstractmethod
 
-from just_tri_it.utils import extract_code
-from just_tri_it.program import Program, Test, TestFunction, InputOutput, Requirements
-from just_tri_it.utils import print_annotated_hr, extract_all_code, ExperimentFailure
+from just_tri_it.program import Test, TestFunction, InputOutput, Requirements
+from just_tri_it.utils import extract_all_code, ExperimentFailure
 from just_tri_it.input_generator import value_is_too_large
 
 

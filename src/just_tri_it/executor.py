@@ -5,11 +5,11 @@ from dataclasses import dataclass
 from pathlib import Path
 import subprocess
 from tempfile import TemporaryDirectory
-from typing import Any, List
+from typing import Any
 import functools
 
 from just_tri_it.program import Program, Test, InputOutput, TestFunction, Pass, Fail
-from just_tri_it.utils import panic, ContentAddressable
+from just_tri_it.utils import ContentAddressable
 
 
 # from LiveCodeBench/lcb_runner/evaluation/utils_execute.py

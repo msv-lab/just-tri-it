@@ -1,18 +1,12 @@
 import argparse
-import sys
 from pathlib import Path
-from itertools import islice
-from typing import List
 
-from just_tri_it.cached_llm import Model, AI302, XMCP
-from just_tri_it.program import Program, Test
-from just_tri_it.executor import Executor, Pass, Fail, Timeout
-from just_tri_it.dataset import Dataset, load_dataset
-from just_tri_it.code_generator import Vanilla, Generator
-from just_tri_it.selection import Selector, Selected, Abstained
-from just_tri_it.test_generator import InputOutputGenerator, TestFunctionGenerator
+from just_tri_it.cached_llm import AI302, XMCP
+from just_tri_it.executor import Executor
+from just_tri_it.dataset import load_dataset
+from just_tri_it.code_generator import Vanilla
+from just_tri_it.selection import Selected, Abstained
 from just_tri_it.utils import print_annotated_hr, add_cache_options, setup_cache, print_legend
-from just_tri_it.triangulation import choose_parameter_to_invert
 from just_tri_it.config import init_selectors
 
 
@@ -64,7 +58,7 @@ def evaluate_selector(model, executor, selector, dataset):
             s = selector
         outcome, _ = s.generate_and_select(model, task.requirements)
         match outcome:
-            case Selected(program, witnesses):
+            case Selected(program, _):
                 if program.passes(executor, task.tests)[0]:
                     print("\nSELECTED: correct")
                 else:

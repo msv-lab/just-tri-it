@@ -1,16 +1,11 @@
 from dataclasses import dataclass
 import ast
-import re
 import hashlib
-import sys
-from typing import Any, List, Tuple, Set
-from itertools import islice
+from typing import Any, List, Tuple
 
 from just_tri_it.cached_llm import Model
 from just_tri_it.utils import (
-    extract_code, extract_all_code, RawData,
-    print_annotated_hr, extract_answer, gen_and_extract_answer_with_retry,
-    ContentAddressable
+    extract_code, RawData, gen_and_extract_answer_with_retry, ContentAddressable
 )
 
 
@@ -189,24 +184,21 @@ class Program(ContentAddressable):
     def hash(self) -> str:
         return hashlib.sha256(self.code.encode()).hexdigest()
 
-    def passes(self, executor, tests: List[Test]) -> Tuple[bool, RawData]:
+    def passes(self, executor, tests: List[Test]) -> Tuple[bool, List[str]]:
         """
         Timeout is a failure.
         Raw data schema:
         {
-          "outcomes": ["pass", "pass", "fail", "timeout", ...]
+          "outcomes": ["Pass", "Pass", "Fail", "Timeout", ...]
         {
         """
         outcomes = []
         never_fails = True
-        for index, test in enumerate(tests):
+        for test in tests:
             match executor.run_test(self, test):
-                case Pass():
-                    outcomes.append('pass')
-                case Timeout():
-                    outcomes.append('timeout')
-                    never_fails = False
-                case _:
-                    outcomes.append('fail')
+                case Pass() as result:
+                    outcomes.append(type(result).__name__)
+                case _ as result:
+                    outcomes.append(type(result).__name__)                    
                     never_fails = False
         return never_fails, outcomes

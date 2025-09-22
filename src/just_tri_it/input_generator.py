@@ -1,13 +1,11 @@
 import copy
-import re
-import sys
 from typing import List, Any
 
-from just_tri_it.cached_llm import Independent, Repeatable
+from just_tri_it.cached_llm import Independent
 from just_tri_it.executor import Executor, Success
 from just_tri_it.utils import extract_code
 from just_tri_it.program import Program, Requirements
-from just_tri_it.utils import print_annotated_hr, extract_all_code, remove_duplicates, ExperimentFailure
+from just_tri_it.utils import extract_all_code, remove_duplicates, ExperimentFailure
 
 
 #FIXME: control number of inputs:
@@ -29,7 +27,7 @@ def value_is_too_large(data, int_bound, seq_bound):
             if value_is_too_large(item, int_bound, seq_bound):
                 return True
     elif isinstance(data, dict):
-        for key, val in data.items():
+        for _, val in data.items():
             if value_is_too_large(val, int_bound, seq_bound):
                 return True
     elif isinstance(data, tuple):

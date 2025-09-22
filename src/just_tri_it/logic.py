@@ -1,14 +1,11 @@
 import sys
 import math
-import hashlib
-import json
 from dataclasses import dataclass
 from functools import partial
-import random
 from enum import Enum
-from typing import Union, Set, Dict, List, Optional, Callable, Any, Iterable
+from typing import Union, Set, Dict, List, Callable, Any
 
-from just_tri_it.executor import Success, Timeout, Error
+from just_tri_it.executor import Success
 from just_tri_it.utils import ExperimentFailure
 
 
@@ -328,7 +325,7 @@ def _set_equals_func(x, y):
         if len(x_sorted) != len(y_sorted):
             return False
 
-        return all(math.isclose(a, b) for a, b in zip(x_sorted, y_sorted))
+        return all(math.isclose(a, b) for a, b in zip(x_sorted, y_sorted, strict=True))
 
     return set(x_list) == set(y_list)
 
