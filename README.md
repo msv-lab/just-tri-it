@@ -1,6 +1,6 @@
 # just-tri-it
 
-This project aims to detect hallucinations in LLM-genarated code using resonance check.
+This project aims to detect hallucinations in LLM-genarated code using semantic triangulation.
 
 ## Preliminaries
 

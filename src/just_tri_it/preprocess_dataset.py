@@ -1,4 +1,5 @@
 import ast
+import sys
 import json
 import math
 from typing import Any, Optional
@@ -399,7 +400,7 @@ def lcb_convert(model: Model,
             unique_id = entry["platform"] + "_" + entry["question_id"]
             if unique_id in skip:
                 continue
-            print(f"converting {unique_id}")
+            print(f"\n[{unique_id}]", file=sys.stderr, flush=True)
             NUM_ATTEMPTS = 3
             ind_model = Independent(model)
             for attempt in range(NUM_ATTEMPTS):
@@ -449,7 +450,7 @@ def lcb_convert(model: Model,
                     break
                 except FailedToConvertAutomatically as e:
                     if attempt < NUM_ATTEMPTS - 1:
-                        print("retrying...")
+                        print("\nretrying...\n", file=sys.stderr, flush=True)
                     else:
                         print(e)
             save_dataset(tasks, output_file, compress=True)
