@@ -34,9 +34,9 @@ def abstention_measures(db):
     +--------------+---------+-----------+-----------+
     | GT \\ Answer | Correct | Incorrect | Abstained |
     +--------------+---------+-----------+-----------+
-    | Select       | N[1]    | N[2]      | N[3]      |
+    | Select       | N[0]    | N[1]      | N[2]      |
     +--------------+---------+-----------+-----------+
-    | Abstain      |         | N[4]      | N[5]      |
+    | Abstain      |         | N[3]      | N[4]      |
     +--------------+---------+-----------+-----------+
     """
     matrix_per_method = {}
@@ -58,13 +58,13 @@ def abstention_measures(db):
                         matrix_per_method[method][1] += 1
                 else:
                     assert selector_data["outcome"] == "abstained"
-                    matrix_per_method[method][3] += 1
+                    matrix_per_method[method][2] += 1
             else:
                 if selector_data["outcome"] == "selected":
-                    matrix_per_method[method][4] += 1
+                    matrix_per_method[method][3] += 1
                 else:
                     assert selector_data["outcome"] == "abstained"
-                    matrix_per_method[method][5] += 1
+                    matrix_per_method[method][4] += 1
 
     return { method: all_abstention_metrics(*matrix) for method, matrix in matrix_per_method.items() } 
 
