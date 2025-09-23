@@ -219,7 +219,7 @@ def eval_app(executor, env, programs, func, args):
             case Success(v):
                 return v
             case _:
-                return None
+                raise PropertyFalseDueToErrors()
     else:
         result = func.semantics(*computed_args)
         # print("RESULT: " + recursive_str(result), flush=True)
@@ -323,6 +323,9 @@ def _set_equals_func(x, y):
         y_sorted = sorted(y_list)
 
         if len(x_sorted) != len(y_sorted):
+            #FIXME: actually, this is a simplification. There could be
+            #sets of floats that are of different sizes, but still
+            #equal according to math.isclose
             return False
 
         return all(math.isclose(a, b) for a, b in zip(x_sorted, y_sorted, strict=True))
@@ -352,5 +355,7 @@ def check(executor, inputs: Dict[Side, Any], programs: Dict[Side, 'Program'], fo
     # print(programs[Side.LEFT].get_content())
     # print("RIGHT:")
     # print(programs[Side.RIGHT].get_content())
-    result = is_formula_true(executor, {}, inputs, programs, formula)
-    return result
+    try:
+        return is_formula_true(executor, {}, inputs, programs, formula)
+    except PropertyFalseDueToErrors:
+        return False
