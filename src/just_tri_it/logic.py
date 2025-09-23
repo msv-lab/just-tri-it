@@ -1,3 +1,4 @@
+import inspect
 import sys
 import math
 from dataclasses import dataclass
@@ -5,7 +6,7 @@ from functools import partial
 from enum import Enum
 from typing import Union, Set, Dict, List, Callable, Any
 
-from just_tri_it.executor import Success
+from just_tri_it.executor import Success, Error
 from just_tri_it.utils import ExperimentFailure
 
 
@@ -173,33 +174,40 @@ Formula = Union[
     ForAll
 ]
 
+# change 1: define 3 new classes
 
-# Error Model:
-#
-# - If a program throws an invalid input exception, its output is
-#   considered Undefined.
-#
-# - If any part of any input is Undefined, then the output of 
-#   the program is automatically Undefined.
-#
-# - Any values containing Undefined as their subcomponents are
-#   considered Undefined.
-#
-# - Programs are only allowed to produce Undefined on non-Undefined
-#   arguments if the arguments come from generated inputs, but not
-#   intermediate values.
-#
-# - The only true predicates on Undefined values is Undefined =
-#   Undefined and Undefined ∈ Undefined.
 
-@dataclass
-class Undefined():
+class SpecialValue:
     pass
 
 
-class PropertyFalseDueToErrors(Exception):
-    "Raised when the property is false due to errors"
-    pass    
+class Angelic(SpecialValue):
+    pass
+
+
+class Demonic(SpecialValue):
+    pass
+
+
+class Undefined(SpecialValue):
+    pass
+
+
+def has_special_value_adu(x: list) -> [bool, bool, bool]:
+    # change 2: define a new function
+    """
+    this function checks:
+    if in list x, there exists a special value A(Angelic)/D(Demonic)/U(Undefined)
+    """
+    has_A, has_D, has_U = False, False, False
+    for ele in x:
+        if isinstance(ele, Demonic):
+            has_D = True
+        elif isinstance(ele, Undefined):
+            has_U = True
+        elif isinstance(ele, Angelic):
+            has_A = True
+    return has_A, has_D, has_U
 
 
 def eval_all(executor, env, programs, terms):
@@ -213,17 +221,45 @@ def eval_app(executor, env, programs, func, args):
     # print("APPLY: " + str(func), flush=True)
     # print("ARGS: " + ", ".join(map(recursive_str, computed_args)), flush=True)
     if isinstance(func.semantics, Side):
+        # change 4: if there exists any special value in 'computed_args', the function can't be executed
+        has_A, has_D, has_U = has_special_value_adu(computed_args)
+        if has_D:
+            return Demonic()
+        if has_U:  # no D
+            return Undefined()
+        if has_A:  # no U no D -> only A
+            return Angelic()
         execution_outcome = executor.run(programs[func.semantics], computed_args)
         # print("RESULT: " + str(execution_outcome), flush=True)
         match execution_outcome:
             case Success(v):
                 return v
+            # change 5: clarify when to return Undefined and Demonic
+            case Error(error_type, error_msg) if error_type == "ValueError" and error_msg == "Invalid input":
+                return Undefined()
             case _:
-                raise PropertyFalseDueToErrors()
+                return Demonic()
+    elif func.display == "tolerate":
+        # change 14: attention! tolerate function can't modify the type of computed_args
+        result = func.semantics(computed_args)
+        return result
     else:
         result = func.semantics(*computed_args)
         # print("RESULT: " + recursive_str(result), flush=True)
         return result
+
+
+def map_to_bool(origin):
+    """
+    this function map origin to bool if origin is not bool but a special value
+    """
+    # change 6: define a new function
+    if isinstance(origin, bool):
+        return origin
+    if isinstance(origin, Angelic):
+        return True
+    else:
+        return False
 
 
 def is_formula_true(executor,
@@ -234,14 +270,20 @@ def is_formula_true(executor,
     match formula:
         case App(func, args):
             return eval_app(executor, env, programs, func, args)
+        # change 7: 'result' now can be a boolean or a special value
         case Not(operand):
-            return is_formula_true(executor, env, inputs, programs, operand)
+            result = is_formula_true(executor, env, inputs, programs, operand)
+            if not isinstance(result, bool):
+                return map_to_bool(result)
+            return not result
         case And(left, right):
-            return is_formula_true(executor, env, inputs, programs, left) and \
-                is_formula_true(executor, env, inputs, programs, right)
+            result_left = map_to_bool(is_formula_true(executor, env, inputs, programs, left))
+            result_right = map_to_bool(is_formula_true(executor, env, inputs, programs, right))
+            return result_left and result_right
         case Or(left, right):
-            return is_formula_true(executor, env, inputs, programs, left) or \
-                is_formula_true(executor, env, inputs, programs, right)
+            result_left = map_to_bool(is_formula_true(executor, env, inputs, programs, left))
+            result_right = map_to_bool(is_formula_true(executor, env, inputs, programs, right))
+            return result_left or result_right
         case ForAll(ele, domain, body):
             for inp in inputs[domain]:
                 new_env = env.copy()
@@ -250,7 +292,8 @@ def is_formula_true(executor,
                 else:
                     for index, var in enumerate(ele):
                         new_env[var.name] = inp[index]
-                if not is_formula_true(executor, new_env, inputs, programs, body):
+                result = map_to_bool(is_formula_true(executor, new_env, inputs, programs, body))
+                if result is False:
                     print(f"\n{formula} failed on {inp}", file=sys.stderr, flush=True)
                     return False
             return True
@@ -266,13 +309,18 @@ def eval_term(executor, env: Dict[str, Any], programs, term: Term) -> Any:
     match term:
         case Var(name):
             return env[name]
-        case Func():
+        # change 14: if term is special value
+        case Func() | SpecialValue():
             return term
         case Map(func, args):
             computed_args = eval_term(executor, env, programs, args)
+            if isinstance(computed_args, SpecialValue):
+                computed_args = [computed_args]
             return [eval_term(executor, env, programs, func([a])) for a in computed_args]
         case MapUnpack(func, args):
             computed_args = eval_term(executor, env, programs, args)
+            if isinstance(computed_args, SpecialValue):
+                computed_args = [computed_args]
             return [eval_term(executor, env, programs, func(a)) for a in computed_args]
         case App(func, args):
             return eval_app(executor, env, programs, func, args)
@@ -300,7 +348,18 @@ OffByOne = Func(_off_by_one, "off-by-one")
 
 
 def _equals_func(x, y):
+    print("equal", x, y)
     """Check equality, using math.isclose for floats."""
+    # change 8: x, y here can be special values
+    if isinstance(x, Demonic) or isinstance(y, Demonic):
+        # D != anything
+        return Demonic()
+    if isinstance(x, Angelic) or isinstance(y, Angelic):  # no Demonic
+        # A == anything(apart from D)
+        return Angelic()
+    if isinstance(x, Undefined) and isinstance(y, Undefined):  # no Demonic and no Angelic
+        # U = U
+        return True
     if isinstance(x, float) and isinstance(y, float):
         return math.isclose(x, y)
     return x == y
@@ -310,22 +369,58 @@ Equals = Func(_equals_func, "=")
 
 
 def _set_equals_func(x, y):
+    print("set equal", x, y)
     """
     Check equality of two iterables.
     - If all elements are floats (in both x and y), compare sorted lists with math.isclose.
     - Otherwise, compare as sets.
     """
+    # change 9: x, y here can be special values
+    if isinstance(x, SpecialValue):
+        x = [x]
+    if isinstance(y, SpecialValue):
+        y = [y]
     x_list = list(x)
     y_list = list(y)
 
+    x_has_A, x_has_D, x_has_U = has_special_value_adu(x_list)
+    y_has_A, y_has_D, y_has_U = has_special_value_adu(y_list)
+
+    if x_has_D or y_has_D:
+        # if x has D or y has D, because D!=D, so the result is still demonic
+        return Demonic()
+    if x_has_A or y_has_A:
+        # when there is no D, A can equals to anything, so
+        return Angelic()
+    if x_has_U and not y_has_U:
+        # if x has U and y doesn't have U, y should have A, otherwise
+        return False
+    if y_has_U and not x_has_U:
+        # if y has U and x doesn't have U, x should have A, otherwise
+        return False
+
+    x_list = [ele for ele in x_list if not isinstance(ele, SpecialValue)]
+    y_list = [ele for ele in y_list if not isinstance(ele, SpecialValue)]
+    # there is no use for these value because we've already handled them
+
+    # change 10: fix 'fix me'
     if all(isinstance(v, float) for v in x_list + y_list):
-        x_sorted = sorted(x_list)
-        y_sorted = sorted(y_list)
+        # Remove duplicates by checking closeness, then compare the unique elements
+        x_unique = []
+        for val in x_list:
+            if not any(math.isclose(val, existing) for existing in x_unique):
+                x_unique.append(val)
+
+        y_unique = []
+        for val in y_list:
+            if not any(math.isclose(val, existing) for existing in y_unique):
+                y_unique.append(val)
+
+        # Sort the unique elements
+        x_sorted = sorted(x_unique)
+        y_sorted = sorted(y_unique)
 
         if len(x_sorted) != len(y_sorted):
-            #FIXME: actually, this is a simplification. There could be
-            #sets of floats that are of different sizes, but still
-            #equal according to math.isclose
             return False
 
         return all(math.isclose(a, b) for a, b in zip(x_sorted, y_sorted, strict=True))
@@ -337,7 +432,23 @@ SetEquals = Func(_set_equals_func, "=")
 
 
 def _member_func(x, y):
+    print("member", x, y)
     """Check membership, using math.isclose for floats."""
+    # change 11: x, y here can be special values
+    if isinstance(x, Demonic):
+        # because D!= anything
+        return Demonic()
+    if isinstance(y, SpecialValue):
+        y = [y]
+    y_has_A, _, _ = has_special_value_adu(y)
+    if y_has_A:
+        # if y has A, we can make sure x = A
+        return Angelic()
+    if isinstance(x, Undefined):
+        return False
+    if isinstance(x, Angelic):
+        return Angelic()
+
     for item in y:
         if isinstance(x, float) and isinstance(item, float):
             if math.isclose(x, item):
@@ -350,12 +461,30 @@ def _member_func(x, y):
 Member = Func(_member_func, "∈")
 
 
+def _tolerate(origin):
+    """
+    this function only transforms Undefined to Angelic
+    """
+    # change 12: define a new function
+    if isinstance(origin, list):
+        for index, item in enumerate(origin):
+            if isinstance(item, Undefined):
+                origin[index] = Angelic()
+    else:
+        if isinstance(origin, Undefined):
+            origin = Angelic()
+    return origin
+
+
+Tolerate = Func(_tolerate, "tolerate")
+
+
 def check(executor, inputs: Dict[Side, Any], programs: Dict[Side, 'Program'], formula: Formula):
     # print("\nLEFT:")
     # print(programs[Side.LEFT].get_content())
     # print("RIGHT:")
     # print(programs[Side.RIGHT].get_content())
-    try:
-        return is_formula_true(executor, {}, inputs, programs, formula)
-    except PropertyFalseDueToErrors:
-        return False
+
+    # change 13: map special values to bool to get final boolean answer
+    result = map_to_bool(is_formula_true(executor, {}, inputs, programs, formula))
+    return result

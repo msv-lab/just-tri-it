@@ -9,7 +9,7 @@ from just_tri_it.code_generator import Generator
 from just_tri_it.selection import Agreement, AgreementOutcome
 from just_tri_it.input_generator import generate_inputs
 from just_tri_it.logic import (
-    Formula, check, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, MapUnpack, Member
+    Formula, check, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, MapUnpack, Member, Tolerate
 )
 from just_tri_it.program import Requirements, NamedReturnSignature, Signature, Parameter
 from just_tri_it.utils import (
@@ -135,9 +135,9 @@ def choose_parameter_to_invert(model: Model, req: Requirements) -> int:
         return 0
     else:
         PROMPT = f"""The problem below is solved using a function with
-the signature {req.signature.pretty_print()}. Choose function one
+the signature {req.signature.pretty_print()}. Choose one function
 parameter to swap with the return value to form an inverse
-problem. Inversing which parameter do you think would make the inverse problem
+problem. Inverting which parameter do you think would make the inverse problem
 natural? Do not choose parameters that can be easily derived from other
 parameters. Answer only the full name of this parameter (not its type)
 in <answer> tags.
@@ -332,7 +332,7 @@ def make_postcondition(arity):
         "post",
         Identity(),
         Postcondition(),
-        ForAll(args, Side.LEFT, g(args + [f(args)]))
+        ForAll(args, Side.LEFT, Tolerate(g(args + [f(args)])))
     )
 
 
@@ -347,7 +347,7 @@ def make_partial_for_inv(arity, inverse_index):
         "for-inv",
         Identity(),
         PartialInverse(inverse_index),
-        ForAll(args, Side.LEFT, Equals([inv_arg, g([f(args)] + remaining_args)]))
+        ForAll(args, Side.LEFT, Equals([inv_arg, g([Tolerate(f(args))] + remaining_args)]))
     )
 
 
@@ -359,14 +359,15 @@ def make_partial_for_fib(arity, inverse_index):
     g = Func(Side.RIGHT)
 
     ReplaceInv = Func(lambda v: args[:inverse_index] + [v] + args[inverse_index+1:], "replace_inv")
-    
+
+    # question 1: unsure about this tolerance
     return Triangulation(
         "for-fib",
         Identity(),
         PartialFiber(inverse_index),
         ForAll(args, Side.LEFT,
-               And(Member([inv_arg, g([f(args)] + remaining_args)]),
-                   SetEquals([MapUnpack(f,
-                                        Map(ReplaceInv, g([f(args)] + remaining_args))),
-                              [f(args)]])))
+               And(Member([inv_arg, g([Tolerate(f(args))] + remaining_args)]),
+                   SetEquals([Tolerate(MapUnpack(f,
+                                        Map(ReplaceInv, g([Tolerate(f(args))] + remaining_args)))),
+                              [Tolerate(f(args))]])))
     )
