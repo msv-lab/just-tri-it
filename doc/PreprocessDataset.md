@@ -15,3 +15,11 @@ The converter generates parsers and printers for all inputs and outputs and chec
 The VibeRate format uses LiveCodeBench's test data compression. To decompress test data for a given task, execute
 
     uv run preprocess_dataset --decompress --dataset lcb_part6.json --task atcoder_abc387_b --output decompressed.json
+    
+# Constructing Judges
+
+To evaluate a judge with a candidate program and a set of inputs, execute
+
+    uv run construct_judges --test-venv test_venv --program program.py --judge judge.py --inputs inputs.json
+    
+The judge should follow the structure of `Postcondition` triangulation.
