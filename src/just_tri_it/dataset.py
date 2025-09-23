@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Any
+from typing import Iterator, List, Any
 from pathlib import Path
 import ast
 import json
@@ -19,7 +19,7 @@ class Task:
     metadata: dict[str, Any]
 
 
-type Dataset = List[Task]
+type Dataset = Iterator[Task]
 
 
 # compression method from LiveCodeBench
@@ -69,7 +69,6 @@ def load_dataset(file: Path) -> Dataset:
     with file.open() as f:
         data = json.load(f)
 
-    tasks: Dataset = []
     for task in data:
         sig_str = task["requirements"]["signature"]
         code = f"""
@@ -103,8 +102,7 @@ def load_dataset(file: Path) -> Dataset:
             tests=tests,
             metadata=task.get("metadata", {}),
         )
-        tasks.append(task_obj)
-    return tasks
+        yield task_obj
 
 
 def save_dataset(dataset: List[Task], file: Path, compress=False):
