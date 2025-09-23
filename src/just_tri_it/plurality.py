@@ -86,8 +86,10 @@ class Plurality(Agreement):
         programs_and_witnesses = []
 
         for _, programs in valid_class_to_programs.items():
+            if len(programs) < 2:
+                continue
             with_witnesses = [(p, [q for q in programs if p.hash_id() != q.hash_id()]) for p in programs]
-            if len(with_witnesses[1]) > 0 and len(programs) / total_valid_samples > self.prob_threshold:
+            if len(programs) / total_valid_samples > self.prob_threshold:
                 programs_and_witnesses.extend(with_witnesses)
 
         return (programs_and_witnesses, raw_data)
