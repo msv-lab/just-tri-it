@@ -129,13 +129,17 @@ def extract_answer(s):
 def gen_and_extract_answer_with_retry(model, prompt, num_retry=3):
     ind_model = Independent(model)
     ans = None
+    tried_samples = []
     for attempt in range(num_retry):
         try:
-            ans = extract_answer(next(ind_model.sample(prompt, num_retry)))
+            sample = next(ind_model.sample(prompt, num_retry))
+            tried_samples.append(sample)
+            ans = extract_answer(sample)
             break
         except Exception as e:
             if attempt == num_retry - 1:
-                raise ExperimentFailure(f"retry failed: {e}")
+                print(tried_samples)
+                raise ExperimentFailure(f"retry failed with {type(e).__name__}: {e}")
         pass
     return ans
 

@@ -134,13 +134,19 @@ def choose_parameter_to_invert(model: Model, req: Requirements) -> int:
     if len(req.signature.params) == 1:
         return 0
     else:
-        PROMPT = f"""The problem below is solved using a function with
-the signature {req.signature.pretty_print()}. Choose one function
-parameter to swap with the return value to form an inverse
-problem. Inverting which parameter do you think would make the inverse problem
-natural? Do not choose parameters that can be easily derived from other
-parameters. Answer only the full name of this parameter (not its type)
-in <answer> tags.
+        PROMPT = f"""
+The problem below is solved using a function with the signature:
+
+{req.signature.pretty_print()}
+
+Choose a single input parameter of the function to be replaced by
+its output, thereby formulating an inverse problem. Determine which
+parameter, when inverted, would yield the most natural or well-posed
+inverse formulation. Exclude parameters whose values can be readily
+deduced from other inputs.
+
+Output only the full name of this parameter (not its type) enclosed
+within `<answer>` and `</answer>` tags.
 
 Problem:
 {req.description}
