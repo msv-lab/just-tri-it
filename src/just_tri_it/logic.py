@@ -330,6 +330,9 @@ def eval_term(executor, env: Dict[str, Any], programs, term: Term) -> Any:
         
 def _off_by_one(x):
     match x:
+        # change 15: x can be special value
+        case SpecialValue():
+            return x
         case int():
             return x + 1
         case float():
