@@ -338,7 +338,7 @@ def make_postcondition(arity):
         "post",
         Identity(),
         Postcondition(),
-        ForAll(args, Side.LEFT, Tolerate(g(args + [f(args)])))
+        ForAll(args, Side.LEFT, Tolerate([g(args + [f(args)])]))
     )
 
 
@@ -353,7 +353,7 @@ def make_partial_for_inv(arity, inverse_index):
         "for-inv",
         Identity(),
         PartialInverse(inverse_index),
-        ForAll(args, Side.LEFT, Equals([inv_arg, g([Tolerate(f(args))] + remaining_args)]))
+        ForAll(args, Side.LEFT, Equals([inv_arg, g([Tolerate([f(args)])] + remaining_args)]))
     )
 
 
@@ -372,8 +372,8 @@ def make_partial_for_fib(arity, inverse_index):
         Identity(),
         PartialFiber(inverse_index),
         ForAll(args, Side.LEFT,
-               And(Member([inv_arg, g([Tolerate(f(args))] + remaining_args)]),
-                   SetEquals([Tolerate(MapUnpack(f,
-                                        Map(ReplaceInv, g([Tolerate(f(args))] + remaining_args)))),
-                              [Tolerate(f(args))]])))
+               And(Member([inv_arg, g([Tolerate([f(args)])] + remaining_args)]),
+                   SetEquals([Tolerate([MapUnpack(f,
+                                        Map(ReplaceInv, g([Tolerate([f(args)])] + remaining_args)))]),
+                              [Tolerate([f(args)])]])))
     )

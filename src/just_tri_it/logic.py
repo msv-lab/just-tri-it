@@ -239,10 +239,6 @@ def eval_app(executor, env, programs, func, args):
                 return Undefined()
             case _:
                 return Demonic()
-    elif func.display == "tolerate":
-        # change 14: attention! tolerate function can't modify the type of computed_args
-        result = func.semantics(computed_args)
-        return result
     else:
         result = func.semantics(*computed_args)
         # print("RESULT: " + recursive_str(result), flush=True)
@@ -351,7 +347,7 @@ OffByOne = Func(_off_by_one, "off-by-one")
 
 
 def _equals_func(x, y):
-    print("equal", x, y)
+    # print("equal", x, y)
     """Check equality, using math.isclose for floats."""
     # change 8: x, y here can be special values
     if isinstance(x, Demonic) or isinstance(y, Demonic):
@@ -372,7 +368,7 @@ Equals = Func(_equals_func, "=")
 
 
 def _set_equals_func(x, y):
-    print("set equal", x, y)
+    # print("set equal", x, y)
     """
     Check equality of two iterables.
     - If all elements are floats (in both x and y), compare sorted lists with math.isclose.
@@ -435,7 +431,7 @@ SetEquals = Func(_set_equals_func, "=")
 
 
 def _member_func(x, y):
-    print("member", x, y)
+    # print("member", x, y)
     """Check membership, using math.isclose for floats."""
     # change 11: x, y here can be special values
     if isinstance(x, Demonic):
