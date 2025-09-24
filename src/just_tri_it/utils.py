@@ -135,7 +135,7 @@ def gen_and_extract_answer_with_retry(model, prompt, num_retry=3):
             break
         except Exception as e:
             if attempt == num_retry - 1:
-                raise ExperimentFailure(f"did not get good response: {e}")
+                raise ExperimentFailure(f"retry failed: {e}")
         pass
     return ans
 

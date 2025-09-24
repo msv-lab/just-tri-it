@@ -139,7 +139,7 @@ Markdown code block:
                 break
             except Exception as e:
                 if attempt == num_retry - 1:
-                    raise ExperimentFailure(f"did not get good response: {e}")
+                    raise ExperimentFailure(f"reply for input generation failed: {e}")
             pass
         return inputs
 

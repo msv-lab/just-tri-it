@@ -70,12 +70,21 @@ class Plurality(Agreement):
                     valid_class_to_programs[class_id] = []
                 valid_class_to_programs[class_id].append(program)
 
+        def _to_serializable(outputs):
+            result = []
+            for o in outputs:
+                if isinstance(o, UncertainOutput):
+                    result.append("__UncertainOutput")
+                else:
+                    result.append(o)
+            return result
+
         raw_data = {
             "method": "plurality_" + str(self.prob_threshold),            
             "programs": programs,
             "inputs": inputs,
             "classes": valid_class_to_programs,
-            "outputs": [(programs[i], outputs[i]) for i in range(len(programs))]
+            "outputs": [(programs[i], _to_serializable(outputs[i])) for i in range(len(programs))]
         }
 
         if not valid_class_to_programs:
