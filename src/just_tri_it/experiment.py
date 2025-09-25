@@ -42,6 +42,11 @@ def parse_args():
         help="File with task IDs to run (all by default)."
     )
     parser.add_argument(
+        "--task",
+        type=str,
+        help="task ID to run (all by default)."
+    )
+    parser.add_argument(
         "--model",
         type=str,
         required=True,
@@ -115,6 +120,9 @@ def main():
         with task_list_file.open("r", encoding="utf-8") as f:
             task_ids = [line.strip() for line in f]
             dataset = [t for t in dataset if t.id in task_ids]
+
+    if args.task:
+        dataset = [t for t in dataset if t.id == args.task]
 
     execute_experiment(model, executor, dataset, database, data_dir)
 
