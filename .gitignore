@@ -12,3 +12,7 @@ result/
 lcb_1/
 dataset_test/
 .DS_Store
+data_dir/
+data_dir_1/
+datasets/lcb_random30_1.txt
+datasets/lcb_random30.txt

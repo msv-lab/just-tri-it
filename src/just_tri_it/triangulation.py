@@ -1,3 +1,4 @@
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from itertools import islice
@@ -113,6 +114,15 @@ class TrivialSemantic(Transformation):
     def transform(self, model, req: Requirements) -> Requirements:
         return_type = req.signature.return_type
         EXTRA_INSTR = "When you get the final answer, please {sth} and then return."
+
+        def is_all_int_tuple(type_str: str) -> bool:
+            type_str = type_str.strip()
+            pattern = re.compile(
+                r"^(?:tuple|Tuple)\[\s*int\s*(?:,\s*int\s*)*"
+                r"(?:,\s*\.\.\.)?\]$"
+            )
+            return bool(pattern.match(type_str))
+
         match return_type:
             case "int":
                 add_sentence = EXTRA_INSTR.format(sth="add 1 to it")
@@ -124,6 +134,8 @@ class TrivialSemantic(Transformation):
                 add_sentence = EXTRA_INSTR.format(sth="add a suffix '_1' to it")
             case "list[int]" | "List[int]":
                 add_sentence = EXTRA_INSTR.format(sth="append 1 to it")
+            case t if is_all_int_tuple(t):
+                add_sentence = EXTRA_INSTR.format(sth="create a new tuple by adding 1 to it")           
             case _:
                 # troublesome to support more complex types
                 raise ExperimentFailure()

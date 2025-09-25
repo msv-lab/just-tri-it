@@ -1,6 +1,7 @@
 import inspect
 import sys
 import math
+import numbers
 from dataclasses import dataclass
 from functools import partial
 from enum import Enum
@@ -298,7 +299,7 @@ def is_formula_true(executor,
 
 
 def eval_term(executor, env: Dict[str, Any], programs, term: Term) -> Any:
-    if isinstance(term, (str, int, bool, float)):
+    if isinstance(term, (str, int, bool, float, tuple)):
         return term
     if isinstance(term, list):
         return eval_all(executor, env, programs, term)
@@ -339,6 +340,8 @@ def _off_by_one(x):
             return x + "_1"
         case list() if all(isinstance(i, int) for i in x):
             return x + [1]
+        case tuple() if all(isinstance(i, int) for i in x):
+            return x + (1,)
         case _:
             raise ExperimentFailure(f"off-by-one does not support this type: {x}")
 
@@ -368,13 +371,13 @@ Equals = Func(_equals_func, "=")
 
 
 def _set_equals_func(x, y):
-    # print("set equal", x, y)
-    """
-    Check equality of two iterables.
-    - If all elements are floats (in both x and y), compare sorted lists with math.isclose.
-    - Otherwise, compare as sets.
-    """
-    # change 9: x, y here can be special values
+    # Helper: convert lists into tuples (for hashability)
+    def make_hashable(obj):
+        if isinstance(obj, list):
+            return tuple(make_hashable(item) for item in obj)
+        return obj
+
+    # Wrap single SpecialValue into a list
     if isinstance(x, SpecialValue):
         x = [x]
     if isinstance(y, SpecialValue):
@@ -382,49 +385,47 @@ def _set_equals_func(x, y):
     x_list = list(x)
     y_list = list(y)
 
+    # Check for special values A/D/U
     x_has_A, x_has_D, x_has_U = has_special_value_adu(x_list)
     y_has_A, y_has_D, y_has_U = has_special_value_adu(y_list)
 
     if x_has_D or y_has_D:
-        # if x has D or y has D, because D!=D, so the result is still demonic
         return Demonic()
     if x_has_A or y_has_A:
-        # when there is no D, A can equals to anything, so
         return Angelic()
     if x_has_U and not y_has_U:
-        # if x has U and y doesn't have U, y should have A, otherwise
         return False
     if y_has_U and not x_has_U:
-        # if y has U and x doesn't have U, x should have A, otherwise
         return False
 
+    # Remove special values, keep only normal elements
     x_list = [ele for ele in x_list if not isinstance(ele, SpecialValue)]
     y_list = [ele for ele in y_list if not isinstance(ele, SpecialValue)]
-    # there is no use for these value because we've already handled them
 
-    # change 10: fix 'fix me'
-    if all(isinstance(v, float) for v in x_list + y_list):
-        # Remove duplicates by checking closeness, then compare the unique elements
-        x_unique = []
-        for val in x_list:
-            if not any(math.isclose(val, existing) for existing in x_unique):
-                x_unique.append(val)
+    # Convert unhashable objects (lists) into hashable ones (tuples)
+    x_hashable = [make_hashable(item) for item in x_list]
+    y_hashable = [make_hashable(item) for item in y_list]
 
-        y_unique = []
-        for val in y_list:
-            if not any(math.isclose(val, existing) for existing in y_unique):
-                y_unique.append(val)
+    # If all elements are numeric, use math.isclose
+    if all(isinstance(v, numbers.Real) for v in x_hashable + y_hashable):
+        def unique_by_isclose(values):
+            values_sorted = sorted(values)
+            result = []
+            for v in values_sorted:
+                if not result or not math.isclose(v, result[-1]):
+                    result.append(v)
+            return result
 
-        # Sort the unique elements
-        x_sorted = sorted(x_unique)
-        y_sorted = sorted(y_unique)
+        x_unique = unique_by_isclose(x_hashable)
+        y_unique = unique_by_isclose(y_hashable)
 
-        if len(x_sorted) != len(y_sorted):
+        if len(x_unique) != len(y_unique):
             return False
 
-        return all(math.isclose(a, b) for a, b in zip(x_sorted, y_sorted, strict=True))
+        return all(math.isclose(a, b) for a, b in zip(x_unique, y_unique))
 
-    return set(x_list) == set(y_list)
+    # Fallback: compare as sets
+    return set(x_hashable) == set(y_hashable)
 
 
 SetEquals = Func(_set_equals_func, "=")

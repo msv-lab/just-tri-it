@@ -42,7 +42,7 @@ For example
     
 For LiveCodeBench v6, first decompress the dataset using
 
-    unzip dataset/lcb_part6.json.zip
+    unzip datasets/lcb_part6.json.zip
     
 A specific task can be specified using `--task`:
     
