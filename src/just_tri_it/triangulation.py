@@ -173,7 +173,9 @@ Problem:
                 valid_name = extract_answer(sample)
                 if valid_name:
                     return_param = [p.name for p in req.signature.params].index(valid_name)
-                break
+                    break
+                else:
+                    continue
             except Exception as e:
                 if attempt == 2:
                     print(tried_samples)
