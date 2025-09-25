@@ -5,7 +5,7 @@ from itertools import islice
 from typing import Tuple
 
 from just_tri_it.executor import Executor
-from just_tri_it.cached_llm import Model
+from just_tri_it.cached_llm import Model, Independent
 from just_tri_it.code_generator import Generator
 from just_tri_it.selection import Agreement, AgreementOutcome
 from just_tri_it.input_generator import generate_inputs
@@ -16,7 +16,7 @@ from just_tri_it.program import Requirements, NamedReturnSignature, Signature, P
 from just_tri_it.utils import (
     gen_and_extract_answer_with_retry,
     ExperimentFailure,
-    RawData
+    RawData, extract_answer
 )
 
 
@@ -163,8 +163,21 @@ within `<answer>` and `</answer>` tags.
 Problem:
 {req.description}
         """
-        valid_name = gen_and_extract_answer_with_retry(model, PROMPT, 3)
-        return_param = [p.name for p in req.signature.params].index(valid_name)
+        ind_model = Independent(model)
+        return_param = None
+        tried_samples = []
+        for attempt in range(3):
+            try:
+                sample = next(ind_model.sample(PROMPT, 3))
+                tried_samples.append(sample)
+                valid_name = extract_answer(sample)
+                if valid_name:
+                    return_param = [p.name for p in req.signature.params].index(valid_name)
+                break
+            except Exception as e:
+                if attempt == 2:
+                    print(tried_samples)
+                    raise ExperimentFailure(f"retry failed with {type(e).__name__}: {e}")
         return return_param
 
 
