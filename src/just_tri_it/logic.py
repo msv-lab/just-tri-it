@@ -375,7 +375,16 @@ def _set_equals_func(x, y):
     def make_hashable(obj):
         if isinstance(obj, list):
             return tuple(make_hashable(item) for item in obj)
-        return obj
+        elif isinstance(obj, tuple):
+            return tuple(make_hashable(item) for item in obj)
+        elif isinstance(obj, dict):
+            return tuple(sorted((k, make_hashable(v)) for k, v in obj.items()))
+        elif isinstance(obj, set):
+            return frozenset(make_hashable(item) for item in obj)
+        elif isinstance(obj, bytearray):
+            return bytes(obj)
+        else:
+            return obj
 
     # Wrap single SpecialValue into a list
     if isinstance(x, SpecialValue):
