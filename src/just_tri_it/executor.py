@@ -172,8 +172,10 @@ class Executor:
         self.test_venv = test_venv
 
     @cache_content_addressable
-    def run(self, p: Program, inputs: list[Any], add_lcb_imports=True) -> ExecutionOutcome:
-        assert isinstance(inputs, list)
+    def run(self, p: Program, inputs, add_lcb_imports=True) -> ExecutionOutcome:
+        assert isinstance(inputs, list | tuple)
+        if isinstance(inputs, tuple):
+            inputs = list(inputs)
         if add_lcb_imports:
             p = p.add_imports(LIVECODEBENCH_IMPORTS)
         with TemporaryDirectory() as tmp:
