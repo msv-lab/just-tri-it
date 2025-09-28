@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Iterator, List, Any
 from pathlib import Path
 import ast
-import json
+import orjson
 import zlib
 import pickle
 import base64
@@ -66,9 +66,13 @@ def load_dataset(file: Path) -> Dataset:
        ...
     ]
     '''
-    with file.open() as f:
-        data = json.load(f)
+    raw_data = file.read_bytes()
+    if len(raw_data) > 0:
+        data = orjson.loads(raw_data)
+    else:
+        data = []
 
+    tasks = []
     for task in data:
         sig_str = task["requirements"]["signature"]
         code = f"""
@@ -81,20 +85,20 @@ def load_dataset(file: Path) -> Dataset:
         description = task["requirements"]["description"]
         requirements = Requirements(signature, description)
 
-        tests = []
         if isinstance(task["tests"], str):
-            test_data = lcb_decompress(task["tests"])
+            tests = lcb_decompress(task["tests"])
         else:
             test_data = task["tests"]
-        for t in test_data:
-            if t["type"] == "InputOutput":
-                inputs = list(map(eval, t["inputs"]))
-                output = eval(t["output"])
-                tests.append(InputOutput(inputs, output))
-            elif t["type"] == "TestFunction":
-                tests.append(TestFunction.from_code(t["code"], signature))
-            else:
-                panic("Test assertions are not supported!")
+            tests = []
+            for t in test_data:
+                if t["type"] == "InputOutput":
+                    inputs = list(map(eval, t["inputs"]))
+                    output = eval(t["output"])
+                    tests.append(InputOutput(inputs, output))
+                elif t["type"] == "TestFunction":
+                    tests.append(TestFunction.from_code(t["code"], signature))
+                else:
+                    panic("Test assertions are not supported!")
 
         task_obj = Task(
             id=task["id"],
@@ -102,7 +106,8 @@ def load_dataset(file: Path) -> Dataset:
             tests=tests,
             metadata=task.get("metadata", {}),
         )
-        yield task_obj
+        tasks.append(task_obj)
+    return tasks
 
 
 def save_dataset(dataset: List[Task], file: Path, compress=False):
@@ -114,24 +119,28 @@ def save_dataset(dataset: List[Task], file: Path, compress=False):
             "description": task.requirements.description,
         }
 
-        tests = []
-        for test in task.tests:
-            match test:
-                case InputOutput(inputs, output):
-                    tests.append({
-                        "type": "InputOutput",
-                        "inputs": list(map(repr, inputs)),
-                        "output": repr(output)
-                    })
-                case TestFunction():
-                    panic("Test assertions are not supported!")
+        if compress:
+            tests = lcb_compress(task.tests)
+        else:
+            tests = []
+            for test in task.tests:
+                match test:
+                    case InputOutput(inputs, output):
+                        tests.append({
+                            "type": "InputOutput",
+                            "inputs": list(map(repr, inputs)),
+                            "output": repr(output)
+                        })
+                    case TestFunction():
+                        panic("Test assertions are not supported!")
         task_dict = {
             "id": task.id,
             "requirements": requirements,
-            "tests": tests if not compress else lcb_compress(tests),
+            "tests": tests,
             "metadata": task.metadata
         }
         data.append(task_dict)
 
-    with file.open("w") as f:
-        json.dump(data, f, indent=2)
+    with file.open("wb") as f:
+        s = orjson.dumps(data, option=orjson.OPT_INDENT_2)
+        f.write(s)

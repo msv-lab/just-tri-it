@@ -10,41 +10,17 @@ import copy
 import jsonlines
 
 from just_tri_it.dataset import Dataset
-from just_tri_it.utils import panic
+from just_tri_it.utils import panic, add_cache_options, setup_cache
 from just_tri_it.cached_llm import Model, Persistent, Independent, AI302
 from just_tri_it.utils import extract_code
 from just_tri_it.program import Signature, Test, Parameter, Program, InputOutput, Requirements
-from just_tri_it.executor import Executor, Success
+from just_tri_it.executor import PersistentWorkerExecutor, Executor, Success
 from just_tri_it.dataset import Task, save_dataset, load_dataset, lcb_decompress
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--cache-root",
-        type=str,
-        help="Set LLM cache root directory (default: ~/.just_tri_it_cache/)."
-    )
-    parser.add_argument(
-        "--no-cache",
-        action="store_true",
-        help="Disable cache."
-    )
-    parser.add_argument(
-        "--replicate",
-        action="store_true",
-        help="Use cache only."
-    )
-    parser.add_argument(
-        "--export-cache",
-        type=str,
-        help="Explore all responsed generated during the run."
-    )
-    parser.add_argument(
-        "--test-venv",
-        type=str,
-        help="Set virtual environment for testing generated programs."
-    )
+    add_cache_options(parser)
     parser.add_argument(
         "--dataset",
         type=str,
@@ -88,29 +64,17 @@ def main():
     
     model_name = "gpt-4o"
     model = AI302(model_name, 1.0)
-    
-    if not args.no_cache:
-        if args.cache_root:
-            cache_root = Path(args.cache_root)
-        else:
-            cache_root = Path.home() / ".just_tri_it_cache"
-        if args.replicate:
-            model = Persistent(model, cache_root, replication=True)
-        else:
-            model = Persistent(model, cache_root)
 
-    if not args.no_cache and args.export_cache:
-        export_root = Path(args.export_cache)
-        export_root.mkdir(parents=True, exist_ok=True)
-        model = Persistent(model, export_root)
+    model = setup_cache(model, args)
             
-    test_venv = Path(args.test_venv)
-    executor = Executor(test_venv)
+    executor = PersistentWorkerExecutor()
 
     if args.format == 'LiveCodeBench':
         lcb_convert(model, executor, Path(args.dataset), Path(args.output))
     else:
         panic("unsupported dataset format")
+
+    executor.shutdown()
 
 
 def decompress_task(dataset_file: Path, task_id: str, output_file: Path):
@@ -453,8 +417,8 @@ def lcb_convert(model: Model,
                         print("\nretrying...\n", file=sys.stderr, flush=True)
                     else:
                         print(e)
-            save_dataset(tasks, output_file, compress=True)
-
+#            save_dataset(tasks, output_file, compress=True)
+    save_dataset(tasks, output_file, compress=True)
 
 if __name__ == "__main__":
     main()
