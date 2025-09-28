@@ -138,7 +138,6 @@ def gen_and_extract_answer_with_retry(model, prompt, num_retry=3):
             break
         except Exception as e:
             if attempt == num_retry - 1:
-                print(tried_samples)
                 raise ExperimentFailure(f"retry failed with {type(e).__name__}: {e}")
         pass
     return ans

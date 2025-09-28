@@ -8,17 +8,6 @@ Set your 302.ai API key using the environment variable `AI302_API_KEY`.
 
 The project uses uv to manage dependencies.
 
-When runnig the project for the first time, please create an environment for testing generated programs:
-
-    uv venv --no-project --seed --python 3.13 test_venv
-    source test_venv/bin/activate
-    pip install -r test_requirements.txt
-    deactivate
-    
-Run unit tests with
-
-    JTI_TEST_ENV=$PWD/test_env uv run pytest
-
 Run linter and type checker:
 
     uv run ruff check .
@@ -34,11 +23,11 @@ The goal of the benchmarking tool is to compare various tool configurations on v
 
 To run a benchmark, execute
 
-    uv run benchmark --test-venv TESTING_ENVIRONMENT --dataset DATASET [ --task TASK_ID ] --selector TOOL_CONFIG --model MODEL
+    uv run benchmark --dataset DATASET [ --task TASK_ID ] --selector TOOL_CONFIG --model MODEL
 
 For example
 
-    uv run benchmark --test-venv test_venv/ --dataset datasets/test.json --selector Plurality --model gpt-4o
+    uv run benchmark --dataset datasets/test.json --selector Plurality --model gpt-4o
     
 For LiveCodeBench v6, first decompress the dataset using
 
@@ -46,7 +35,7 @@ For LiveCodeBench v6, first decompress the dataset using
     
 A specific task can be specified using `--task`:
     
-    uv run benchmark --test-venv test_venv/ --dataset datasets/lcb_part6.json --selector CodeT_IO --model gpt-4o --task atcoder_abc387_b
+    uv run benchmark --dataset datasets/lcb_part6.json --selector CodeT_IO --model gpt-4o --task atcoder_abc387_b
     
 List of configurations:
 
@@ -71,13 +60,28 @@ To run LiveCodeBench v6, first decompress the dataset using:
     
 Then, to collect experimental results and save (append) into `data_dir`, execute
 
-    uv run experiment --test-venv test_venv/ --dataset datasets/lcb_part6.json --model gpt-4o --data data_dir
+    uv run experiment  --dataset datasets/lcb_part6.json --model gpt-4o --data data_dir
 
 Optionally, you can specify the list of tasks to run via the option `--task-list datasets/lcb_top30.txt`.
 
 Then, to compute measures and generate plots, execute
 
     uv run analyze --data data_dir --report report_dir
+    
+## Extra options
+
+To execute generated progarms in isolated subprocesses, please create an environment for testing generated programs:
+
+    uv venv --no-project --seed --python 3.13 test_venv
+    source test_venv/bin/activate
+    pip install -r test_requirements.txt
+    deactivate
+    
+Adding the options `--test-venv test_venv/` to the above commands will run generated programs inside this environment.
+
+To run tests within this environment, execute
+
+    JTI_TEST_ENV=$PWD/test_env uv run pytest
 
 ## Reproducibility
 

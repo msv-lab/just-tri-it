@@ -7,7 +7,7 @@ import jsonlines
 from typing import List, Any, Dict
 
 from just_tri_it.cached_llm import Repeatable, AI302, XMCP
-from just_tri_it.executor import Executor
+from just_tri_it.executor import SubprocessExecutor, PersistentWorkerExecutor
 from just_tri_it.dataset import load_dataset
 from just_tri_it.utils import (
     print_annotated_hr,
@@ -108,8 +108,12 @@ def main():
     # even without persistent cache, we need to ensure that we always
     # sample the same programs for a consistent database:
     model = Repeatable(model)
-    
-    executor = Executor(Path(args.test_venv))
+
+    if args.test_venv:
+        executor = SubprocessExecutor(Path(args.test_venv))
+    else:
+        executor = PersistentWorkerExecutor()
+
     dataset = load_dataset(Path(args.dataset))
     data_dir = Path(args.data)
     data_dir.mkdir(parents=True, exist_ok=True)
@@ -125,6 +129,8 @@ def main():
         dataset = [t for t in dataset if t.id == args.task]
 
     execute_experiment(model, executor, dataset, database, data_dir)
+
+    executor.shutdown()
 
 
 def execute_experiment(model, executor, dataset, db, data_dir):

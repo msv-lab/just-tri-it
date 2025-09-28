@@ -175,8 +175,6 @@ Formula = Union[
     ForAll
 ]
 
-# change 1: define 3 new classes
-
 
 class SpecialValue:
     pass
@@ -195,7 +193,6 @@ class Undefined(SpecialValue):
 
 
 def has_special_value_adu(x: list) -> [bool, bool, bool]:
-    # change 2: define a new function
     """
     this function checks:
     if in list x, there exists a special value A(Angelic)/D(Demonic)/U(Undefined)
@@ -222,20 +219,18 @@ def eval_app(executor, env, programs, func, args):
     # print("APPLY: " + str(func), flush=True)
     # print("ARGS: " + ", ".join(map(recursive_str, computed_args)), flush=True)
     if isinstance(func.semantics, Side):
-        # change 4: if there exists any special value in 'computed_args', the function can't be executed
         has_A, has_D, has_U = has_special_value_adu(computed_args)
         if has_D:
             return Demonic()
-        if has_U:  # no D
-            return Undefined()
         if has_A:  # no U no D -> only A
             return Angelic()
+        if has_U:  # no D
+            return Undefined()
         execution_outcome = executor.run(programs[func.semantics], computed_args)
         # print("RESULT: " + str(execution_outcome), flush=True)
         match execution_outcome:
             case Success(v):
                 return v
-            # change 5: clarify when to return Undefined and Demonic
             case Error(error_type, error_msg) if error_type == "ValueError" and error_msg == "Invalid input":
                 return Undefined()
             case _:
@@ -250,7 +245,6 @@ def map_to_bool(origin):
     """
     this function map origin to bool if origin is not bool but a special value
     """
-    # change 6: define a new function
     if isinstance(origin, bool):
         return origin
     if isinstance(origin, Angelic):
@@ -267,8 +261,8 @@ def is_formula_true(executor,
     match formula:
         case App(func, args):
             return eval_app(executor, env, programs, func, args)
-        # change 7: 'result' now can be a boolean or a special value
         case Not(operand):
+            #FIXME: this is problematic. Not(angelic) should also be angelic. Angelic means that the formulas should overall be True, unless Demonic happends anywhere
             result = is_formula_true(executor, env, inputs, programs, operand)
             if not isinstance(result, bool):
                 return map_to_bool(result)
@@ -306,7 +300,6 @@ def eval_term(executor, env: Dict[str, Any], programs, term: Term) -> Any:
     match term:
         case Var(name):
             return env[name]
-        # change 14: if term is special value
         case Func() | SpecialValue():
             return term
         case Map(func, args):
@@ -327,7 +320,6 @@ def eval_term(executor, env: Dict[str, Any], programs, term: Term) -> Any:
         
 def _off_by_one(x):
     match x:
-        # change 15: x can be special value
         case SpecialValue():
             return x
         case int():
@@ -350,9 +342,7 @@ OffByOne = Func(_off_by_one, "off-by-one")
 
 
 def _equals_func(x, y):
-    # print("equal", x, y)
     """Check equality, using math.isclose for floats."""
-    # change 8: x, y here can be special values
     if isinstance(x, Demonic) or isinstance(y, Demonic):
         # D != anything
         return Demonic()
@@ -441,9 +431,7 @@ SetEquals = Func(_set_equals_func, "=")
 
 
 def _member_func(x, y):
-    # print("member", x, y)
     """Check membership, using math.isclose for floats."""
-    # change 11: x, y here can be special values
     if isinstance(x, Demonic):
         # because D!= anything
         return Demonic()
@@ -474,7 +462,6 @@ def _tolerate(origin):
     """
     this function only transforms Undefined to Angelic
     """
-    # change 12: define a new function
     if isinstance(origin, list):
         for index, item in enumerate(origin):
             if isinstance(item, Undefined):
@@ -494,6 +481,6 @@ def check(executor, inputs: Dict[Side, Any], programs: Dict[Side, 'Program'], fo
     # print("RIGHT:")
     # print(programs[Side.RIGHT].get_content())
 
-    # change 13: map special values to bool to get final boolean answer
+    #FIXME: I am not sure this is justified. I think we should only interpret angelic as true inside forall statements. Adding extra convertions "just in case" will just hide bugs.
     result = map_to_bool(is_formula_true(executor, {}, inputs, programs, formula))
     return result

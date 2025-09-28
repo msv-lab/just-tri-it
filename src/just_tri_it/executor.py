@@ -1,14 +1,20 @@
 import pickle
 import math
 import sys
+import os
 from dataclasses import dataclass
 from pathlib import Path
 import subprocess
 from tempfile import TemporaryDirectory
 from typing import Any
 import functools
+from copy import deepcopy
+from abc import ABC, abstractmethod
+import multiprocessing
+import time
 
-from just_tri_it.program import Program, Test, InputOutput, TestFunction, Pass, Fail
+
+from just_tri_it.program import Program, Signature, Test, InputOutput, TestFunction, Pass, Fail
 from just_tri_it.utils import ContentAddressable
 
 
@@ -82,52 +88,47 @@ type TestOutcome = Pass | Fail | Error | Panic | Timeout
 EXECUTION_TIMEOUT_SECONDS = 2
 
 
-def test_harness(p: Program, input_file: Path, output_file: Path):
-    return f"""
-import pickle
-if __name__ == '__main__':
-    with open('{str(input_file)}', 'rb') as __input_file:
-        __input_list = pickle.load(__input_file)
-    report = dict()
-    try:
-        output = {p.signature.name}(*__input_list)
-        report['status'] = 'success'
-        report['value'] = output
-    except Exception as e:
-        report['status'] = 'error'
-        report['error_type'] = type(e).__name__
-        report['error_message'] = str(e)
-    with open('{str(output_file)}', 'wb') as f:
-        pickle.dump(report,f)
-    """
+class Executor(ABC):
 
+    @abstractmethod
+    def run(self, p: Program, inputs: list[Any], add_lcb_imports=True) -> ExecutionOutcome:
+        pass
 
-def assertion_test_harness(p: Program, assertion: TestFunction, output_file: Path):
-    return f"""
-import pickle
+    def run_test(self, p: Program, t: Test, add_lcb_imports=True) -> TestOutcome:
+        if add_lcb_imports:
+            p = p.add_imports(LIVECODEBENCH_IMPORTS)
+        match t:
+            case InputOutput(inputs, expected):
+                execution_outcome = self.run(p, inputs)
+                match execution_outcome:
+                    case Success(actual):
+                        if isinstance(actual, float) and isinstance(expected, float) and math.isclose(actual, expected):
+                            return Pass()
+                        elif actual == expected:
+                            return Pass()
+                        else:
+                            return Fail()
+                    case _:
+                        return execution_outcome
+            
+            case TestFunction(test_function_name, test_function_code, target_signature):
+                test_sig = Signature(test_function_name, [], "None")
+                test_program = Program(test_sig, p.code + "\n" + test_function_code)
+                execution_outcome = self.run(test_program, [])
+                match execution_outcome:
+                    case Success(_):
+                        return Pass()
+                    case Error(t, _):
+                        if t == "AssertionError":
+                            return Fail()
+                        else:
+                            return execution_outcome
+                    case _:
+                        return execution_outcome
 
-{p.code}
+                return self._run_test_function(p, t)
+        pass
 
-{assertion.test_function_code}
-
-if __name__ == '__main__':
-    report = dict()
-    try:
-        {assertion.test_function_name}()
-        report['status'] = 'success'
-        report['test_passed'] = True
-    except AssertionError as e:
-        report['status'] = 'success'
-        report['test_passed'] = False
-        report['assertion_message'] = str(e)
-    except Exception as e:
-        report['status'] = 'error'
-        report['error_type'] = type(e).__name__
-        report['error_message'] = str(e)
-    
-    with open('{str(output_file)}', 'wb') as f:
-        pickle.dump(report, f)
-    """
 
 def cache_content_addressable(func):
     """
@@ -166,10 +167,35 @@ def cache_content_addressable(func):
     return wrapper
 
 
-class Executor:
+class SubprocessExecutor(Executor):
 
     def __init__(self, test_venv: Path):
         self.test_venv = test_venv
+
+    def _test_harness(self, p: Program, input_file: Path, output_file: Path, load_inputs: bool):
+        if load_inputs:
+            inputs_loader = f"""\
+    with open('{str(input_file)}', 'rb') as __input_file:
+        __input_list = pickle.load(__input_file)"""
+        else:
+            inputs_loader = """\
+    __input_list = []"""
+        return f"""
+import pickle
+if __name__ == '__main__':
+    report = dict()
+{inputs_loader}
+    try:
+        output = {p.signature.name}(*__input_list)
+        report['status'] = 'success'
+        report['value'] = output
+    except Exception as e:
+        report['status'] = 'error'
+        report['error_type'] = type(e).__name__
+        report['error_message'] = str(e)
+    with open('{str(output_file)}', 'wb') as f:
+        pickle.dump(report,f)
+        """
 
     @cache_content_addressable
     def run(self, p: Program, inputs, add_lcb_imports=True) -> ExecutionOutcome:
@@ -181,10 +207,11 @@ class Executor:
         with TemporaryDirectory() as tmp:
             exec_dir = Path(tmp)
             input_file = exec_dir / 'input.pkl'
-            with input_file.open('wb') as f:
-                pickle.dump(inputs, f)
+            if len(inputs) > 0:
+                with input_file.open('wb') as f:
+                    pickle.dump(inputs, f)
             output_file = exec_dir / 'output.pkl'
-            source_code = p.code + "\n" + test_harness(p, input_file, output_file)
+            source_code = p.code + "\n" + self._test_harness(p, input_file, output_file, len(inputs) > 0)
             (exec_dir / 'code.py').write_text(source_code)
             try:
                 interpreter = str(self.test_venv.resolve() / 'bin' / 'python')
@@ -216,63 +243,91 @@ class Executor:
                 print("!", end="", file=sys.stderr, flush=True)
                 return Timeout()          
     
-    def _run_test_function(self, p: Program, assertion: TestFunction) -> TestOutcome:
-        with TemporaryDirectory() as tmp:
-            exec_dir = Path(tmp)
-            output_file = exec_dir / 'output.pkl'
-            source_code = assertion_test_harness(p, assertion, output_file)
-            (exec_dir / 'code.py').write_text(source_code)
-            
+    def shutdown(self):
+        pass
+
+
+class PersistentWorkerExecutor(Executor):
+
+    def _runner(self, task_queue: multiprocessing.Queue, return_queue: multiprocessing.Queue):
+        sys.stdout = open(os.devnull, "w")
+        sys.stderr = open(os.devnull, "w")                
+        
+        while True:
+            item = task_queue.get()
+            if item is None:
+                break  # Shutdown signal
+            program_code, func_name, args = item
+
             try:
-                interpreter = str(self.test_venv.resolve() / 'bin' / 'python')
-                result = subprocess.run(
-                    [interpreter, 'code.py'],
-                    cwd=exec_dir,
-                    capture_output=True,
-                    text=True,
-                    timeout=EXECUTION_TIMEOUT_SECONDS,
-                    check=False
-                )
-                
-                if result.returncode != 0:
-                    return Panic(result.stderr)
-                    
-                if not output_file.exists():
-                    return Panic("no output")
-                    
-                with output_file.open('rb') as f:
-                    report = pickle.load(f)
-                    if report['status'] == 'success':
-                        if report['test_passed']:
-                            print(".", end="", file=sys.stderr, flush=True)
-                            return Pass()
-                        else:
-                            print("!", end="", file=sys.stderr, flush=True)
-                            return Fail()
-                    else:
-                        print("!", end="", file=sys.stderr, flush=True)
-                        return Error(report['error_type'], report['error_message'])
-                        
-            except subprocess.TimeoutExpired:
-                return Timeout()
+                namespace = {}
+
+                exec(program_code, namespace)
+
+                if func_name in namespace and callable(namespace[func_name]):
+                    result = namespace[func_name](*args)
+                else:
+                    return_queue.put({ "status": "error",
+                                       "error_type": "panic",
+                                       "error_message": "no function found" })
+
+                return_queue.put({ "status": "success",
+                                   "value": result })
+
+            except Exception as e:
+                return_queue.put({ "status": "error",
+                                   "error_type": type(e).__name__,
+                                   "error_message": str(e) })
+
+    def __init__(self):
+        self.task_queue = multiprocessing.Queue()
+        self.result_queue = multiprocessing.Queue()
+        self.worker = None
+        self._start_worker()
+
+    def _start_worker(self):
+        self.worker = multiprocessing.Process(
+            target=self._runner, 
+            args=(self.task_queue, self.result_queue)
+        )
+        self.worker.start()
+
+    def _restart_worker(self):
+        if self.worker.is_alive():
+            self.worker.terminate()
+            self.worker.join()
+        self._start_worker()
+
+    def shutdown(self):
+        self.task_queue.put(None)
+        self.worker.join()
+
+    def _execute_code(self, program_code: str, func_name: str, args: list, timeout: int):
+        self.task_queue.put((program_code, func_name, args))
+        start = time.time()
+        
+        while time.time() - start < timeout:
+            if not self.result_queue.empty():
+                report = self.result_queue.get()
+                if report['status'] == 'success':
+                    print(".", end="", file=sys.stderr, flush=True)
+                    return Success(report['value'])
+                else:
+                    print("!", end="", file=sys.stderr, flush=True)
+                    assert report['status'] == 'error'
+                    if report['error_type'] == 'panic':
+                        return Panic(report['error_message'])
+                    return Error(report['error_type'], report['error_message'])
+            time.sleep(0.01)  # Small delay to avoid busy wait
+
+        # Timeout
+        self._restart_worker()
+        return Timeout()
 
     @cache_content_addressable
-    def run_test(self, p: Program, t: Test, add_lcb_imports=True) -> TestOutcome:
+    def run(self, p: Program, inputs: list[Any], add_lcb_imports=True) -> ExecutionOutcome:
+        assert isinstance(inputs, list)
+        args = deepcopy(inputs)
         if add_lcb_imports:
             p = p.add_imports(LIVECODEBENCH_IMPORTS)
-        match t:
-            case InputOutput(inputs, expected):
-                execution_outcome = self.run(p, inputs)
-                match execution_outcome:
-                    case Success(actual):
-                        if isinstance(actual, float) and isinstance(expected, float) and math.isclose(actual, expected):
-                            return Pass()
-                        elif actual == expected:
-                            return Pass()
-                        else:
-                            return Fail()
-                    case _:
-                        return execution_outcome
-            
-            case TestFunction():
-                return self._run_test_function(p, t)
+        return self._execute_code(p.code, p.signature.name, args, EXECUTION_TIMEOUT_SECONDS)

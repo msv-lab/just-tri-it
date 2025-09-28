@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 
 from just_tri_it.logic import check, Side
-from just_tri_it.executor import Executor
+from just_tri_it.executor import SubprocessExecutor, PersistentWorkerExecutor
 from just_tri_it.program import Program
 from just_tri_it.triangulation import make_postcondition
 
@@ -38,7 +38,11 @@ def parse_args():
 def main():
     args = parse_args()
 
-    executor = Executor(Path(args.test_venv))    
+    if args.test_venv:
+        executor = SubprocessExecutor(Path(args.test_venv))
+    else:
+        executor = PersistentWorkerExecutor()
+
     left_program_file = Path(args.program)
     right_program_file = Path(args.judge)
     inputs_file = Path(args.inputs)
@@ -55,6 +59,7 @@ def main():
           { Side.LEFT: left_program, Side.RIGHT: right_program },
           tri.hyperproperty)
 
+    executor.shutdown()
     print()
     
 

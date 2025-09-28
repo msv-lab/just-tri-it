@@ -2,12 +2,13 @@ import argparse
 from pathlib import Path
 
 from just_tri_it.cached_llm import AI302, XMCP
-from just_tri_it.executor import Executor
+from just_tri_it.executor import SubprocessExecutor, PersistentWorkerExecutor
 from just_tri_it.dataset import load_dataset
 from just_tri_it.code_generator import Vanilla
 from just_tri_it.selection import Selected, Abstained
 from just_tri_it.utils import print_annotated_hr, add_cache_options, setup_cache, print_legend
 from just_tri_it.config import init_selectors
+from just_tri_it.program import Program
 
 
 def parse_args():
@@ -73,7 +74,11 @@ def main():
     # model = XMCP(args.model, 1.0)
 
     model = setup_cache(model, args)
-    executor = Executor(Path(args.test_venv))
+    if args.test_venv:
+        executor = SubprocessExecutor(Path(args.test_venv))
+    else:
+        executor = PersistentWorkerExecutor()
+
     dataset = load_dataset(Path(args.dataset))
     if args.task:
         dataset = [t for t in dataset if t.id == args.task]
@@ -83,6 +88,8 @@ def main():
     selectors = init_selectors(executor, Vanilla(), model)
         
     evaluate_selector(model, executor, selectors[args.selector], dataset)
+
+    executor.shutdown()
 
 
 if __name__ == "__main__":

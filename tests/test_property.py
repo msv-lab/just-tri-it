@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from just_tri_it.logic import check, Side
-from just_tri_it.executor import Executor
+from just_tri_it.executor import SubprocessExecutor
 from just_tri_it.program import Program
 from just_tri_it.triangulation import make_partial_for_inv
 
@@ -64,7 +64,7 @@ FORWARD_INPUTS = [
 
 TRIANGULATION = make_partial_for_inv(2, 0)
 
-EXECUTOR = Executor(Path(os.environ["JTI_TEST_ENV"]))
+EXECUTOR = SubprocessExecutor(Path(os.environ["JTI_TEST_ENV"]))
 
 def check_programs(p, q):
     return check(EXECUTOR,
