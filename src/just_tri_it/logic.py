@@ -268,30 +268,65 @@ def map_to_bool(origin):
         return False
 
 
+def get_priority_from_list(values: List[SpecialValue]) -> SpecialValue:
+    has_demonic = any(isinstance(v, Demonic) for v in values)
+    if has_demonic:
+        return Demonic()
+    has_undefined = any(isinstance(v, Undefined) for v in values)
+    if has_undefined:
+        return Undefined()
+    return Angelic()
+
+
 def is_formula_true(executor,
                     env: Dict[str, Any],
                     inputs: Dict[Side, Any],
                     programs: Dict[Side, 'Program'],
-                    formula: Formula) -> bool:
+                    formula: Formula):
     match formula:
         case App(func, args):
             return eval_app(executor, env, programs, func, args)
         case Not(operand):
-            #FIXME: currently, Not(Angelic) = False and Not(Demonic) = True, which is quite the opposite of what we want.
-            # I suggest Not(Angelic) = Angelic and Not(Demonic) = Demonic. The same goes for And and Or.
             result = is_formula_true(executor, env, inputs, programs, operand)
-            if not isinstance(result, bool):
-                return map_to_bool(result)
-            return not result
+            if isinstance(result, bool):
+                return not result
+            return result
         case And(left, right):
-            result_left = map_to_bool(is_formula_true(executor, env, inputs, programs, left))
-            result_right = map_to_bool(is_formula_true(executor, env, inputs, programs, right))
-            return result_left and result_right
+            result_left = is_formula_true(executor, env, inputs, programs, left)
+            result_right = is_formula_true(executor, env, inputs, programs, right)
+            if isinstance(result_left, bool) and isinstance(result_right, bool):
+                return result_left and result_right
+            if isinstance(result_left, bool):
+                # right is not bool
+                if result_left is False:
+                    return False
+                return result_right
+            if isinstance(result_right, bool):
+                # left is not bool
+                if result_right is False:
+                    return False
+                return result_left
+            # right and left both not bool
+            return get_priority_from_list([result_left, result_right])
         case Or(left, right):
-            result_left = map_to_bool(is_formula_true(executor, env, inputs, programs, left))
-            result_right = map_to_bool(is_formula_true(executor, env, inputs, programs, right))
-            return result_left or result_right
+            result_left = is_formula_true(executor, env, inputs, programs, left)
+            result_right = is_formula_true(executor, env, inputs, programs, right)
+            if isinstance(result_left, bool) and isinstance(result_right, bool):
+                return result_left or result_right
+            if isinstance(result_left, bool):
+                # right is not bool
+                if result_left is True:
+                    return True
+                return result_right
+            if isinstance(result_right, bool):
+                # left is not bool
+                if result_right is True:
+                    return True
+                return result_left
+            # right and left both not bool
+            return get_priority_from_list([result_left, result_right])
         case ForAll(ele, domain, body):
+            special_list = []
             for inp in inputs[domain]:
                 new_env = env.copy()
                 if isinstance(ele, Var):
@@ -299,10 +334,15 @@ def is_formula_true(executor,
                 else:
                     for index, var in enumerate(ele):
                         new_env[var.name] = inp[index]
-                result = map_to_bool(is_formula_true(executor, new_env, inputs, programs, body))
+                result = is_formula_true(executor, new_env, inputs, programs, body)
+                if not isinstance(result, bool):
+                    special_list.append(result)
+                    continue
                 if result is False:
                     print(f"\n{formula} failed on {inp}", file=sys.stderr, flush=True)
                     return False
+            if len(special_list):
+                return get_priority_from_list(special_list)
             return True
         case _:
             raise ValueError(f"Unsupported formula type {formula}")
@@ -502,7 +542,7 @@ def check(executor, inputs: Dict[Side, Any], programs: Dict[Side, 'Program'], fo
     available_call_budget = CHECKER_CALL_BUDGET
 
     try:
-        result = is_formula_true(executor, {}, inputs, programs, formula)
+        result = map_to_bool(is_formula_true(executor, {}, inputs, programs, formula))
     except CallBudgetExceeded:
         print(f"[too many calls]", file=sys.stderr, flush=True)
         return False

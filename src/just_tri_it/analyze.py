@@ -5,7 +5,9 @@ from collections import defaultdict
 from statistics import mean
 from typing import Dict
 
+import math
 import matplotlib.pyplot as plt
+import numpy as np
 
 from just_tri_it.experiment import Database
 from just_tri_it.metrics import all_abstention_metrics
@@ -132,6 +134,99 @@ def prob_correct_under_agreement(db) -> Dict[str, float]:
     return probs
 
 
+def to_interval(x):
+    if not (0 <= x <= 1):
+        raise ValueError("should be between 0 and 1")
+
+    if x == 1.0:
+        return 9
+
+    left = math.floor(x * 10) / 10
+
+    return int(left / 0.1)
+
+
+def cal_class_size_info(db):
+    interval_data = {}
+    box_data = {}
+
+    for obj in db.objects:
+        # for each task
+        correct_samples = [p for p, correct, _ in obj["sample_correctness"] if correct]
+        all_length = len(obj["sample_correctness"])
+        seen_methods = set()
+        proportion = 0
+
+        for selector_data in obj["selectors"]:
+            if selector_data["outcome"] == "abstained":
+                continue
+            if selector_data["id"] == "Plurality":
+                class_data_dict = selector_data["raw_data"]["agreement_raw_data"]["classes"]
+                size_of_class = 0
+                for key, value in class_data_dict.items():
+                    for correct_sample in correct_samples:
+                        if correct_sample in value:
+                            size_of_class = len(value)
+                            break
+                proportion = size_of_class / all_length
+            method = selector_data["raw_data"]["agreement_raw_data"]["method"]
+            if method not in seen_methods:
+                seen_methods.add(method)
+                for (program, witnesses) in selector_data["raw_data"]["agreement"]:
+                    if program in correct_samples:
+                        if method not in interval_data:
+                            interval_data[method] = [0] * 10
+                            box_data[method] = []
+                        interval_data[method][to_interval(proportion)] += 1
+                        box_data[method].append(proportion)
+                        break
+
+    return interval_data, box_data
+
+
+def plot_distribution(data, output_file):
+    bins = [f"{i / 10:.1f}-{(i + 1) / 10:.1f}" for i in range(10)]
+    x = np.arange(len(bins))
+
+    n_methods = len(data)
+    total_width = 0.8
+    width = total_width / n_methods
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    for i, (method, values) in enumerate(data.items()):
+        offset = (i - n_methods / 2) * width + width / 2
+        ax.bar(x + offset, values, width, label=method)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(bins, rotation=45)
+
+    ax.set_xlabel("Proportion of Correct Programs")
+    ax.set_ylabel("Number of Correct Decision")
+    ax.set_title("Distribution")
+    ax.legend()
+
+    plt.tight_layout()
+    plt.savefig(output_file, dpi=300)
+    plt.close()
+
+
+def plot_box(data, output_file):
+    sorted_keys = sorted(data.keys())
+    sorted_values = [data[k] for k in sorted_keys]
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.boxplot(sorted_values, labels=sorted_keys, patch_artist=True)
+
+    ax.set_xlabel("Class Size of Correct Decision")
+    ax.set_ylabel("Values")
+    ax.set_title("Boxplot")
+
+    plt.tight_layout()
+    plt.savefig(output_file, dpi=300)
+    plt.close()
+
+
 def main():
     args = parse_args()
     data_dir = Path(args.data)
@@ -152,6 +247,10 @@ def main():
         plot_sorted_percentages(measure_to_methods[measure],
                                 measure,
                                 report_dir/f"{measure}.png")
+
+    interval_data, box_data = cal_class_size_info(db)
+    plot_distribution(interval_data, report_dir/"distribution.png")
+    plot_box(box_data, report_dir/"box.png")
 
     with (report_dir/"metrics.json").open("w", encoding="utf-8") as f:
         json.dump(measure_to_methods, f, indent=4)

@@ -13,5 +13,6 @@ lcb_1/
 dataset_test/
 .DS_Store
 data_dir*/
+report_dir*/
 datasets/lcb_random30_1.txt
 datasets/lcb_random30.txt
