@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from functools import partial
 from enum import Enum
 from typing import Union, Set, Dict, List, Callable, Any
+from copy import deepcopy
 
 from just_tri_it.executor import Success, Error
 from just_tri_it.utils import ExperimentFailure
@@ -222,9 +223,9 @@ def eval_app(executor, env, programs, func, args):
         has_A, has_D, has_U = has_special_value_adu(computed_args)
         if has_D:
             return Demonic()
-        if has_A:  # no U no D -> only A
+        if has_A:  # A, no D -> A
             return Angelic()
-        if has_U:  # no D
+        if has_U:  # U, no D, no A -> U
             return Undefined()
         execution_outcome = executor.run(programs[func.semantics], computed_args)
         # print("RESULT: " + str(execution_outcome), flush=True)
@@ -463,14 +464,15 @@ def _tolerate(origin):
     """
     this function only transforms Undefined to Angelic
     """
-    if isinstance(origin, list):
-        for index, item in enumerate(origin):
+    transformed = deepcopy(origin)
+    if isinstance(transformed, list):
+        for index, item in enumerate(transformed):
             if isinstance(item, Undefined):
-                origin[index] = Angelic()
+                transformed[index] = Angelic()
     else:
-        if isinstance(origin, Undefined):
-            origin = Angelic()
-    return origin
+        if isinstance(transformed, Undefined):
+            transformed = Angelic()
+    return transformed
 
 
 Tolerate = Func(_tolerate, "tolerate")
