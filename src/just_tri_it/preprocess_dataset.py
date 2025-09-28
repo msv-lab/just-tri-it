@@ -417,8 +417,7 @@ def lcb_convert(model: Model,
                         print("\nretrying...\n", file=sys.stderr, flush=True)
                     else:
                         print(e)
-#            save_dataset(tasks, output_file, compress=True)
-    save_dataset(tasks, output_file, compress=True)
+            save_dataset(tasks, output_file, compress=True)
 
 if __name__ == "__main__":
     main()

@@ -262,7 +262,8 @@ def is_formula_true(executor,
         case App(func, args):
             return eval_app(executor, env, programs, func, args)
         case Not(operand):
-            #FIXME: this is problematic. Not(angelic) should also be angelic. Angelic means that the formulas should overall be True, unless Demonic happends anywhere
+            #FIXME: currently, Not(Angelic) = False and Not(Demonic) = True, which is quite the opposite of what we want.
+            # I suggest Not(Angelic) = Angelic and Not(Demonic) = Demonic. The same goes for And and Or.
             result = is_formula_true(executor, env, inputs, programs, operand)
             if not isinstance(result, bool):
                 return map_to_bool(result)
@@ -481,6 +482,5 @@ def check(executor, inputs: Dict[Side, Any], programs: Dict[Side, 'Program'], fo
     # print("RIGHT:")
     # print(programs[Side.RIGHT].get_content())
 
-    #FIXME: I am not sure this is justified. I think we should only interpret angelic as true inside forall statements. Adding extra convertions "just in case" will just hide bugs.
     result = map_to_bool(is_formula_true(executor, {}, inputs, programs, formula))
     return result
