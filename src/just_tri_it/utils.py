@@ -270,7 +270,8 @@ def remove_duplicates(seq):
 def print_legend():
     l = """$ - LLM API call
 C - cached LLM call
-. - successful execution
-! - failed execution
+. - successful execution/passing test
+! - failed execution/failed test
+T - execution timeout
 c - cached execution"""
     print(l, file=sys.stderr, flush=True)

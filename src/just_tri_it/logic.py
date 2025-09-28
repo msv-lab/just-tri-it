@@ -12,6 +12,16 @@ from just_tri_it.executor import Success, Error
 from just_tri_it.utils import ExperimentFailure
 
 
+CHECKER_CALL_BUDGET = 10000
+
+available_call_budget = 0
+
+
+class CallBudgetExceeded(Exception):
+    "Raised when make too many program calls"
+    pass    
+
+
 class Side(Enum):
     LEFT = "left"
     RIGHT = "right"
@@ -215,6 +225,7 @@ def eval_all(executor, env, programs, terms):
 
 
 def eval_app(executor, env, programs, func, args):
+    global available_call_budget
     computed_args = eval_term(executor, env, programs, args)
     # print()
     # print("APPLY: " + str(func), flush=True)
@@ -227,7 +238,10 @@ def eval_app(executor, env, programs, func, args):
             return Angelic()
         if has_U:  # U, no D, no A -> U
             return Undefined()
+        if available_call_budget <= 0:
+            raise CallBudgetExceeded()
         execution_outcome = executor.run(programs[func.semantics], computed_args)
+        available_call_budget -= 1
         # print("RESULT: " + str(execution_outcome), flush=True)
         match execution_outcome:
             case Success(v):
@@ -479,10 +493,18 @@ Tolerate = Func(_tolerate, "tolerate")
 
 
 def check(executor, inputs: Dict[Side, Any], programs: Dict[Side, 'Program'], formula: Formula):
+    global available_call_budget
     # print("\nLEFT:")
     # print(programs[Side.LEFT].get_content())
     # print("RIGHT:")
     # print(programs[Side.RIGHT].get_content())
 
-    result = map_to_bool(is_formula_true(executor, {}, inputs, programs, formula))
+    available_call_budget = CHECKER_CALL_BUDGET
+
+    try:
+        result = is_formula_true(executor, {}, inputs, programs, formula)
+    except CallBudgetExceeded:
+        print(f"[too many calls]", file=sys.stderr, flush=True)
+        return False
+
     return result

@@ -240,7 +240,7 @@ if __name__ == '__main__':
                         return Error(report['error_type'], report['error_message'])
                 
             except subprocess.TimeoutExpired:
-                print("!", end="", file=sys.stderr, flush=True)
+                print("T", end="", file=sys.stderr, flush=True)
                 return Timeout()          
     
     def shutdown(self):
@@ -251,7 +251,9 @@ class PersistentWorkerExecutor(Executor):
 
     def _runner(self, task_queue: multiprocessing.Queue, return_queue: multiprocessing.Queue):
         sys.stdout = open(os.devnull, "w")
-        sys.stderr = open(os.devnull, "w")                
+        sys.stderr = open(os.devnull, "w")
+
+        callable_cache = {}
         
         while True:
             item = task_queue.get()
@@ -260,19 +262,27 @@ class PersistentWorkerExecutor(Executor):
             program_code, func_name, args = item
 
             try:
-                namespace = {}
-
-                exec(program_code, namespace)
-
-                if func_name in namespace and callable(namespace[func_name]):
-                    result = namespace[func_name](*args)
+                func = None
+                if program_code in callable_cache:
+                    func = callable_cache[program_code]
                 else:
-                    return_queue.put({ "status": "error",
-                                       "error_type": "panic",
-                                       "error_message": "no function found" })
+                    namespace = {}
 
-                return_queue.put({ "status": "success",
-                                   "value": result })
+                    exec(program_code, namespace)
+
+                    if func_name in namespace and callable(namespace[func_name]):
+                        func = namespace[func_name]
+                        callable_cache[program_code] = func
+                    else:
+                        return_queue.put({ "status": "error",
+                                           "error_type": "panic",
+                                           "error_message": "no function found" })
+
+                if func is not None:
+                    result = func(*args)
+
+                    return_queue.put({ "status": "success",
+                                       "value": result })
 
             except Exception as e:
                 return_queue.put({ "status": "error",
@@ -322,6 +332,7 @@ class PersistentWorkerExecutor(Executor):
 
         # Timeout
         self._restart_worker()
+        print("T", end="", file=sys.stderr, flush=True)
         return Timeout()
 
     @cache_content_addressable
