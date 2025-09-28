@@ -4,9 +4,9 @@ First, download LiveCodeBench (fast) data file `test6.jsonl`.
 
 Second, download GPT-4o cache: https://github.com/msv-lab/just-tri-it-cache-sergey/archive/livecodebench_part6_conversion_v2.zip
 
-Then, on the commit f0533f5d6ee48dde0bc97baccd0bb7a1e59d0b30, execute
+Then, on the commit 857478838718f5b5869f5ddea263cd86c5f54b6d, execute
 
-    uv run preprocess_dataset --test-venv test_venv/ --format LiveCodeBench --dataset test6.jsonl --output lcb_part6.json --cache-root livecodebench_part6_conversion_v2
+    uv run preprocess_dataset --format LiveCodeBench --dataset test6.jsonl --output lcb_part6.json --cache-root livecodebench_part6_conversion_v2
     
 The converter generates parsers and printers for all inputs and outputs and checks that their composition is an identity function.
 

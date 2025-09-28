@@ -12,7 +12,7 @@ from just_tri_it.executor import Success, Error
 from just_tri_it.utils import ExperimentFailure
 
 
-CHECKER_CALL_BUDGET = 10000
+CHECKER_CALL_BUDGET = 5000
 
 available_call_budget = 0
 
