@@ -122,9 +122,13 @@ def main():
         task_list_file = Path(args.task_list)
         with task_list_file.open("r", encoding="utf-8") as f:
             task_ids = [line.strip() for line in f]
-            dataset = [list(load_dataset(Path(args.dataset / (t_id + ".json"))))[0] for t_id in task_ids]
+            dataset = []
+            for t_id in task_ids:
+                file_path = Path(args.dataset) / (t_id + ".json")
+                dataset.append(list(load_dataset(file_path))[0])
     elif args.task:
-        dataset = [list(load_dataset(Path(args.dataset / (args.task + ".json"))))[0]]
+        file_path = Path(args.dataset) / (args.task + ".json")
+        dataset = [list(load_dataset(file_path))[0]]
     else:
         dataset = load_dataset(Path(args.dataset))
 
