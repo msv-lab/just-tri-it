@@ -114,7 +114,6 @@ def main():
     else:
         executor = PersistentWorkerExecutor()
 
-    dataset = load_dataset(Path(args.dataset))
     data_dir = Path(args.data)
     data_dir.mkdir(parents=True, exist_ok=True)
     database = Database.load(data_dir)
@@ -123,10 +122,11 @@ def main():
         task_list_file = Path(args.task_list)
         with task_list_file.open("r", encoding="utf-8") as f:
             task_ids = [line.strip() for line in f]
-            dataset = [t for t in dataset if t.id in task_ids]
-
-    if args.task:
-        dataset = [t for t in dataset if t.id == args.task]
+            dataset = [list(load_dataset(Path(args.dataset / (t_id + ".json"))))[0] for t_id in task_ids]
+    elif args.task:
+        dataset = [list(load_dataset(Path(args.dataset / (args.task + ".json"))))[0]]
+    else:
+        dataset = load_dataset(Path(args.dataset))
 
     execute_experiment(model, executor, dataset, database, data_dir)
 

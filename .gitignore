@@ -16,3 +16,5 @@ data_dir*/
 report_dir*/
 datasets/lcb_random30_1.txt
 datasets/lcb_random30.txt
+datasets/no_use/
+datasets/no_use/random_select.py
