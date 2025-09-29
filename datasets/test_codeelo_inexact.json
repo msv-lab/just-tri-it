@@ -1,0 +1,450 @@
+[
+  {
+    "id": "1_1971B_Different_String",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Different String\nProblem id: 1971B\nRating: 800\nTags: implementation, strings\n\nDescription:\nYou are given a string $s$ consisting of lowercase English letters.\n\nRearrange the characters of $s$ to form a new string $r$ that is not equal to $s$, or report that it's impossible.\n\nInput specification:\nThe first line contains a single integer $t$ ($1 \\leq t \\leq 1000$) — the number of test cases.\n\nThe only line of each test case contains a string $s$ of length at most $10$ consisting of lowercase English letters.\n\nOutput specification:\nFor each test case, if no such string $r$ exists as described in the statement, output \"NO\" (without quotes).\n\nOtherwise, output \"YES\" (without quotes). Then, output one line — the string $r$, consisting of letters of string $s$.\n\nYou can output \"YES\" and \"NO\" in any case (for example, strings \"yEs\", \"yes\", and \"Yes\" will be recognized as a positive response).\n\nIf multiple answers are possible, you can output any of them.\n\nNote:\nIn the first test case, another possible answer is $\\texttt{forcescode}$.\n\nIn the second test case, all rearrangements of $\\texttt{aaaaa}$ are equal to $\\texttt{aaaaa}$.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''8\ncodeforces\naaaaa\nxxxxy\nco\nd\nnutdealer\nmwistht\nhhhhhhhhhh''') == r'''YES\nforcodesec\nNO\nYES\nxxyxx\nYES\noc\nNO\nYES\nundertale\nYES\nthtsiwm\nNO'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "2_1974D_Ingenuity_2",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Ingenuity-2\nProblem id: 1974D\nRating: 1400\nTags: constructive algorithms, greedy, implementation\n\nDescription:\nLet's imagine the surface of Mars as an infinite coordinate plane. Initially, the rover Perseverance-2 and the helicopter Ingenuity-2 are located at the point with coordinates $(0, 0)$. A set of instructions $s$ consisting of $n$ instructions of the following types was specially developed for them:\n\n  * N: move one meter north (from point $(x, y)$ to $(x, y + 1)$);    * S: move one meter south (from point $(x, y)$ to $(x, y - 1)$);    * E: move one meter east (from point $(x, y)$ to $(x + 1, y)$);    * W: move one meter west (from point $(x, y)$ to $(x - 1, y)$). \n\nEach instruction must be executed either by the rover or by the helicopter. Moreover, each device must execute at least one instruction. Your task is to distribute the instructions in such a way that after executing all $n$ instructions, the helicopter and the rover end up at the same point, or determine that this is impossible.\n\nInput specification:\nThe first line of input contains $t$ ($1 \\leq t \\leq 10^4$) — the number of test cases.\n\nThe first line of each test case contains a single integer $n$ ($1 \\le n \\le 2 \\cdot 10^5$) — the number of instructions.\n\nThe second line of each test case contains a string $s$ of length $n$ consisting of the characters 'N', 'S', 'E', 'W' — the sequence of instructions.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10 ^ 5$.\n\nOutput specification:\nFor each test case, if the required distribution of instructions exists, output a string $p$ of length $n$ consisting of the characters 'R', 'H'. If the $i$-th operation should be executed by the rover, then $p_i=\\text{R}$, if the $i$-th operation should be executed by the helicopter, then $p_i=\\text{H}$. If there are multiple solutions, output any of them.\n\nOtherwise, output NO.\n\nNote:\nLet's consider the first example: the string $S = \\texttt{NENSNE}$. One of the possible solutions, shown in the figure below, is $p = \\texttt{RRHRRH}$, using which both the rover and the helicopter will end up one meter north and one meter east.\n\n![](CDN_BASE_URL/266d0d868dd4494e2ec9dbaf74403e88)\n\nFor WWW, the solution is impossible.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''10\n6\nNENSNE\n3\nWWW\n6\nNESSWS\n2\nSN\n2\nWE\n4\nSSNN\n4\nWESN\n2\nSS\n4\nEWNN\n4\nWEWE''') == r'''RRHRRH\nNO\nHRRHRH\nNO\nNO\nRHRH\nRRHH\nRH\nRRRH\nRRHH'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "3_1977B_Binary_Colouring",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Binary Colouring\nProblem id: 1977B\nRating: 1100\nTags: bitmasks, constructive algorithms, greedy, math\n\nDescription:\nYou are given a positive integer $x$. Find any array of integers $a_0, a_1, \\ldots, a_{n-1}$ for which the following holds:\n\n  * $1 \\le n \\le 32$,    * $a_i$ is $1$, $0$, or $-1$ for all $0 \\le i \\le n - 1$,    * $x = \\displaystyle{\\sum_{i=0}^{n - 1}{a_i \\cdot 2^i}}$,    * There does not exist an index $0 \\le i \\le n - 2$ such that both $a_{i} \\neq 0$ and $a_{i + 1} \\neq 0$. \n\nIt can be proven that under the constraints of the problem, a valid array always exists.\n\nInput specification:\nEach test contains multiple test cases. The first line of input contains a single integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of the test cases follows.\n\nThe only line of each test case contains a single positive integer $x$ ($1 \\le x < 2^{30}$).\n\nOutput specification:\nFor each test case, output two lines.\n\nOn the first line, output an integer $n$ ($1 \\le n \\le 32$) — the length of the array $a_0, a_1, \\ldots, a_{n-1}$.\n\nOn the second line, output the array $a_0, a_1, \\ldots, a_{n-1}$.\n\nIf there are multiple valid arrays, you can output any of them.\n\nNote:\nIn the first test case, one valid array is $[1]$, since $(1) \\cdot 2^0 = 1$.\n\nIn the second test case, one possible valid array is $[0,-1,0,0,1]$, since $(0) \\cdot 2^0 + (-1) \\cdot 2^1 + (0) \\cdot 2^2 + (0) \\cdot 2^3 + (1) \\cdot 2^4 = -2 + 16 = 14$.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''7\n1\n14\n24\n15\n27\n11\n19''') == r'''1\n1\n5\n0 -1 0 0 1\n6\n0 0 0 -1 0 1\n5\n-1 0 0 0 1\n6\n-1 0 -1 0 0 1\n5\n-1 0 -1 0 1\n5\n-1 0 1 0 1'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "4_1977D_XORificator",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: XORificator\nProblem id: 1977D\nRating: 2300\nTags: bitmasks, brute force, greedy, hashing\n\nDescription:\nYou are given a binary (consisting only of 0s and 1s) $n \\times m$ matrix. You are also given a XORificator, using which you can invert all the values in a chosen row (i.e. replace 0 with 1 and 1 with 0).\n\nA column in the matrix is considered special if it contains exactly one 1. Your task is to find the maximum number of columns that can be made special at the same time, and the set of rows the XORificator should be used on to achieve that.\n\nInput specification:\nEach test contains multiple test cases. The first line of input contains a single integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains two integers $n$ and $m$ ($1 \\leq n, m \\leq 3 \\cdot 10^5$, $n \\cdot m \\leq 3 \\cdot 10^5$).\n\nEach of the following $n$ lines of the test case contains a binary string of length $m$.\n\nIt is guaranteed that the sum of $n \\cdot m$ over all test cases does not exceed $3 \\cdot 10^5$.\n\nOutput specification:\nFor each test case, output two lines.\n\nIn the first line, output the maximum number of special columns that is possible to get simultaneously.\n\nIn the second line, output a binary string of length $n$, where the $i$-th character is 0, if you don't use the XORificator on the $i$-th row, and 1, if you use the XORificator on the $i$-th row.\n\nIf there are multiple valid XORificator configurations that achieve the optimal answer, you can output any of them.\n\nNote:\nIn the first test case, you can use the XORificator on the second row to make the columns $2$, $3$, and $4$ special.\n\nIn the second test case, the only column is already special, so you don't need to use the XORificator.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''5\n3 4\n1010\n0110\n0100\n1 1\n1\n1 1\n0\n2 5\n00101\n10110\n3 3\n101\n111\n000''') == r'''3\n010\n1\n0\n1\n1\n3\n00\n2\n010'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "5_1978C_Manhattan_Permutations",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Manhattan Permutations\nProblem id: 1978C\nRating: 1300\nTags: constructive algorithms, data structures, greedy, implementation'\n 'math\n\nDescription:\nLet's call the Manhattan value of a permutation$^{\\dagger}$ $p$ the value of the expression $|p_1 - 1| + |p_2 - 2| + \\ldots + |p_n - n|$.\n\nFor example, for the permutation $[1, 2, 3]$, the Manhattan value is $|1 - 1| + |2 - 2| + |3 - 3| = 0$, and for the permutation $[3, 1, 2]$, the Manhattan value is $|3 - 1| + |1 - 2| + |2 - 3| = 2 + 1 + 1 = 4$.\n\nYou are given integers $n$ and $k$. Find a permutation $p$ of length $n$ such that its Manhattan value is equal to $k$, or determine that no such permutation exists.\n\n$^{\\dagger}$A permutation of length $n$ is an array consisting of $n$ distinct integers from $1$ to $n$ in arbitrary order. For example, $[2,3,1,5,4]$ is a permutation, but $[1,2,2]$ is not a permutation ($2$ appears twice in the array), and $[1,3,4]$ is also not a permutation ($n=3$ but there is $4$ in the array).\n\nInput specification:\nEach test consists of multiple test cases. The first line contains a single integer $t$ ($1 \\leq t \\leq 10^{4}$) — the number of test cases. The description of the test cases follows.\n\nThe only line of each test case contains two integers $n$ and $k$ ($1 \\le n \\le 2 \\cdot 10^{5}, 0 \\le k \\le 10^{12}$) — the length of the permutation and the required Manhattan value.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^{5}$.\n\nOutput specification:\nFor each test case, if there is no suitable permutation, output \"No\". Otherwise, in the first line, output \"Yes\", and in the second line, output $n$ distinct integers $p_1, p_2, \\ldots, p_n$ ($1 \\le p_i \\le n$) — a suitable permutation.\n\nIf there are multiple solutions, output any of them.\n\nYou can output the answer in any case (for example, the strings \"yEs\", \"yes\", \"Yes\", and \"YES\" will be recognized as a positive answer).\n\nNote:\nIn the first test case, the permutation $[3, 1, 2]$ is suitable, its Manhattan value is $|3 - 1| + |1 - 2| + |2 - 3| = 2 + 1 + 1 = 4$.\n\nIn the second test case, it can be proven that there is no permutation of length $4$ with a Manhattan value of $5$.\n\nIn the third test case, the permutation $[1,2,3,4,5,6,7]$ is suitable, its Manhattan value is $|1-1|+|2-2|+|3-3|+|4-4|+|5-5|+|6-6|+|7-7|=0$.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''8\n3 4\n4 5\n7 0\n1 1000000000000\n8 14\n112 777\n5 12\n5 2''') == r'''Yes\n3 1 2\nNo\nYes\n1 2 3 4 5 6 7\nNo\nYes\n8 2 3 4 5 6 1 7\nNo\nYes\n5 4 3 1 2\nYes\n2 1 3 4 5'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "6_1979C_Earning_on_Bets",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Earning on Bets\nProblem id: 1979C\nRating: 1200\nTags: binary search, combinatorics, constructive algorithms, number theory\n\nDescription:\nYou have been offered to play a game. In this game, there are $n$ possible outcomes, and for each of them, you must bet a certain integer amount of coins. In the event that the $i$-th outcome turns out to be winning, you will receive back the amount of coins equal to your bet on that outcome, multiplied by $k_i$. Note that exactly one of the $n$ outcomes will be winning.\n\nYour task is to determine how to distribute the coins in such a way that you will come out ahead in the event of any winning outcome. More formally, the total amount of coins you bet on all outcomes must be strictly less than the number of coins received back for each possible winning outcome.\n\nInput specification:\nEach test consists of multiple test cases. The first line contains a single integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($1 \\le n \\le 50$) — the number of outcomes.\n\nThe second line of each test case contains $n$ integers $k_1,k_2,\\ldots,k_n$ ($2 \\le k_i \\le 20$) — the multiplier for the amount of coins if the $i$-th outcome turns out to be winning.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.\n\nOutput specification:\nFor each test case, output $-1$ if there is no way to distribute the coins as required. Otherwise, output $n$ integers $x_1, x_2,\\ldots, x_n$ ($1 \\le x_i \\le 10^{9}$) — your bets on the outcomes.\n\nIt can be shown that if a solution exists, there is always a solution that satisfies these constraints.\n\nIf there are multiple suitable solutions, output any of them.\n\nNote:\nIn the first test case, the coins can be distributed as follows: $27$ coins on the first outcome, $41$ coins on the second outcome, $12$ coins on the third outcome. Then the total amount of coins bet on all outcomes is $27 + 41 + 12 = 80$ coins. If the first outcome turns out to be winning, you will receive back $3 \\cdot 27 = 81$ coins, if the second outcome turns out to be winning, you will receive back $2 \\cdot 41 = 82$ coins, if the third outcome turns out to be winning, you will receive back $7 \\cdot 12 = 84$ coins. All these values are strictly greater than $80$.\n\nIn the second test case, one way is to bet one coin on each of the outcomes.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''6\n3\n3 2 7\n2\n3 3\n5\n5 5 5 5 5\n6\n7 9 3 17 9 13\n3\n6 3 2\n5\n9 4 6 8 3''') == r'''27 41 12 \n1 1 \n-1\n1989 1547 4641 819 1547 1071 \n-1\n8 18 12 9 24'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "7_1979D_Fixing_a_Binary_String",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Fixing a Binary String\nProblem id: 1979D\nRating: 1800\nTags: bitmasks, brute force, constructive algorithms, dp, greedy'\n 'hashing, strings\n\nDescription:\nYou are given a binary string $s$ of length $n$, consisting of zeros and ones. You can perform the following operation exactly once:\n\n  1. Choose an integer $p$ ($1 \\le p \\le n$).    2. Reverse the substring $s_1 s_2 \\ldots s_p$. After this step, the string $s_1 s_2 \\ldots s_n$ will become $s_p s_{p-1} \\ldots s_1 s_{p+1} s_{p+2} \\ldots s_n$.    3. Then, perform a cyclic shift of the string $s$ to the left $p$ times. After this step, the initial string $s_1s_2 \\ldots s_n$ will become $s_{p+1}s_{p+2} \\ldots s_n s_p s_{p-1} \\ldots s_1$. \n\nFor example, if you apply the operation to the string 110001100110 with $p=3$, after the second step, the string will become 011001100110, and after the third step, it will become 001100110011.\n\nA string $s$ is called $k$-proper if two conditions are met:\n\n  * $s_1=s_2=\\ldots=s_k$;    * $s_{i+k} \\neq s_i$ for any $i$ ($1 \\le i \\le n - k$). \n\nFor example, with $k=3$, the strings 000, 111000111, and 111000 are $k$-proper, while the strings 000000, 001100, and 1110000 are not.\n\nYou are given an integer $k$, which is a divisor of $n$. Find an integer $p$ ($1 \\le p \\le n$) such that after performing the operation, the string $s$ becomes $k$-proper, or determine that it is impossible. Note that if the string is initially $k$-proper, you still need to apply exactly one operation to it.\n\nInput specification:\nEach test consists of multiple test cases. The first line contains one integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains two integers $n$ and $k$ ($1 \\le k \\le n$, $2 \\le n \\le 10^5$) — the length of the string $s$ and the value of $k$. It is guaranteed that $k$ is a divisor of $n$.\n\nThe second line of each test case contains a binary string $s$ of length $n$, consisting of the characters 0 and 1.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.\n\nOutput specification:\nFor each test case, output a single integer — the value of $p$ to make the string $k$-proper, or $-1$ if it is impossible.\n\nIf there are multiple solutions, output any of them.\n\nNote:\nIn the first test case, if you apply the operation with $p=3$, after the second step of the operation, the string becomes 11100001, and after the third step, it becomes 00001111. This string is $4$-proper.\n\nIn the second test case, it can be shown that there is no operation after which the string becomes $2$-proper.\n\nIn the third test case, if you apply the operation with $p=7$, after the second step of the operation, the string becomes 100011100011, and after the third step, it becomes 000111000111. This string is $3$-proper.\n\nIn the fourth test case, after the operation with any $p$, the string becomes $5$-proper.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''7\n8 4\n11100001\n4 2\n1110\n12 3\n111000100011\n5 5\n00000\n6 1\n101001\n8 4\n01110001\n12 2\n110001100110''') == r'''3\n-1\n7\n5\n4\n-1\n3'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "8_1979E_Manhattan_Triangle",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Manhattan Triangle\nProblem id: 1979E\nRating: 2400\nTags: binary search, constructive algorithms, data structures, geometry'\n 'implementation, two pointers\n\nDescription:\nThe Manhattan distance between two points $(x_1, y_1)$ and $(x_2, y_2)$ is defined as: $$|x_1 - x_2| + |y_1 - y_2|.$$\n\nWe call a Manhattan triangle three points on the plane, the Manhattan distances between each pair of which are equal.\n\nYou are given a set of pairwise distinct points and an even integer $d$. Your task is to find any Manhattan triangle, composed of three distinct points from the given set, where the Manhattan distance between any pair of vertices is equal to $d$.\n\nInput specification:\nEach test consists of multiple test cases. The first line contains one integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains two integers $n$ and $d$ ($3 \\le n \\le 2 \\cdot 10^5$, $2 \\le d \\le 4 \\cdot 10^5$, $d$ is even) — the number of points and the required Manhattan distance between the vertices of the triangle.\n\nThe $(i + 1)$-th line of each test case contains two integers $x_i$ and $y_i$ ($-10^5 \\le x_i, y_i \\le 10^5$) — the coordinates of the $i$-th point. It is guaranteed that all points are pairwise distinct.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.\n\nOutput specification:\nFor each test case, output three distinct integers $i$, $j$, and $k$ ($1 \\le i,j,k \\le n$) — the indices of the points forming the Manhattan triangle. If there is no solution, output \"$0\\ 0\\ 0$\" (without quotes).\n\nIf there are multiple solutions, output any of them.\n\nNote:\nIn the first test case:\n\n![](CDN_BASE_URL/d4e05137288270ab95be887865fe7aa8) Points $A$, $B$, and $F$ form a Manhattan triangle, the Manhattan distance between each pair of vertices is $4$. Points $D$, $E$, and $F$ can also be the answer.\n\nIn the third test case:\n\n![](CDN_BASE_URL/ccf6b49ba1a3bb8d87cffad3da846f32) Points $A$, $C$, and $E$ form a Manhattan triangle, the Manhattan distance between each pair of vertices is $6$.\n\nIn the fourth test case, there are no two points with a Manhattan distance of $4$, and therefore there is no suitable Manhattan triangle.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''6\n6 4\n3 1\n0 0\n0 -2\n5 -3\n3 -5\n2 -2\n5 4\n0 0\n0 -2\n5 -3\n3 -5\n2 -2\n6 6\n3 1\n0 0\n0 -2\n5 -3\n3 -5\n2 -2\n4 4\n3 0\n0 3\n-3 0\n0 -3\n10 8\n2 1\n-5 -1\n-4 -1\n-5 -3\n0 1\n-2 5\n-4 4\n-4 2\n0 0\n-4 1\n4 400000\n100000 100000\n-100000 100000\n100000 -100000\n-100000 -100000''') == r'''2 6 1\n4 3 5\n3 5 1\n0 0 0\n6 1 3\n0 0 0'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "9_1981C_Turtle_and_an_Incomplete_Sequence",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Turtle and an Incomplete Sequence\nProblem id: 1981C\nRating: 1800\nTags: bitmasks, brute force, constructive algorithms, greedy'\n 'implementation, math\n\nDescription:\nTurtle was playing with a sequence $a_1, a_2, \\ldots, a_n$ consisting of positive integers. Unfortunately, some of the integers went missing while playing.\n\nNow the sequence becomes incomplete. There may exist an arbitrary number of indices $i$ such that $a_i$ becomes $-1$. Let the new sequence be $a'$.\n\nTurtle is sad. But Turtle remembers that for every integer $i$ from $1$ to $n - 1$, either $a_i = \\left\\lfloor\\frac{a_{i + 1}}{2}\\right\\rfloor$ or $a_{i + 1} = \\left\\lfloor\\frac{a_i}{2}\\right\\rfloor$ holds for the original sequence $a$.\n\nTurtle wants you to help him complete the sequence. But sometimes Turtle makes mistakes, so you need to tell him if you can't complete the sequence.\n\nFormally, you need to find another sequence $b_1, b_2, \\ldots, b_n$ consisting of positive integers such that:\n\n  * For every integer $i$ from $1$ to $n$, if $a'_i \\ne -1$, then $b_i = a'_i$.    * For every integer $i$ from $1$ to $n - 1$, either $b_i = \\left\\lfloor\\frac{b_{i + 1}}{2}\\right\\rfloor$ or $b_{i + 1} = \\left\\lfloor\\frac{b_i}{2}\\right\\rfloor$ holds.    * For every integer $i$ from $1$ to $n$, $1 \\le b_i \\le 10^9$. \n\nIf there is no sequence $b_1, b_2, \\ldots, b_n$ that satisfies all of the conditions above, you need to report $-1$.\n\nInput specification:\nEach test contains multiple test cases. The first line contains the number of test cases $t$ ($1 \\le t \\le 10^5$). The description of the test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($2 \\le n \\le 2 \\cdot 10^5$) — the length of the sequence.\n\nThe second line of each test case contains $n$ integers $a'_1, a'_2, \\ldots, a'_n$ ($a'_i = -1$ or $1 \\le a'_i \\le 10^8$) — the elements of the sequence $a'$.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.\n\nOutput specification:\nFor each test case, if there is no sequence $b_1, b_2, \\ldots, b_n$ that satisfies all of the conditions, output a single integer $-1$.\n\nOtherwise, output $n$ integers $b_1, b_2, \\ldots, b_n$ — the elements of the sequence $b_1, b_2, \\ldots, b_n$ you find. The sequence should satisfy that $1 \\le b_i \\le 10^9$ for every integer $i$ from $1$ to $n$. If there are multiple answers, print any of them.\n\nNote:\nIn the first test case, $[4, 2, 1, 2, 1, 2, 1, 3]$ can also be the answer, while $[4, 2, 5, 10, 5, 2, 1, 3]$ and $[4, 2, 1, 2, 1, 2, 1, 4]$ cannot.\n\nIn the second test case, $[1, 2, 5, 2]$ can also be the answer.\n\nFrom the fourth to the sixth test cases, it can be shown that there is no answer, so you should output $-1$.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''9\n8\n-1 -1 -1 2 -1 -1 1 -1\n4\n-1 -1 -1 -1\n6\n3 -1 -1 -1 9 -1\n4\n-1 5 -1 6\n4\n2 -1 -1 3\n4\n1 2 3 4\n2\n4 2\n5\n-1 3 -1 3 6\n13\n-1 -1 3 -1 -1 -1 -1 7 -1 -1 3 -1 -1''') == r'''4 9 4 2 4 2 1 2\n7 3 6 13\n3 1 2 4 9 18\n-1\n-1\n-1\n4 2\n6 3 1 3 6\n3 1 3 1 3 7 3 7 3 1 3 1 3'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "10_1981D_Turtle_and_Multiplication",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Turtle and Multiplication\nProblem id: 1981D\nRating: 2400\nTags: constructive algorithms, dfs and similar, graphs, number theory\n\nDescription:\nTurtle just learned how to multiply two integers in his math class, and he was very excited.\n\nThen Piggy gave him an integer $n$, and asked him to construct a sequence $a_1, a_2, \\ldots, a_n$ consisting of integers which satisfied the following conditions:\n\n  * For all $1 \\le i \\le n$, $1 \\le a_i \\le 3 \\cdot 10^5$.    * For all $1 \\le i < j \\le n - 1$, $a_i \\cdot a_{i + 1} \\ne a_j \\cdot a_{j + 1}$. \n\nOf all such sequences, Piggy asked Turtle to find the one with the minimum number of distinct elements.\n\nTurtle definitely could not solve the problem, so please help him!\n\nInput specification:\nEach test contains multiple test cases. The first line contains the number of test cases $t$ ($1 \\le t \\le 10^4$). The description of the test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($2 \\le n \\le 10^6$) — the length of the sequence $a$.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $10^6$.\n\nOutput specification:\nFor each test case, output $n$ integers $a_1, a_2, \\ldots, a_n$ — the elements of the sequence $a$.\n\nIf there are multiple answers, print any of them.\n\nNote:\nIn the third test case, $a = [3, 4, 2, 6]$ violates the second condition since $a_1 \\cdot a_2 = a_3 \\cdot a_4$. $a = [2, 3, 4, 4]$ satisfy the conditions but its number of distinct elements isn't minimum.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''3\n2\n3\n4''') == r'''114514 114514\n1 2 2\n3 3 4 4'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "11_1988C_Increasing_Sequence_with_Fixed_OR",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Increasing Sequence with Fixed OR\nProblem id: 1988C\nRating: 1300\nTags: bitmasks, constructive algorithms, greedy\n\nDescription:\nYou are given a positive integer $n$. Find the longest sequence of positive integers $a=[a_1,a_2,\\ldots,a_k]$ that satisfies the following conditions, and print the sequence:\n\n  * $a_i\\le n$ for all $1\\le i\\le k$.    * $a$ is strictly increasing. That is, $a_i>a_{i-1}$ for all $2\\le i\\le k$.    * $a_i\\,|\\,a_{i-1}=n$ for all $2\\le i\\le k$, where $|$ denotes the [bitwise OR operation](https://en.wikipedia.org/wiki/Bitwise_operation#OR).\n\nInput specification:\nEach test contains multiple test cases. The first line contains the number of test cases $t$ ($1 \\le t \\le 1000$). Description of the test cases follows.\n\nThe only line of each test case contains one integer $n$ ($1\\le n\\le 10^{18}$).\n\nIt's guaranteed that the sum of lengths of the longest valid sequences does not exceed $5\\cdot 10^5$.\n\nOutput specification:\nFor each testcase, print two lines. In the first line, print the length of your constructed sequence, $k$. In the second line, print $k$ positive integers, denoting the sequence. If there are multiple longest sequences, you can print any of them.\n\nNote:\n\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''4\n1\n3\n14\n23''') == r'''1\n1\n3\n1 2 3\n4\n4 10 12 14\n5\n7 18 21 22 23'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "12_1991B_AND_Reconstruction",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: AND Reconstruction\nProblem id: 1991B\nRating: 1100\nTags: bitmasks, constructive algorithms, greedy\n\nDescription:\nYou are given an array $b$ of $n - 1$ integers.\n\null array $a$ of $n$ integers is called good if $b_i = a_i \\, \\& \\, a_{i + 1}$ for $1 \\le i \\le n-1$, where $\\&$ denotes the [bitwise AND operator](https://en.wikipedia.org/wiki/Bitwise_operation#AND).\n\nConstruct a good array, or report that no good arrays exist.\n\nInput specification:\nEach test contains multiple test cases. The first line contains a single integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($2 \\le n \\le 10^5$) — the length of the array $a$.\n\nThe second line of each test case contains $n - 1$ integers $b_1, b_2, \\ldots, b_{n - 1}$ ($0 \\le b_i < 2^{30}$) — the elements of the array $b$.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $10^5$.\n\nOutput specification:\nFor each test case, output a single integer $-1$ if no good arrays exist.\n\nOtherwise, output $n$ space-separated integers $a_1, a_2, \\ldots, a_n$ ($0 \\le a_i < 2^{30}$) — the elements of a good array $a$.\n\nIf there are multiple solutions, you may output any of them.\n\nNote:\nIn the first test case, $b = [1]$. A possible good array is $a=[5, 3]$, because $a_1 \\, \\& \\, a_2 = 5 \\, \\& \\, 3 = 1 = b_1$.\n\nIn the second test case, $b = [2, 0]$. A possible good array is $a=[3, 2, 1]$, because $a_1 \\, \\& \\, a_2 = 3 \\, \\& \\, 2 = 2 = b_1$ and $a_2 \\, \\& \\, a_3 = 2 \\, \\& \\, 1 = 0 = b_2$.\n\nIn the third test case, $b = [1, 2, 3]$. It can be shown that no good arrays exist, so the output is $-1$.\n\nIn the fourth test case, $b = [3, 5, 4, 2]$. A possible good array is $a=[3, 7, 5, 6, 3]$.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''4\n2\n1\n3\n2 0\n4\n1 2 3\n5\n3 5 4 2''') == r'''5 3\n3 2 1\n-1\n3 7 5 6 3'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "13_1991C_Absolute_Zero",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Absolute Zero\nProblem id: 1991C\nRating: 1300\nTags: constructive algorithms, greedy, math\n\nDescription:\nYou are given an array $a$ of $n$ integers.\n\nIn one operation, you will perform the following two-step move:\n\n  1. Choose an integer $x$ ($0 \\le x \\le 10^{9}$).    2. Replace each $a_i$ with $|a_i - x|$, where $|v|$ denotes the [absolute value](https://en.wikipedia.org/wiki/Absolute_value) of $v$. \n\nFor example, by choosing $x = 8$, the array $[5, 7, 10]$ will be changed into $[|5-8|, |7-8|, |10-8|] = [3,1,2]$.\n\nConstruct a sequence of operations to make all elements of $a$ equal to $0$ in at most $40$ operations or determine that it is impossible. You do not need to minimize the number of operations.\n\nInput specification:\nEach test contains multiple test cases. The first line contains a single integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($1 \\le n \\le 2 \\cdot 10^5$) — the length of the array $a$.\n\nThe second line of each test case contains $n$ integers $a_1, a_2, \\ldots, a_n$ ($0 \\le a_i \\le 10^9$) — the elements of the array $a$.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.\n\nOutput specification:\nFor each test case, output a single integer $-1$ if it is impossible to make all array elements equal to $0$ in at most $40$ operations.\n\nOtherwise, output two lines. The first line of output should contain a single integer $k$ ($0 \\le k \\le 40$) — the number of operations. The second line of output should contain $k$ integers $x_1, x_2, \\ldots, x_k$ ($0 \\le x_i \\le 10^{9}$) — the sequence of operations, denoting that on the $i$-th operation, you chose $x=x_i$.\n\nIf there are multiple solutions, output any of them.\n\nYou do not need to minimize the number of operations.\n\nNote:\nIn the first test case, we can perform only one operation by choosing $x = 5$, changing the array from $[5]$ to $[0]$.\n\nIn the second test case, no operations are needed because all elements of the array are already $0$.\n\nIn the third test case, we can choose $x = 6$ to change the array from $[4, 6, 8]$ to $[2, 0, 2]$, then choose $x = 1$ to change it to $[1, 1, 1]$, and finally choose $x = 1$ again to change the array into $[0, 0, 0]$.\n\nIn the fourth test case, we can make all elements $0$ by following the operation sequence $(60, 40, 20, 10, 30, 25, 5)$.\n\nIn the fifth test case, it can be shown that it is impossible to make all elements $0$ in at most $40$ operations. Therefore, the output is $-1$.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''5\n1\n5\n2\n0 0\n3\n4 6 8\n4\n80 40 20 10\n5\n1 2 3 4 5''') == r'''1\n5\n0\n\n3\n6 1 1\n7\n60 40 20 10 30 25 5\n-1'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "14_1991D_Prime_XOR_Coloring",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Prime XOR Coloring\nProblem id: 1991D\nRating: 1900\nTags: bitmasks, constructive algorithms, graphs, greedy, math'\n 'number theory\n\nDescription:\nYou are given an undirected graph with $n$ vertices, numbered from $1$ to $n$. There is an edge between vertices $u$ and $v$ if and only if $u \\oplus v$ is a [prime number](https://en.wikipedia.org/wiki/Prime_number), where $\\oplus$ denotes the [bitwise XOR operator](https://en.wikipedia.org/wiki/Bitwise_operation#XOR).\n\nColor all vertices of the graph using the minimum number of colors, such that no two vertices directly connected by an edge have the same color.\n\nInput specification:\nEach test contains multiple test cases. The first line contains the number of test cases $t$ ($1 \\le t \\le 500$). The description of test cases follows.\n\nThe only line contains a single integer $n$ ($1 \\le n \\le 2 \\cdot 10^5$) — the number of vertices in the graph.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.\n\nOutput specification:\nFor each test case, output two lines.\n\nThe first line should contain a single integer $k$ ($1 \\le k \\le n$) — the minimum number of colors required.\n\nThe second line should contain $n$ integers $c_1, c_2, \\ldots, c_n$ ($1 \\le c_i \\le k$) — the color of each vertex.\n\nIf there are multiple solutions, output any of them.\n\nNote:\nIn the first test case, the minimum number of colors is $1$, because there is only one vertex.\n\nIn the second test case, the minimum number of colors is $2$, because there is an edge connecting $1$ and $2$ ($1 \\oplus 2 = 3$, which is a prime number).\n\nIn the third test case, the minimum number of colors is still $2$, because $2$ and $3$ can be colored the same since there is no edge between $2$ and $3$ ($2 \\oplus 3 = 1$, which is not a prime number).\n\nIn the fourth test case, it can be shown that the minimum number of colors is $3$.\n\nIn the fifth test case, it can be shown that the minimum number of colors is $3$.\n\nIn the sixth test case, it can be shown that the minimum number of colors is $4$.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''6\n1\n2\n3\n4\n5\n6''') == r'''1\n1\n2\n1 2\n2\n1 2 2\n3\n1 2 2 3\n3\n1 2 2 3 3\n4\n1 2 2 3 3 4'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "15_1991G_Grid_Reset",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Grid Reset\nProblem id: 1991G\nRating: 2700\nTags: constructive algorithms, greedy, implementation\n\nDescription:\nYou are given a grid consisting of $n$ rows and $m$ columns, where each cell is initially white. Additionally, you are given an integer $k$, where $1 \\le k \\le \\min(n, m)$.\n\nYou will process $q$ operations of two types:\n\n  * $\\mathtt{H}$ (horizontal operation) — You choose a $1 \\times k$ rectangle completely within the grid, where all cells in this rectangle are white. Then, all cells in this rectangle are changed to black.    * $\\mathtt{V}$ (vertical operation) — You choose a $k \\times 1$ rectangle completely within the grid, where all cells in this rectangle are white. Then, all cells in this rectangle are changed to black. \n\nAfter each operation, if any rows or columns become completely black, all cells in these rows and columns are simultaneously reset to white. Specifically, if all cells in the row and column a cell is contained in become black, all cells in both the row and column will be reset to white.\n\nChoose the rectangles in a way that you can perform all given operations, or determine that it is impossible.\n\nInput specification:\nEach test contains multiple test cases. The first line contains a single integer $t$ ($1 \\le t \\le 1000$) — the number of test cases. The description of test cases follows.\n\nThe first line of each test case contains four integers $n$, $m$, $k$, and $q$ ($1 \\le n, m \\le 100$, $1 \\le k \\le \\min(n, m)$, $1 \\le q \\le 1000$) — the number of rows and columns in the grid, the size of the operation rectangle, and the number of operations, respectively.\n\nThe second line of each test case contains a string $s$ of length $q$, consisting only of characters $\\mathtt{H}$ and $\\mathtt{V}$ — the sequence of operation types.\n\nIt is guaranteed that the sum of $q$ over all test cases does not exceed $1000$.\n\nOutput specification:\nFor each test case, output a single integer $-1$ if it is impossible to perform all the operations.\n\nOtherwise, output $q$ lines. Each line contains two integers $i$, $j$ ($1 \\le i \\le n$, $1 \\le j \\le m$) — the coordinates of the top-left cell of the operation rectangle.\n\nIf there are multiple solutions, output any of them.\n\nNote:\n![](CDN_BASE_URL/4e8cc9bc31ec8a5ba8c074c199a00b25) Illustration of example.\n\nThe first operation is horizontal. The operation rectangle starts at $(1,1)$ and is a $1 \\times 3$ rectangle. After the operation, cells $(1,1)$, $(1,2)$, and $(1,3)$ become black.\n\nThe second operation is vertical. The operation rectangle starts at $(2,1)$ and is a $3 \\times 1$ rectangle. After the operation, cells $(2,1)$, $(3,1)$, and $(4,1)$ become black. At this point, the first column becomes completely black, so all cells in the first column are reset to white.\n\nThe third operation is vertical. The operation rectangle starts at $(1,1)$ and is a $3 \\times 1$ rectangle. After the operation, cells $(1,1)$, $(2,1)$, and $(3,1)$ become black.\n\nThe fourth operation is horizontal. The operation rectangle starts at $(2,3)$ and is a $1 \\times 3$ rectangle. After the operation, cells $(2,3)$, $(2,4)$, and $(2,5)$ become black.\n\nThe fifth operation is horizontal. The operation rectangle starts at $(3,3)$ and is a $1 \\times 3$ rectangle. After the operation, cells $(3,3)$, $(3,4)$, and $(3,5)$ become black.\n\nThe sixth operation is vertical. The operation rectangle starts at $(2,2)$ and is a $3 \\times 1$ rectangle. After the operation, cells $(2,2)$, $(3,2)$, and $(4,2)$ become black. At this point, two rows and one column become completely black, so all cells in these rows and the column are reset to white.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''1\n4 5 3 6\nHVVHHV''') == r'''1 1\n2 1\n1 1\n2 3\n3 3\n2 2'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "16_1992C_Gorilla_and_Permutation",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Gorilla and Permutation\nProblem id: 1992C\nRating: 900\nTags: constructive algorithms, math\n\nDescription:\nGorilla and Noobish_Monk found three numbers $n$, $m$, and $k$ ($m < k$). They decided to construct a permutation$^{\\dagger}$ of length $n$.\n\nFor the permutation, Noobish_Monk came up with the following function: $g(i)$ is the sum of all the numbers in the permutation on a prefix of length $i$ that are not greater than $m$. Similarly, Gorilla came up with the function $f$, where $f(i)$ is the sum of all the numbers in the permutation on a prefix of length $i$ that are not less than $k$. A prefix of length $i$ is a subarray consisting of the first $i$ elements of the original array.\n\nFor example, if $n = 5$, $m = 2$, $k = 5$, and the permutation is $[5, 3, 4, 1, 2]$, then:\n\n  * $f(1) = 5$, because $5 \\ge 5$; $g(1) = 0$, because $5 > 2$;    * $f(2) = 5$, because $3 < 5$; $g(2) = 0$, because $3 > 2$;    * $f(3) = 5$, because $4 < 5$; $g(3) = 0$, because $4 > 2$;    * $f(4) = 5$, because $1 < 5$; $g(4) = 1$, because $1 \\le 2$;    * $f(5) = 5$, because $2 < 5$; $g(5) = 1 + 2 = 3$, because $2 \\le 2$. \n\nHelp them find a permutation for which the value of $\\left(\\sum_{i=1}^n f(i) - \\sum_{i=1}^n g(i)\\right)$ is maximized.\n\n$^{\\dagger}$A permutation of length $n$ is an array consisting of $n$ distinct integers from $1$ to $n$ in any order. For example, $[2,3,1,5,4]$ is a permutation, but $[1,2,2]$ is not a permutation (as $2$ appears twice in the array) and $[1,3,4]$ is also not a permutation (as $n=3$, but $4$ appears in the array).\n\nInput specification:\nThe first line contains a single integer $t$ ($1 \\le t \\le 10^4$)  — the number of test cases.\n\nThe only line of each case contains three integers $n$, $m$, $k$ ($2\\le n \\le 10^5$; $1 \\le m < k \\le n$) — the size of the permutation to be constructed and two integers.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.\n\nOutput specification:\nFor each test case, output the permutation  — a set of numbers that satisfies the conditions of the problem. If there are multiple solutions, output any of them.\n\nNote:\nIn the first example, $\\left(\\sum_{i=1}^n f(i) - \\sum_{i=1}^n g(i)\\right) = 5 \\cdot 5 - (0 \\cdot 3 + 1 + 3) = 25 - 4 = 21$\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''3\n5 2 5\n3 1 3\n10 3 8''') == r'''5 3 4 1 2\n3 2 1\n10 9 8 4 7 5 6 1 2 3'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "17_1994F_Stardew_Valley",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Stardew Valley\nProblem id: 1994F\nRating: 2500\nTags: constructive algorithms, dfs and similar, graphs, trees\n\nDescription:\nPelican Town represents $n$ houses connected by $m$ bidirectional roads. Some roads have NPCs standing on them. Farmer Buba needs to walk on each road with an NPC and talk to them.\n\nHelp the farmer find a route satisfying the following properties:\n\n  * The route starts at some house, follows the roads, and ends at the same house.    * The route does not follow any road more than once (in both directions together).    * The route follows each road with an NPC exactly once. \n\nNote that the route can follow roads without NPCs, and you do not need to minimize the length of the route.\n\nIt is guaranteed that you can reach any house from any other by walking on the roads with NPCs only.\n\nInput specification:\nEach test consists of multiple test cases. The first line contains an integer $t$ ($1 \\le t \\le 10^{4}$) — the number of test cases. Then follows the description of the test cases.\n\nThe first line of each test case contains two integers $n$ and $m$ ($2 \\leq n \\leq 5 \\cdot 10^5, 1 \\leq m \\leq 5 \\cdot 10^5$) — the number of houses and roads in Pelican Town respectively.\n\nIn each of the next $m$ lines, three integers $u$, $v$, and $c$ ($1 \\leq u, v \\leq n, c = 0/1$) are given — the ends of the road and whether an NPC is on this road. If $c = 1$, then the road has an NPC. If $c = 0$, then the road has no NPC.\n\nThe graph may contain multiple edges and loops, and if there are multiple edges with NPCs standing on them, the route must follow each of these roads.\n\nIt is guaranteed that you can reach any house from any other by walking on the roads with NPCs only.\n\nIt is guaranteed that the sum of $n$ and $m$ for all test cases does not exceed $5 \\cdot 10^5$.\n\nOutput specification:\nFor each test case, if there is no solution, then output \"No\" (without quotes).\n\nOtherwise, output \"Yes\" (without quotes), and then output $k$ — the number of roads in the route. In the next line, output $k + 1$ numbers — the houses of the route in the order of traversal. Note that the first house should match the last one, as the route is cyclic.\n\nIf there are multiple answers, you can print any of them.\n\nYou can output each letter in any case (for example, the strings \"yEs\", \"yes\", \"Yes\", and \"YES\" will be recognized as a positive answer).\n\nNote:\nNote that in the third test case, there are multiple edges $(5, 2)$. You must walk on two of them.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''3\n3 2\n1 2 1\n2 3 1\n3 3\n1 2 1\n1 3 1\n2 3 0\n5 9\n1 2 0\n5 2 1\n5 4 1\n5 1 1\n2 3 1\n5 2 1\n4 1 0\n4 3 0\n5 2 0''') == r'''NO\nYES\n3\n1 2 3 1 \nYES\n7\n1 2 5 4 3 2 5 1'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "18_1997A_Strong_Password",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Strong Password\nProblem id: 1997A\nRating: 800\nTags: brute force, implementation, strings\n\nDescription:\nMonocarp's current password on Codeforces is a string $s$, consisting of lowercase Latin letters. Monocarp thinks that his current password is too weak, so he wants to insert exactly one lowercase Latin letter into the password to make it stronger. Monocarp can choose any letter and insert it anywhere, even before the first character or after the last character.\n\nMonocarp thinks that the password's strength is proportional to the time it takes him to type the password. The time it takes to type the password is calculated as follows:\n\n  * the time to type the first character is $2$ seconds;    * for each character other than the first, the time it takes to type it is $1$ second if it is the same as the previous character, or $2$ seconds otherwise. \n\nFor example, the time it takes to type the password abacaba is $14$; the time it takes to type the password a is $2$; the time it takes to type the password aaabacc is $11$.\n\nYou have to help Monocarp — insert a lowercase Latin letter into his password so that the resulting password takes the maximum possible amount of time to type.\n\nInput specification:\nThe first line contains one integer $t$ ($1 \\le t \\le 1000$) — the number of test cases.\n\nEach test case consists of one line containing the string $s$ ($1 \\le |s| \\le 10$), consisting of lowercase Latin letters.\n\nOutput specification:\nFor each test case, print one line containing the new password — a string which can be obtained from $s$ by inserting one lowercase Latin letter. The string you print should have the maximum possible required time to type it. If there are multiple answers, print any of them.\n\nNote:\n\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''4\na\naaa\nabb\npassword''') == r'''wa\naada\nabcb\npastsword'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "19_1998A_Find_K_Distinct_Points_with_Fixed_Center",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Find K Distinct Points with Fixed Center\nProblem id: 1998A\nRating: 800\nTags: constructive algorithms, implementation, math\n\nDescription:\nI couldn't think of a good title for this problem, so I decided to learn from LeetCode.\n\n— Sun Tzu, The Art of War\n\nYou are given three integers $x_c$, $y_c$, and $k$ ($-100 \\leq x_c, y_c \\leq 100$, $1 \\leq k \\leq 1000$).\n\nYou need to find $k$ distinct points ($x_1, y_1$), ($x_2, y_2$), $\\ldots$, ($x_k, y_k$), having integer coordinates, on the 2D coordinate plane such that:\n\n  * their center$^{\\text{∗}}$ is ($x_c, y_c$)    * $-10^9 \\leq x_i, y_i \\leq 10^9$ for all $i$ from $1$ to $k$ \n\nIt can be proven that at least one set of $k$ distinct points always exists that satisfies these conditions.\n\n$^{\\text{∗}}$The center of $k$ points ($x_1, y_1$), ($x_2, y_2$), $\\ldots$, ($x_k, y_k$) is $\\left( \\frac{x_1 + x_2 + \\ldots + x_k}{k}, \\frac{y_1 + y_2 + \\ldots + y_k}{k} \\right)$.\n\nInput specification:\nThe first line contains $t$ ($1 \\leq t \\leq 100$) — the number of test cases.\n\nEach test case contains three integers $x_c$, $y_c$, and $k$ ($-100 \\leq x_c, y_c \\leq 100$, $1 \\leq k \\leq 1000$) — the coordinates of the center and the number of distinct points you must output.\n\nIt is guaranteed that the sum of $k$ over all test cases does not exceed $1000$.\n\nOutput specification:\nFor each test case, output $k$ lines, the $i$-th line containing two space separated integers, $x_i$ and $y_i$, ($-10^9 \\leq x_i, y_i \\leq 10^9$) — denoting the position of the $i$-th point.\n\nIf there are multiple answers, print any of them. It can be shown that a solution always exists under the given constraints.\n\nNote:\nFor the first test case, $\\left( \\frac{10}{1}, \\frac{10}{1} \\right) = (10, 10)$.\n\nFor the second test case, $\\left( \\frac{-1 + 5 - 4}{3}, \\frac{-1 -1 + 2}{3} \\right) = (0, 0)$.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''4\n10 10 1\n0 0 3\n-5 -8 8\n4 -5 3''') == r'''10 10\n-1 -1\n5 -1\n-4 2\n-6 -7\n-5 -7\n-4 -7\n-4 -8\n-4 -9\n-5 -9\n-6 -9\n-6 -8\n1000 -1000\n-996 995\n8 -10'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "20_1999D_Slavic_s_Exam",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Slavic's Exam\nProblem id: 1999D\nRating: 1100\nTags: greedy, implementation, strings\n\nDescription:\nSlavic has a very tough exam and needs your help in order to pass it. Here is the question he is struggling with:\n\nThere exists a string $s$, which consists of lowercase English letters and possibly zero or more \"?\".\n\nSlavic is asked to change each \"?\" to a lowercase English letter such that string $t$ becomes a subsequence (not necessarily continuous) of the string $s$.\n\nOutput any such string, or say that it is impossible in case no string that respects the conditions exists.\n\nInput specification:\nThe first line contains a single integer $T$ ($1 \\leq T \\leq 10^4$) — the number of test cases.\n\nThe first line of each test case contains a single string $s$ ($1 \\leq |s| \\leq 2 \\cdot 10^5$, and $s$ consists only of lowercase English letters and \"?\"-s)  – the original string you have.\n\nThe second line of each test case contains a single string $t$ ($1 \\leq |t| \\leq |s|$, and $t$ consists only of lowercase English letters)  – the string that should be a subsequence of string $s$.\n\nThe sum of $|s|$ over all test cases doesn't exceed $2 \\cdot 10^5$, where $|x|$ denotes the length of the string $x$.\n\nOutput specification:\nFor each test case, if no such string exists as described in the statement, output \"NO\" (without quotes).\n\nOtherwise, output \"YES\" (without quotes). Then, output one line — the string that respects all conditions.\n\nYou can output \"YES\" and \"NO\" in any case (for example, strings \"yEs\", \"yes\", and \"Yes\" will be recognized as a positive response).\n\nIf multiple answers are possible, you can output any of them.\n\nNote:\n\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''5\n?????\nxbx\nab??e\nabcde\nayy?x\na\nab??e\ndac\npaiu\nmom''') == r'''YES\nxabax\nYES\nabcde\nYES\nayyyx\nNO\nNO'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "21_2001B_Generate_Permutation",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Generate Permutation\nProblem id: 2001B\nRating: 800\nTags: constructive algorithms\n\nDescription:\nThere is an integer sequence $a$ of length $n$, where each element is initially $-1$.\n\nMisuki has two typewriters where the first one writes letters from left to right, with a pointer initially pointing to $1$, and another writes letters from right to left with a pointer initially pointing to $n$.\n\nMisuki would choose one of the typewriters and use it to perform the following operations until $a$ becomes a permutation of $[1, 2, \\ldots, n]$\n\n  * write number: write the minimum positive integer that isn't present in the array $a$ to the element $a_i$, $i$ is the position where the pointer points at. Such operation can be performed only when $a_i = -1$.    * carriage return: return the pointer to its initial position (i.e. $1$ for the first typewriter, $n$ for the second)    * move pointer: move the pointer to the next position, let $i$ be the position the pointer points at before this operation, if Misuki is using the first typewriter, $i := i + 1$ would happen, and $i := i - 1$ otherwise. Such operation can be performed only if after the operation, $1 \\le i \\le n$ holds. \n\nYour task is to construct any permutation $p$ of length $n$, such that the minimum number of carriage return operations needed to make $a = p$ is the same no matter which typewriter Misuki is using.\n\nInput specification:\nEach test contains multiple test cases. The first line of input contains a single integer $t$ ($1 \\le t \\le 500$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($1 \\le n \\le 2 \\cdot 10^5$) — the length of the permutation.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.\n\nOutput specification:\nFor each test case, output a line of $n$ integers, representing the permutation $p$ of length $n$ such that the minimum number of carriage return operations needed to make $a = p$ is the same no matter which typewriter Misuki is using, or $-1$ if it is impossible to do so.\n\nIf there are multiple valid permutations, you can output any of them.\n\nNote:\nIn the first testcase, it's possible to make $a = p = [1]$ using $0$ carriage return operations.\n\nIn the second testcase, it is possible to make $a = p = [1, 2]$ with the minimal number of carriage returns as follows:\n\nIf Misuki is using the first typewriter:\n\n  * Write number: write $1$ to $a_1$, $a$ becomes $[1, -1]$    * Move pointer: move the pointer to the next position. (i.e. $2$)    * Write number: write $2$ to $a_2$, $a$ becomes $[1, 2]$ \n\nIf Misuki is using the second typewriter:\n\n  * Move pointer: move the pointer to the next position. (i.e. $1$)    * Write number: write $1$ to $a_1$, $a$ becomes $[1, -1]$    * Carriage return: return the pointer to $2$.    * Write number: write $2$ to $a_2$, $a$ becomes $[1, 2]$ \n\nIt can be proven that the minimum number of carriage returns needed to transform $a$ into $p$ when using the first typewriter is $0$ and it is $1$ when using the second one, so this permutation is not valid.\n\nSimilarly, $p = [2, 1]$ is also not valid, so there is no solution for $n = 2$.\n\nIn the third testcase, it is possibile to make $a = p = [3, 1, 2]$ with $1$ carriage return with both the first and the second typewriter. It can be proven that, for both typewriters, it is impossible to write $p$ with $0$ carriage returns.\n\nWith the first typewriter it is possible to:\n\n  * Move pointer: move the pointer to the next position. (i.e. $2$)    * Write number: write $1$ to $a_2$, $a$ becomes $[-1, 1, -1]$    * Move pointer: move the pointer to the next position. (i.e. $3$)    * Write number: write $2$ to $a_3$, $a$ becomes $[-1, 1, 2]$    * Carriage return: return the pointer to $1$.    * Write number: write $3$ to $a_1$, $a$ becomes $[3,1,2]$ \n\nWith the second typewriter it is possible to:\n\n  * Move pointer: move the pointer to the next position. (i.e. $2$)    * Write number: write $1$ to $a_2$, $a$ becomes $[-1, 1, -1]$    * Carriage return: return the pointer to $3$.    * Write number: write $2$ to $a_3$, $a$ becomes $[-1, 1, 2]$    * Move pointer: move the pointer to the next position. (i.e. $2$)    * Move pointer: move the pointer to the next position. (i.e. $1$)    * Write number: write $3$ to $a_1$, $a$ becomes $[3, 1, 2]$\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''3\n1\n2\n3''') == r'''1\n-1\n3 1 2'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "22_2003C_Turtle_and_Good_Pairs",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Turtle and Good Pairs\nProblem id: 2003C\nRating: 1200\nTags: constructive algorithms, greedy, sortings, strings\n\nDescription:\nTurtle gives you a string $s$, consisting of lowercase Latin letters.\n\nTurtle considers a pair of integers $(i, j)$ ($1 \\le i < j \\le n$) to be a pleasant pair if and only if there exists an integer $k$ such that $i \\le k < j$ and both of the following two conditions hold:\n\n  * $s_k \\ne s_{k + 1}$;    * $s_k \\ne s_i$ or $s_{k + 1} \\ne s_j$. \n\nBesides, Turtle considers a pair of integers $(i, j)$ ($1 \\le i < j \\le n$) to be a good pair if and only if $s_i = s_j$ or $(i, j)$ is a pleasant pair.\n\nTurtle wants to reorder the string $s$ so that the number of good pairs is maximized. Please help him!\n\nInput specification:\nEach test contains multiple test cases. The first line contains the number of test cases $t$ ($1 \\le t \\le 10^4$). The description of the test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($2 \\le n \\le 2 \\cdot 10^5$) — the length of the string.\n\nThe second line of each test case contains a string $s$ of length $n$, consisting of lowercase Latin letters.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.\n\nOutput specification:\nFor each test case, output the string $s$ after reordering so that the number of good pairs is maximized. If there are multiple answers, print any of them.\n\nNote:\nIn the first test case, $(1, 3)$ is a good pair in the reordered string. It can be seen that we can't reorder the string so that the number of good pairs is greater than $1$. bac and cab can also be the answer.\n\nIn the second test case, $(1, 2)$, $(1, 4)$, $(1, 5)$, $(2, 4)$, $(2, 5)$, $(3, 5)$ are good pairs in the reordered string. efddd can also be the answer.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''5\n3\nabc\n5\nedddf\n6\nturtle\n8\npppppppp\n10\ncodeforces''') == r'''acb\nddedf\nurtlet\npppppppp\ncodeforces'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "23_2023A_Concatenation_of_Arrays",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Concatenation of Arrays\nProblem id: 2023A\nRating: 1300\nTags: constructive algorithms, greedy, math, sortings\n\nDescription:\nYou are given $n$ arrays $a_1$, $\\ldots$, $a_n$. The length of each array is two. Thus, $a_i = [a_{i, 1}, a_{i, 2}]$. You need to concatenate the arrays into a single array of length $2n$ such that the number of inversions$^{\\dagger}$ in the resulting array is minimized. Note that you do not need to count the actual number of inversions.\n\nMore formally, you need to choose a permutation$^{\\ddagger}$ $p$ of length $n$, so that the array $b = [a_{p_1,1}, a_{p_1,2}, a_{p_2, 1}, a_{p_2, 2}, \\ldots, a_{p_n,1}, a_{p_n,2}]$ contains as few inversions as possible.\n\n$^{\\dagger}$The number of inversions in an array $c$ is the number of pairs of indices $i$ and $j$ such that $i < j$ and $c_i > c_j$.\n\n$^{\\ddagger}$A permutation of length $n$ is an array consisting of $n$ distinct integers from $1$ to $n$ in arbitrary order. For example, $[2,3,1,5,4]$ is a permutation, but $[1,2,2]$ is not a permutation ($2$ appears twice in the array), and $[1,3,4]$ is also not a permutation ($n=3$ but there is $4$ in the array).\n\nInput specification:\nEach test consists of multiple test cases. The first line contains a single integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($1 \\le n \\le 10^5$) — the number of arrays.\n\nEach of the following $n$ lines contains two integers $a_{i,1}$ and $a_{i,2}$ ($1 \\le a_{i,j} \\le 10^9$) — the elements of the $i$-th array.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $10^5$.\n\nOutput specification:\nFor each test case, output $2n$ integers — the elements of the array you obtained. If there are multiple solutions, output any of them.\n\nNote:\nIn the first test case, we concatenated the arrays in the order $2, 1$. Let's consider the inversions in the resulting array $b = [2, 3, 1, 4]$:\n\n  * $i = 1$, $j = 3$, since $b_1 = 2 > 1 = b_3$;   * $i = 2$, $j = 3$, since $b_2 = 3 > 1 = b_3$. \n\nThus, the number of inversions is $2$. It can be proven that this is the minimum possible number of inversions.\n\nIn the second test case, we concatenated the arrays in the order $3, 1, 2$. Let's consider the inversions in the resulting array $b = [2, 1, 3, 2, 4, 3]$:\n\n  * $i = 1$, $j = 2$, since $b_1 = 2 > 1 = b_2$;   * $i = 3$, $j = 4$, since $b_3 = 3 > 2 = b_4$;   * $i = 5$, $j = 6$, since $b_5 = 4 > 3 = b_6$. \n\nThus, the number of inversions is $3$. It can be proven that this is the minimum possible number of inversions.\n\nIn the third test case, we concatenated the arrays in the order $4, 2, 1, 5, 3$.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''4\n2\n1 4\n2 3\n3\n3 2\n4 3\n2 1\n5\n5 10\n2 3\n9 6\n4 1\n8 7\n1\n10 20''') == r'''2 3 1 4\n2 1 3 2 4 3\n4 1 2 3 5 10 8 7 9 6\n10 20'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "24_2024C_Concatenation_of_Arrays",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Concatenation of Arrays\nProblem id: 2024C\nRating: 1300\nTags: constructive algorithms, greedy, sortings\n\nDescription:\nYou are given $n$ arrays $a_1$, $\\ldots$, $a_n$. The length of each array is two. Thus, $a_i = [a_{i, 1}, a_{i, 2}]$. You need to concatenate the arrays into a single array of length $2n$ such that the number of inversions$^{\\dagger}$ in the resulting array is minimized. Note that you do not need to count the actual number of inversions.\n\nMore formally, you need to choose a permutation$^{\\ddagger}$ $p$ of length $n$, so that the array $b = [a_{p_1,1}, a_{p_1,2}, a_{p_2, 1}, a_{p_2, 2}, \\ldots, a_{p_n,1}, a_{p_n,2}]$ contains as few inversions as possible.\n\n$^{\\dagger}$The number of inversions in an array $c$ is the number of pairs of indices $i$ and $j$ such that $i < j$ and $c_i > c_j$.\n\n$^{\\ddagger}$A permutation of length $n$ is an array consisting of $n$ distinct integers from $1$ to $n$ in arbitrary order. For example, $[2,3,1,5,4]$ is a permutation, but $[1,2,2]$ is not a permutation ($2$ appears twice in the array), and $[1,3,4]$ is also not a permutation ($n=3$ but there is $4$ in the array).\n\nInput specification:\nEach test consists of multiple test cases. The first line contains a single integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($1 \\le n \\le 10^5$) — the number of arrays.\n\nEach of the following $n$ lines contains two integers $a_{i,1}$ and $a_{i,2}$ ($1 \\le a_{i,j} \\le 10^9$) — the elements of the $i$-th array.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $10^5$.\n\nOutput specification:\nFor each test case, output $2n$ integers — the elements of the array you obtained. If there are multiple solutions, output any of them.\n\nNote:\nIn the first test case, we concatenated the arrays in the order $2, 1$. Let's consider the inversions in the resulting array $b = [2, 3, 1, 4]$:\n\n  * $i = 1$, $j = 3$, since $b_1 = 2 > 1 = b_3$;   * $i = 2$, $j = 3$, since $b_2 = 3 > 1 = b_3$. \n\nThus, the number of inversions is $2$. It can be proven that this is the minimum possible number of inversions.\n\nIn the second test case, we concatenated the arrays in the order $3, 1, 2$. Let's consider the inversions in the resulting array $b = [2, 1, 3, 2, 4, 3]$:\n\n  * $i = 1$, $j = 2$, since $b_1 = 2 > 1 = b_2$;   * $i = 3$, $j = 4$, since $b_3 = 3 > 2 = b_4$;   * $i = 5$, $j = 6$, since $b_5 = 4 > 3 = b_6$. \n\nThus, the number of inversions is $3$. It can be proven that this is the minimum possible number of inversions.\n\nIn the third test case, we concatenated the arrays in the order $4, 2, 1, 5, 3$.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''4\n2\n1 4\n2 3\n3\n3 2\n4 3\n2 1\n5\n5 10\n2 3\n9 6\n4 1\n8 7\n1\n10 20''') == r'''2 3 1 4\n2 1 3 2 4 3\n4 1 2 3 5 10 8 7 9 6\n10 20'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "25_2025F_Choose_Your_Queries",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Choose Your Queries\nProblem id: 2025F\nRating: 2700\nTags: constructive algorithms, dfs and similar, dp, graphs, greedy'\n 'trees\n\nDescription:\nYou are given an array $a$, consisting of $n$ integers (numbered from $1$ to $n$). Initially, they are all zeroes.\n\nYou have to process $q$ queries. The $i$-th query consists of two different integers $x_i$ and $y_i$. During the $i$-th query, you have to choose an integer $p$ (which is either $x_i$ or $y_i$) and an integer $d$ (which is either $1$ or $-1$), and assign $a_p = a_p + d$.\n\nAfter each query, every element of $a$ should be a non-negative integer.\n\nProcess all queries in such a way that the sum of all elements of $a$ after the last query is the minimum possible.\n\nInput specification:\nThe first line contains two integers $n$ and $q$ ($2 \\le n \\le 3 \\cdot 10^5$; $1 \\le q \\le 3 \\cdot 10^5$) — the number of elements in $a$ and the number of queries, respectively.\n\nThen $q$ lines follow. The $i$-th of these lines contains two integers $x_i$ and $y_i$ ($1 \\le x_i, y_i \\le n$; $x_i \\ne y_i$) — the description of the $i$-th query.\n\nOutput specification:\nFor each query, print a line containing two characters:\n\n  * the first character should be x if you choose $p=x_i$, or y if you choose $p=y_i$;    * the second character should be + if you choose $d=1$, or - if you choose $d=-1$. \n\nIf there are multiple answers, print any of them.\n\nNote:\n\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''3 4\n1 2\n3 2\n3 1\n1 2''') == r'''y+\nx+\nx-\ny-'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "26_2026A_Perpendicular_Segments",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Perpendicular Segments\nProblem id: 2026A\nRating: 900\nTags: constructive algorithms, geometry, greedy, math\n\nDescription:\nYou are given a coordinate plane and three integers $X$, $Y$, and $K$. Find two line segments $AB$ and $CD$ such that\n\n  1. the coordinates of points $A$, $B$, $C$, and $D$ are integers;    2. $0 \\le A_x, B_x, C_x, D_x \\le X$ and $0 \\le A_y, B_y, C_y, D_y \\le Y$;    3. the length of segment $AB$ is at least $K$;    4. the length of segment $CD$ is at least $K$;    5. segments $AB$ and $CD$ are perpendicular: if you draw lines that contain $AB$ and $CD$, they will cross at a right angle. \n\nNote that it's not necessary for segments to intersect. Segments are perpendicular as long as the lines they induce are perpendicular.\n\nInput specification:\nThe first line contains a single integer $t$ ($1 \\le t \\le 5000$) — the number of test cases. Next, $t$ cases follow.\n\nThe first and only line of each test case contains three integers $X$, $Y$, and $K$ ($1 \\le X, Y \\le 1000$; $1 \\le K \\le 1414$).\n\nAdditional constraint on the input: the values of $X$, $Y$, and $K$ are chosen in such a way that the answer exists.\n\nOutput specification:\nFor each test case, print two lines. The first line should contain $4$ integers $A_x$, $A_y$, $B_x$, and $B_y$ — the coordinates of the first segment.\n\nThe second line should also contain $4$ integers $C_x$, $C_y$, $D_x$, and $D_y$ — the coordinates of the second segment.\n\nIf there are multiple answers, print any of them.\n\nNote:\nThe answer for the first test case is shown below:\n\n![](CDN_BASE_URL/fde49f7448aea636de500404fb8804d1) The answer for the second test case:  ![](CDN_BASE_URL/218ed75e7877cea15a02e0b20b635ea4) The answer for the third test case:  ![](CDN_BASE_URL/a78511ad84067550d68b03ae1de99762) The answer for the fourth test case: ![](CDN_BASE_URL/e06aa850f6b8b3b4ee28ceaee5c5b478)\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''4\n1 1 1\n3 4 1\n4 3 3\n3 4 4''') == r'''0 0 1 0\n0 0 0 1\n2 4 2 2\n0 1 1 1\n0 0 1 3\n1 2 4 1\n0 1 3 4\n0 3 3 0'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "27_2028D_Alice_s_Adventures_in_Cards",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Alice's Adventures in Cards\nProblem id: 2028D\nRating: 2000\nTags: constructive algorithms, divide and conquer, dp, graphs, greedy'\n 'implementation, sortings, two pointers\n\nDescription:\nAlice is playing cards with the Queen of Hearts, King of Hearts, and Jack of Hearts. There are $n$ different types of cards in their card game. Alice currently has a card of type $1$ and needs a card of type $n$ to escape Wonderland. The other players have one of each kind of card.\n\nIn this card game, Alice can trade cards with the three other players. Each player has different preferences for the $n$ types of cards, which can be described by permutations$^{\\text{∗}}$ $q$, $k$, and $j$ for the Queen, King, and Jack, respectively.\n\nA player values card $a$ more than card $b$ if for their permutation $p$, $p_a > p_b$. Then, this player is willing to trade card $b$ to Alice in exchange for card $a$. Alice's preferences are straightforward: she values card $a$ more than card $b$ if $a > b$, and she will also only trade according to these preferences.\n\nDetermine if Alice can trade up from card $1$ to card $n$ subject to these preferences, and if it is possible, give a possible set of trades to do it.\n\n$^{\\text{∗}}$A permutation of length $n$ is an array consisting of $n$ distinct integers from $1$ to $n$ in arbitrary order. For example, $[2,3,1,5,4]$ is a permutation, but $[1,2,2]$ is not a permutation ($2$ appears twice in the array), and $[1,3,4]$ is also not a permutation ($n=3$ but there is $4$ in the array).\n\nInput specification:\nEach test contains multiple test cases. The first line contains the number of test cases $t$ ($1 \\le t \\le 10^4$). The description of the test cases follows.\n\nThe first line of each test case contains an integer $n$ ($2\\le n\\le 2\\cdot 10^5$) — the number of card types.\n\nThe next three lines contain the preferences of the Queen, King, and Jack respectively. Each of these lines contains $n$ integers $p_1, p_2, \\ldots, p_n$ ($1\\le p_i\\le n$) — a permutation corresponding to the player's preferences.\n\nThe sum of $n$ over all test cases does not exceed $2\\cdot 10^5$.\n\nOutput specification:\nFor each test case, on the first line output a single string \"YES\" or \"NO\" (without the quotes) denoting whether Alice can trade up to card $n$.\n\nIf the first line was \"YES\", then on the next line output $k$ — the number of trades Alice will make. On the next $k$ lines output space separated a character $c\\in \\\\{\\texttt{q}, \\texttt{k}, \\texttt{j}\\\\}$ and integer $x$, denoting that Alice trades with player $c$ to get card $x$. It must be the case that on the $k$'th line, $x = n$. If there are multiple solutions, print any of them.\n\nYou can output this answer in any case (upper or lower). For example, the strings \"yEs\", \"yes\", \"Yes\", and \"YES\" will be recognized as positive responses. The same goes for the character $c$ denoting the player in the trade ($\\texttt{Q}, \\texttt{K}, \\texttt{J}$ will all be accepted alongside their lowercase variants).\n\nNote:\nIn the first testcase, Alice can trade with the King to get card $2$. She can then trade with the Queen to get card $3$.\n\nIn the second testcase, even though Alice can trade with the Queen to get card $3$, with the King to get card $2$, and then with the Jack to get card $4$, this is not a valid solution since it doesn't respect Alice's preferences. We can show that there is no way for Alice to get to card $4$.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''2\n3\n1 3 2\n2 1 3\n1 2 3\n4\n2 3 1 4\n1 2 3 4\n1 4 2 3''') == r'''YES\n2\nk 2\nq 3\nNO'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "28_2029D_Cool_Graph",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Cool Graph\nProblem id: 2029D\nRating: 1900\nTags: constructive algorithms, data structures, dfs and similar, graphs'\n 'trees\n\nDescription:\nYou are given an undirected graph with $n$ vertices and $m$ edges.\n\nYou can perform the following operation at most $2\\cdot \\max(n,m)$ times:\n\n  * Choose three distinct vertices $a$, $b$, and $c$, then for each of the edges $(a,b)$, $(b,c)$, and $(c,a)$, do the following:      * If the edge does not exist, add it. On the contrary, if it exists, remove it. \n\nA graph is called cool if and only if one of the following holds:\n\n  * The graph has no edges, or    * The graph is a tree. \n\nYou have to make the graph cool by performing the above operations. Note that you can use at most $2\\cdot \\max(n,m)$ operations.\n\nIt can be shown that there always exists at least one solution.\n\nInput specification:\nEach test contains multiple test cases. The first line of input contains a single integer $t$ ($1\\le t\\le 10^4$) — the number of test cases. The description of test cases follows.\n\nThe first line of each test case contains two integers $n$ and $m$ ($3\\le n\\le 10^5$, $0\\le m\\le \\min\\left(\\frac{n(n-1)}{2},2\\cdot 10^5\\right)$) — the number of vertices and the number of edges.\n\nThen $m$ lines follow, the $i$-th line contains two integers $u_i$ and $v_i$ ($1\\le u_i,v_i\\le n$) — the two nodes that the $i$-th edge connects.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $10^5$, and the sum of $m$ over all test cases does not exceed $2\\cdot 10^5$.\n\nIt is guaranteed that there are no self-loops or multiple-edges in the given graph.\n\nOutput specification:\nFor each test case, in the first line output an integer $k$ ($0\\le k\\le 2\\cdot \\max(n, m)$) — the number of operations.\n\nThen output $k$ lines, the $i$-th line containing three distinct integers $a$, $b$, and $c$ ($1\\le a,b,c\\le n$) — the three integers you choose in the $i$-th operation.\n\nIf there are multiple solutions, you can output any of them.\n\nNote:\nIn the first test case, the graph is already cool because there are no edges.\n\nIn the second test case, after performing the only operation, the graph becomes a tree, so it is cool.\n\nIn the third test case, the graph is already cool because it is a tree.\n\nIn the fourth test case, after performing the only operation, the graph has no edges, so it is cool.\n\nIn the fifth test case:\n\nOperation| Graph before the operation| Graph after the operation   ---|---|---   $1$| ![](CDN_BASE_URL/2ae6076e1f03509c037a09c9076dda44)| ![](CDN_BASE_URL/f67f064593f982711104693ae4686716)   $2$| ![](CDN_BASE_URL/e255209e458ced6bc4506880eff20f51)| ![](CDN_BASE_URL/bd025bd4677e0b4aa572053845638281)   $3$| ![](CDN_BASE_URL/201da19f0948f088eeec88037834610e)| ![](CDN_BASE_URL/7190a38dd77c4ed23d9567462fd4f2f2)      Note that after the first operation, the graph has already become cool, and there are two extra operations. As the graph is still cool after the two extra operations, this is a valid answer.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''5\n3 0\n3 1\n1 2\n3 2\n1 2\n2 3\n3 3\n1 2\n2 3\n3 1\n6 6\n1 2\n1 6\n4 5\n3 4\n4 6\n3 6''') == r'''0\n1\n1 2 3\n0\n1\n1 2 3\n3\n1 3 6\n2 4 5\n3 4 6'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "29_2029E_Common_Generator",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Common Generator\nProblem id: 2029E\nRating: 2100\nTags: brute force, math, number theory\n\nDescription:\nFor two integers $x$ and $y$ ($x,y\\ge 2$), we will say that $x$ is a generator of $y$ if and only if $x$ can be transformed to $y$ by performing the following operation some number of times (possibly zero):\n\n  * Choose a divisor $d$ ($d\\ge 2$) of $x$, then increase $x$ by $d$. \n\nFor example,\n\n  * $3$ is a generator of $8$ since we can perform the following operations: $3 \\xrightarrow{d = 3} 6 \\xrightarrow{d = 2} 8$;    * $4$ is a generator of $10$ since we can perform the following operations: $4 \\xrightarrow{d = 4} 8 \\xrightarrow{d = 2} 10$;    * $5$ is not a generator of $6$ since we cannot transform $5$ into $6$ with the operation above. \n\nNow, Kevin gives you an array $a$ consisting of $n$ pairwise distinct integers ($a_i\\ge 2$).\n\nYou have to find an integer $x\\ge 2$ such that for each $1\\le i\\le n$, $x$ is a generator of $a_i$, or determine that such an integer does not exist.\n\nInput specification:\nEach test contains multiple test cases. The first line of the input contains a single integer $t$ ($1\\le t\\le 10^4$) — the number of test cases. The description of test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($1\\le n\\le 10^5$) — the length of the array $a$.\n\nThe second line contains $n$ integers $a_1,a_2,\\ldots,a_n$ ($2\\le a_i\\le 4\\cdot 10^5$) — the elements in the array $a$. It is guaranteed that the elements are pairwise distinct.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $10^5$.\n\nOutput specification:\nFor each test case, output a single integer $x$ — the integer you found. Print $-1$ if there does not exist a valid $x$.\n\nIf there are multiple answers, you may output any of them.\n\nNote:\nIn the first test case, for $x=2$:\n\n  * $2$ is a generator of $8$, since we can perform the following operations: $2 \\xrightarrow{d = 2} 4 \\xrightarrow{d = 4} 8$;    * $2$ is a generator of $9$, since we can perform the following operations: $2 \\xrightarrow{d = 2} 4 \\xrightarrow{d = 2} 6 \\xrightarrow{d = 3} 9$.    * $2$ is a generator of $10$, since we can perform the following operations: $2 \\xrightarrow{d = 2} 4 \\xrightarrow{d = 2} 6 \\xrightarrow{d = 2} 8 \\xrightarrow{d = 2} 10$. \n\nIn the second test case, it can be proven that it is impossible to find a common generator of the four integers.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''4\n3\n8 9 10\n4\n2 3 4 5\n2\n147 154\n5\n3 6 8 25 100000''') == r'''2\n-1\n7\n3'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "30_2030B_Minimise_Oneness",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Minimise Oneness\nProblem id: 2030B\nRating: 800\nTags: combinatorics, constructive algorithms, games, math\n\nDescription:\nFor an arbitrary binary string $t$$^{\\text{∗}}$, let $f(t)$ be the number of non-empty subsequences$^{\\text{†}}$ of $t$ that contain only $\\mathtt{0}$, and let $g(t)$ be the number of non-empty subsequences of $t$ that contain at least one $\\mathtt{1}$.\n\nNote that for $f(t)$ and for $g(t)$, each subsequence is counted as many times as it appears in $t$. E.g., $f(\\mathtt{000}) = 7, g(\\mathtt{100}) = 4$.\n\nWe define the oneness of the binary string $t$ to be $|f(t)-g(t)|$, where for an arbitrary integer $z$, $|z|$ represents the absolute value of $z$.\n\nYou are given a positive integer $n$. Find a binary string $s$ of length $n$ such that its oneness is as small as possible. If there are multiple strings, you can print any of them.\n\n$^{\\text{∗}}$A binary string is a string that only consists of characters $\\texttt{0}$ and $\\texttt{1}$.\n\n$^{\\text{†}}$A sequence $a$ is a subsequence of a sequence $b$ if $a$ can be obtained from $b$ by the deletion of several (possibly, zero or all) elements. For example, subsequences of $\\mathtt{1011101}$ are $\\mathtt{0}$, $\\mathtt{1}$, $\\mathtt{11111}$, $\\mathtt{0111}$, but not $\\mathtt{000}$ nor $\\mathtt{11100}$.\n\nInput specification:\nThe first line contains an integer $t$ ($1 \\leq t \\leq 10^4$) — the number of test cases.\n\nThe only line of each test case contains an integer $n$ ($1 \\leq n \\leq 2\\cdot10^5$) — the length of $s$.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2\\cdot10^5$.\n\nOutput specification:\nFor each test case, output $s$ on a new line. If multiple answers exist, output any.\n\nNote:\nIn the first test case, for the example output, $f(t)=1$ because there is one subsequence that contains only $\\mathtt{0}$ ($\\mathtt{0}$), and $g(t)=0$ because there are no subsequences that contain at least one $1$. The oneness is $|1-0|=1$. The output $\\mathtt{1}$ is correct as well because its oneness is $|0-1|=1$.\n\nFor the example output of the second test case, $f(t)=1$ because there is one non-empty subsequence that contains only $\\mathtt{0}$, and $g(t)=2$ because there are two non-empty subsequences that contain at least one $\\mathtt{1}$ ($\\mathtt{01}$ and $\\mathtt{1}$). The oneness is thus $|1-2|=1$. It can be shown that $1$ is the minimum possible value of its oneness over all possible binary strings of size $2$.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''3\n1\n2\n3''') == r'''0\n01\n010'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "31_2032B_Medians",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Medians\nProblem id: 2032B\nRating: 1100\nTags: constructive algorithms, greedy, implementation, math\n\nDescription:\nYou are given an array $a = [1, 2, \\ldots, n]$, where $n$ is odd, and an integer $k$.\n\nYour task is to choose an odd positive integer $m$ and to split $a$ into $m$ subarrays$^{\\dagger}$ $b_1, b_2, \\ldots, b_m$ such that:\n\n  * Each element of the array $a$ belongs to exactly one subarray.    * For all $1 \\le i \\le m$, $|b_i|$ is odd, i.e., the length of each subarray is odd.    * $\\operatorname{median}([\\operatorname{median}(b_1), \\operatorname{median}(b_2), \\ldots, \\operatorname{median}(b_m)]) = k$, i.e., the median$^{\\ddagger}$ of the array of medians of all subarrays must equal $k$. $\\operatorname{median}(c)$ denotes the median of the array $c$. \n\n$^{\\dagger}$A subarray of the array $a$ of length $n$ is the array $[a_l, a_{l + 1}, \\ldots, a_r]$ for some integers $1 \\le l \\le r \\le n$.\n\n$^{\\ddagger}$A median of the array of odd length is the middle element after the array is sorted in non-decreasing order. For example: $\\operatorname{median}([1,2,5,4,3]) = 3$, $\\operatorname{median}([3,2,1]) = 2$, $\\operatorname{median}([2,1,2,1,2,2,2]) = 2$.\n\nInput specification:\nEach test consists of multiple test cases. The first line contains a single integer $t$ ($1 \\le t \\le 5000$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains two integers $n$ and $k$ ($1 \\le k \\le n < 2 \\cdot 10^5$, $n$ is odd) — the length of array $a$ and the desired median of the array of medians of all subarrays.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.\n\nOutput specification:\nFor each test case:\n\n  * If there is no suitable partition, output $-1$ in a single line.    * Otherwise, in the first line, output an odd integer $m$ ($1 \\le m \\le n$), and in the second line, output $m$ distinct integers $p_1, p_2 , p_3 , \\ldots, p_m$ ($1 = p_1 < p_2 < p_3 < \\ldots < p_m \\le n$) — denoting the left borders of each subarray. \n\nIn detail, for a valid answer $[p_1, p_2, \\ldots, p_m]$:\n\n  * $b_1 = \\left[ a_{p_1}, a_{p_1 + 1}, \\ldots, a_{p_2 - 1} \\right]$    * $b_2 = \\left[ a_{p_2}, a_{p_2 + 1}, \\ldots, a_{p_3 - 1} \\right]$    * $\\ldots$    * $b_m = \\left[ a_{p_m}, a_{p_m + 1}, \\ldots, a_n \\right]$. \n\nIf there are multiple solutions, you can output any of them.\n\nNote:\nIn the first test case, the given partition has $m = 1$ and $b_1 = [1]$. It is obvious that $\\operatorname{median}([\\operatorname{median}([1])]) = \\operatorname{median}([1]) = 1$.\n\nIn the second test case, the given partition has $m = 3$ and:\n\n  * $b_1 = [1]$    * $b_2 = [2]$    * $b_3 = [3]$ \n\nTherefore, $\\operatorname{median}([\\operatorname{median}([1]), \\operatorname{median}([2]), \\operatorname{median}([3])]) = \\operatorname{median}([1, 2, 3]) = 2$.\n\nIn the third test case, there is no valid partition for $k = 3$.\n\nIn the fourth test case, the given partition has $m = 5$ and:\n\n  * $b_1 = [1, 2, 3]$    * $b_2 = [4, 5, 6]$    * $b_3 = [7, 8, 9]$    * $b_4 = [10, 11, 12]$    * $b_5 = [13, 14, 15]$ \n\nTherefore, $\\operatorname{median}([\\operatorname{median}([1, 2, 3]), \\operatorname{median}([4, 5, 6]), \\operatorname{median}([7, 8, 9]), \\operatorname{median}([10, 11, 12]), \\operatorname{median}([13, 14, 15])]) = \\operatorname{median}([2, 5, 8, 11, 14]) = 8$.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''4\n1 1\n3 2\n3 3\n15 8''') == r'''1\n1\n3\n1 2 3\n-1\n5\n1 4 7 10 13'''\n"
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "32_2035C_Alya_and_Permutation",
+    "requirements": {
+      "signature": "def solution(raw_input: str) -> str",
+      "description": "Title: Alya and Permutation\nProblem id: 2035C\nRating: 1400\nTags: bitmasks, constructive algorithms, math\n\nDescription:\nAlya has been given a hard problem. Unfortunately, she is too busy running for student council. Please solve this problem for her.\n\nGiven an integer $n$, construct a permutation $p$ of integers $1, 2, \\ldots, n$ that maximizes the value of $k$ (which is initially $0$) after the following process.\n\nPerform $n$ operations, on the $i$-th operation ($i=1, 2, \\dots, n$),\n\n  * If $i$ is odd, $k=k\\,\\&\\,p_i$, where $\\&$ denotes the [bitwise AND operation](https://en.wikipedia.org/wiki/Bitwise_operation#AND).    * If $i$ is even, $k=k\\,|\\,p_i$, where $|$ denotes the [bitwise OR operation](https://en.wikipedia.org/wiki/Bitwise_operation#OR).\n\nInput specification:\nThe first line contains a single integer $t$ ($1\\le t\\le 500$) — the number of test cases.\n\nThe only line of each test case contains a single integer $n$ ($5\\le n\\le 2 \\cdot 10^5$) — the length of the permutation.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.\n\nOutput specification:\nFor each test case, output the maximum value of $k$ in the first line and output the permutation $p_1, p_2,\\ldots, p_n$ in the second line.\n\nIf there are multiple such permutations, output any.\n\nNote:\nFor the first test case, the value of $k$ is determined as follows:\n\n$k = 0$ initially.\n\n  * On the $1$st operation, $1$ is odd, so Alya sets $k$ to be $k\\&p_1 = 0\\&2 = 0$.   * On the $2$nd operation, $2$ is even, so Alya sets $k$ to be $k|p_2 = 0|1 = 1$.   * On the $3$rd operation, $3$ is odd, so Alya sets $k$ to be $k\\&p_3 = 1\\&3 = 1$.   * On the $4$th operation, $4$ is even, so Alya sets $k$ to be $k|p_4 = 1|4 = 5$.   * On the $5$th operation, $5$ is odd, so Alya sets $k$ to be $k\\&p_5 = 5\\&5 = 5$.\n\nThe final value of $k$ is $5$. It can be shown that the final value of $k$ is at most $5$ for all permutations of length $5$. Another valid output is $[2, 3, 1, 4, 5]$.\n\nFor the second test case, the final value of $k$ is $7$. It can be shown that the final value of $k$ is at most $7$ for all permutations of length $6$. Other valid outputs include $[2, 4, 1, 6, 3, 5]$ and $[5, 2, 6, 1, 3, 4]$.\n"
+    },
+    "tests": [
+      {
+        "type": "TestFunction",
+        "code": "def test_1():\n    assert solution(r'''6\n5\n6\n7\n8\n9\n10''') == r'''5\n2 1 3 4 5 \n7\n1 2 4 6 5 3 \n7\n2 4 5 1 3 6 7 \n15\n2 4 5 1 3 6 7 8 \n9\n2 4 5 6 7 1 3 8 9 \n15\n1 2 3 4 5 6 8 10 9 7'''\n"
+      }
+    ],
+    "metadata": {}
+  }
+]
