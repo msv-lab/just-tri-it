@@ -96,7 +96,11 @@ def load_dataset(file: Path) -> Dataset:
                     output = eval(t["output"])
                     tests.append(InputOutput(inputs, output))
                 elif t["type"] == "TestFunction":
-                    tests.append(TestFunction.from_code(t["code"], signature))
+                    if "judge" in task:
+                        code = task["judge"] + "\n" + t["code"]
+                    else:
+                        code = t["code"]
+                    tests.append(TestFunction.from_code(code, signature))
                 else:
                     panic("Test assertions are not supported!")
 

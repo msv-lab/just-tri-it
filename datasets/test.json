@@ -41,5 +41,24 @@
             }
         ],
         "metadata": { }
+    },
+    {
+        "id": "trivial_inexact_problem",
+        "requirements": {
+            "signature": "def between(a: int, b:int) -> int",
+            "description": "give a number between a and b (inclusive)"
+        },
+        "judge": "def __judge(a: int, b: int, ans: int) -> bool:\n    return a <= ans and b >= ans",
+        "tests": [
+            {
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(1, 3, between(1, 3))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(-1, 3, between(-1, 3))"
+            }
+        ],
+        "metadata": { }
     }
 ]
