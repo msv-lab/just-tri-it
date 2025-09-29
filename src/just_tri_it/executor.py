@@ -336,8 +336,10 @@ class PersistentWorkerExecutor(Executor):
         return Timeout()
 
     @cache_content_addressable
-    def run(self, p: Program, inputs: list[Any], add_lcb_imports=True) -> ExecutionOutcome:
-        assert isinstance(inputs, list)
+    def run(self, p: Program, inputs, add_lcb_imports=True) -> ExecutionOutcome:
+        assert isinstance(inputs, list | tuple)
+        if isinstance(inputs, tuple):
+            inputs = list(inputs)
         args = deepcopy(inputs)
         if add_lcb_imports:
             p = p.add_imports(LIVECODEBENCH_IMPORTS)

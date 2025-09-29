@@ -60,6 +60,8 @@ input is valid. Put the complete code inside a Markdown code block:
     valid_checker = Program(checker_sig, extract_code(response))
     filtered_input = []
     for unchecked_input in input_list:
+        if not isinstance(unchecked_input, list):
+            unchecked_input = [unchecked_input]
         if len(unchecked_input) != len(req.signature.params) and len(req.signature.params) == 1:
             unchecked_input = [unchecked_input]
         check_outcome = executor.run(valid_checker, unchecked_input)
