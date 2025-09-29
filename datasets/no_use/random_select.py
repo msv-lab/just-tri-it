@@ -71,10 +71,10 @@ if __name__ == "__main__":
     json_file_path = "lcb_part6.json"  # Replace with your JSON file path
     
     # Number of items to select (can be modified as needed)
-    n = 30
+    n = 200
     
     # Output file path
-    output_file = "lcb_random30.txt"
+    output_file = "lcb_random167.txt"
     
     # Execute selection and write to file
     selected_ids = select_random_ids_from_json(json_file_path, n, output_file)
