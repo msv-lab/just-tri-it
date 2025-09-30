@@ -290,12 +290,14 @@ class PersistentWorkerExecutor(Executor):
                                    "error_message": str(e) })
 
     def __init__(self):
-        self.task_queue = multiprocessing.Queue()
-        self.result_queue = multiprocessing.Queue()
+        self.task_queue = None
+        self.result_queue = None
         self.worker = None
         self._start_worker()
 
     def _start_worker(self):
+        self.task_queue = multiprocessing.Queue()
+        self.result_queue = multiprocessing.Queue()
         self.worker = multiprocessing.Process(
             target=self._runner, 
             args=(self.task_queue, self.result_queue)

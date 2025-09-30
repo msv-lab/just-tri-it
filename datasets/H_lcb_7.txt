@@ -11,5 +11,4 @@ leetcode_3750
 atcoder_abc397_e
 atcoder_abc391_d
 atcoder_arc192_b
-atcoder_arc190_d
 leetcode_3789
