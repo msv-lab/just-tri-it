@@ -12,6 +12,8 @@ Run linter and type checker:
 
     uv run ruff check .
     uvx mypy src/
+    
+To run tests, execute `uv run pytest`.
 
 ## Usage
 
@@ -78,10 +80,6 @@ To execute generated progarms in isolated subprocesses, please create an environ
     deactivate
     
 Adding the options `--test-venv test_venv/` to the above commands will run generated programs inside this environment.
-
-To run tests within this environment, execute
-
-    JTI_TEST_ENV=$PWD/test_env uv run pytest
 
 ## Reproducibility
 

@@ -2,9 +2,12 @@ import os
 from pathlib import Path
 
 from just_tri_it.logic import check, Side
-from just_tri_it.executor import SubprocessExecutor
+from just_tri_it.executor import PersistentWorkerExecutor
 from just_tri_it.program import Program
 from just_tri_it.triangulation import make_partial_for_inv
+
+import pytest
+
 
 
 FORWARD_PROGRAM = Program.from_function_code("""
@@ -64,53 +67,50 @@ FORWARD_INPUTS = [
 
 TRIANGULATION = make_partial_for_inv(2, 0)
 
-EXECUTOR = SubprocessExecutor(Path(os.environ["JTI_TEST_ENV"]))
-
-def check_programs(p, q):
-    return check(EXECUTOR,
+def check_programs(e, p, q):
+    return check(e,
                  { Side.LEFT: FORWARD_INPUTS, Side.RIGHT: None },
                  { Side.LEFT: p, Side.RIGHT: q },
                  TRIANGULATION.hyperproperty)
 
 
-def test_normal_agreement():
-    assert check_programs(FORWARD_PROGRAM, INVERSE_PROGRAM)
+@pytest.fixture()
+def executor():
+    executor = PersistentWorkerExecutor()
+    yield executor
+    executor.shutdown()
 
 
-def test_detect_right_invalid_inputs():
-    assert not check_programs(FORWARD_PROGRAM, INVERSE_PROGRAM_WITH_MATCHING_INVALID_INPUT)
+def test_normal_agreement(executor):
+    assert check_programs(executor, FORWARD_PROGRAM, INVERSE_PROGRAM)
 
 
-def test_detect_right_crash():
-    assert not check_programs(FORWARD_PROGRAM, INVERSE_PROGRAM_WITH_MATCHING_CRASH)
+def test_detect_right_invalid_inputs(executor):
+    assert not check_programs(executor, FORWARD_PROGRAM, INVERSE_PROGRAM_WITH_MATCHING_INVALID_INPUT)
 
 
-def test_detect_left_invalid_inputs():
-    assert not check_programs(FORWARD_PROGRAM_WITH_INVALID_INPUT, INVERSE_PROGRAM)
+def test_detect_right_crash(executor):
+    assert not check_programs(executor, FORWARD_PROGRAM, INVERSE_PROGRAM_WITH_MATCHING_CRASH)
 
 
-def test_detect_left_crash():
-    assert not check_programs(FORWARD_PROGRAM_WITH_CRASH, INVERSE_PROGRAM)
+def test_detect_left_crash(executor):
+    assert not check_programs(executor, FORWARD_PROGRAM_WITH_CRASH, INVERSE_PROGRAM)
 
 
-def test_agreement_on_invalid_inputs():
-    assert check_programs(FORWARD_PROGRAM_WITH_INVALID_INPUT, INVERSE_PROGRAM_WITH_MATCHING_INVALID_INPUT)
+def test_agreement_on_invalid_inputs(executor):
+    assert check_programs(executor, FORWARD_PROGRAM_WITH_INVALID_INPUT, INVERSE_PROGRAM_WITH_MATCHING_INVALID_INPUT)
 
 
-def test_disagreement_on_invalid_inputs():
-    assert not check_programs(FORWARD_PROGRAM_WITH_INVALID_INPUT, INVERSE_PROGRAM_WITH_NONMATCHING_INVALID_INPUT)
+def test_disagreement_on_invalid_inputs(executor):
+    assert not check_programs(executor, FORWARD_PROGRAM_WITH_INVALID_INPUT, INVERSE_PROGRAM_WITH_NONMATCHING_INVALID_INPUT)
 
 
-def test_left_invalid_right_crash():
-    assert not check_programs(FORWARD_PROGRAM_WITH_INVALID_INPUT, INVERSE_PROGRAM_WITH_MATCHING_CRASH)
+def test_left_crash_right_invalid(executor):
+    assert not check_programs(executor, FORWARD_PROGRAM_WITH_CRASH, INVERSE_PROGRAM_WITH_NONMATCHING_INVALID_INPUT)
 
 
-def test_left_crash_right_invalid():
-    assert not check_programs(FORWARD_PROGRAM_WITH_CRASH, INVERSE_PROGRAM_WITH_NONMATCHING_INVALID_INPUT)
-
-
-def test_should_not_agree_on_matching_crashes():
-    assert not check_programs(FORWARD_PROGRAM_WITH_CRASH, INVERSE_PROGRAM_WITH_MATCHING_CRASH)
+def test_should_not_agree_on_matching_crashes(executor):
+    assert not check_programs(executor, FORWARD_PROGRAM_WITH_CRASH, INVERSE_PROGRAM_WITH_MATCHING_CRASH)
     
 
 
