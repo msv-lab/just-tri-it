@@ -1,6 +1,8 @@
 import copy
+import sys
+import random
 from typing import List, Any
-
+from just_tri_it.type_checker import type_checker
 from just_tri_it.cached_llm import Independent
 from just_tri_it.executor import Executor, Success
 from just_tri_it.utils import extract_code
@@ -37,45 +39,35 @@ def value_is_too_large(data, int_bound, seq_bound):
     return False
 
 
-def range_checker(executor, model, req, input_list):
-    checker_sig = copy.deepcopy(req.signature)
-    checker_sig.name = "is_valid_input"
-    checker_sig.return_type = "bool"
-    PROMPT = f"""A program input is valid if the problem description
-specifies how the program must behave on this input. Otherwise, it is
-invalid. Given a problem description, please write a function named
-'is_valid_input' with the signature below that checks if the given
-input is valid. Put the complete code inside a Markdown code block:
-```python
-```
-
-# **Function Signature**:
-{checker_sig.pretty_print()}
-
-# **Problem Description**:
-{req.description}
-
-    """
-    response = next(model.sample(PROMPT))
-    valid_checker = Program(checker_sig, extract_code(response))
+def input_checker(req, input_list):
     filtered_input = []
+    param_list = req.signature.params
+    # print(param_list, file=sys.stderr, flush=True)
     for unchecked_input in input_list:
-        fined_input = unchecked_input
-        if not isinstance(fined_input, list):
-            fined_input = [fined_input]
-        elif len(fined_input) != len(req.signature.params) and len(req.signature.params) == 1:
-            fined_input = [fined_input]
-        check_outcome = executor.run(valid_checker, fined_input)
-        match check_outcome:
-            case Success(outcome):
-                if outcome:
-                    filtered_input.append(fined_input)
-            case _:
-                pass
+        # print(unchecked_input, file=sys.stderr, flush=True)
+        if not isinstance(unchecked_input, list):
+            if len(param_list) == 1:
+                unchecked_input = [unchecked_input]
+            else:
+                continue
+        else:
+            if len(unchecked_input) != len(param_list):
+                if len(param_list) == 1:
+                    unchecked_input = [unchecked_input]
+                else:
+                    continue
+        type_error = True
+        for index in range(len(param_list)):
+            # print(unchecked_input[index], param_list[index].type, file=sys.stderr, flush=True)
+            if not type_checker(unchecked_input[index], param_list[index].type):
+                type_error = False
+                break
+        if type_error:
+            filtered_input.append(unchecked_input)
     return filtered_input
 
 
-def generate_inputs(model, req: Requirements, executor: Executor) -> List[Any]:
+def generate_inputs(model, req: Requirements, min_tests: int = 15, max_attempts: int = 3) -> List[Any]:
     # Define three different types of prompts
     PROMPT_SMALL = f"""Given a problem description and the function
 signature, generate a comprehensive set of small-scale test cases to
@@ -131,14 +123,13 @@ Markdown code block:
     """
 
     def sample_and_extract_with_retry(prompt, used_model, num_retry=3):
-        ind_model = Independent(used_model)
         inputs = []
         for attempt in range(num_retry):
             try:
                 response = next(ind_model.sample(prompt, num_retry))
                 blocks = extract_all_code(response)
                 inputs = [eval(block.strip()) for block in blocks]
-                inputs = [i for i in inputs if not value_is_too_large(i, 10000, 10)]
+                inputs = [i for i in inputs if not value_is_too_large(i, 10000, 100)]
                 break
             except Exception as e:
                 if attempt == num_retry - 1:
@@ -146,20 +137,32 @@ Markdown code block:
             pass
         return inputs
 
-    small_inputs = sample_and_extract_with_retry(PROMPT_SMALL, model)
-    medium_inputs = sample_and_extract_with_retry(PROMPT_MEDIUM, model)
-    boundary_inputs = sample_and_extract_with_retry(PROMPT_BOUNDARY, model)
-
-    # Use range_checker to filter inputs if executor is provided
-    if executor:
-        small_inputs = range_checker(executor, model, req, small_inputs)
-        medium_inputs = range_checker(executor, model, req, medium_inputs)
-        boundary_inputs = range_checker(executor, model, req, boundary_inputs)
-
     all_inputs = []
-        
-    all_inputs.extend(small_inputs)
-    all_inputs.extend(medium_inputs)
-    all_inputs.extend(boundary_inputs)
+    attempts = 0
+    ind_model = Independent(model)
+    while len(all_inputs) < min_tests and attempts < max_attempts:
+        attempts += 1
+        small_inputs = sample_and_extract_with_retry(PROMPT_SMALL, ind_model)
+        medium_inputs = sample_and_extract_with_retry(PROMPT_MEDIUM, ind_model)
+        boundary_inputs = sample_and_extract_with_retry(PROMPT_BOUNDARY, ind_model)
 
-    return remove_duplicates(all_inputs)
+        small_inputs = input_checker(req, small_inputs)
+        medium_inputs = input_checker(req, medium_inputs)
+        boundary_inputs = input_checker(req, boundary_inputs)
+
+        current_batch = []
+        current_batch.extend(small_inputs)
+        current_batch.extend(medium_inputs)
+        current_batch.extend(boundary_inputs)
+        
+        current_batch = remove_duplicates(current_batch)
+        
+        all_inputs.extend(current_batch)
+        all_inputs = remove_duplicates(all_inputs)
+        
+        # print(f"Attempt {attempts}: Generated {len(current_batch)} new inputs, total unique inputs: {len(all_inputs)}")
+
+    if len(all_inputs) < min_tests:
+        raise ExperimentFailure(f"Warning: Only generated {len(all_inputs)} unique inputs after {max_attempts} attempts (target: {min_tests})")
+     
+    return all_inputs[:min_tests]

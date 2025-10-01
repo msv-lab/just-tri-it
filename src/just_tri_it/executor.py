@@ -199,9 +199,7 @@ if __name__ == '__main__':
 
     @cache_content_addressable
     def run(self, p: Program, inputs, add_lcb_imports=True) -> ExecutionOutcome:
-        assert isinstance(inputs, list | tuple)
-        if isinstance(inputs, tuple):
-            inputs = list(inputs)
+        assert isinstance(inputs, list)
         if add_lcb_imports:
             p = p.add_imports(LIVECODEBENCH_IMPORTS)
         with TemporaryDirectory() as tmp:
@@ -339,9 +337,7 @@ class PersistentWorkerExecutor(Executor):
 
     @cache_content_addressable
     def run(self, p: Program, inputs, add_lcb_imports=True) -> ExecutionOutcome:
-        assert isinstance(inputs, list | tuple)
-        if isinstance(inputs, tuple):
-            inputs = list(inputs)
+        assert isinstance(inputs, list)
         args = deepcopy(inputs)
         if add_lcb_imports:
             p = p.add_imports(LIVECODEBENCH_IMPORTS)

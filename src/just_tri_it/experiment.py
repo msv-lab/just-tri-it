@@ -21,6 +21,7 @@ from just_tri_it.utils import (
 from just_tri_it.config import init_selectors, NUM_LEFT_SAMPLES
 from just_tri_it.code_generator import Vanilla
 from just_tri_it.selection import Selected, Abstained
+from just_tri_it.input_generator import generate_inputs
 
 
 def parse_args():
@@ -185,7 +186,8 @@ def execute_experiment(model, executor, dataset, db, data_dir):
     """
 
     print_legend()
-    for task in dataset:
+    task_num = len(dataset)
+    for index, task in enumerate(dataset):
         if task.id in map(lambda o: o["task_id"], db.objects):
             continue
 
@@ -197,7 +199,13 @@ def execute_experiment(model, executor, dataset, db, data_dir):
         }
         
         print()
-        print_annotated_hr(f"Task {task.id}")
+        print_annotated_hr(f"{index+1}/{task_num} —— Task {task.id}")
+
+        # try:
+        #     if len(generate_inputs(model, task.requirements)) < 15:
+        #         print("NO")
+        # except:
+        #     continue
 
         print("\n[Sample correctness]", end="", file=sys.stderr, flush=True)
         samples = list(islice(Vanilla().generate(model, task.requirements, NUM_LEFT_SAMPLES), NUM_LEFT_SAMPLES))
