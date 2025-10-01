@@ -145,5 +145,13 @@ def type_checker(data, type_str):
                     if not isinstance(s, str):
                         return False
             return True
+        case 'union[list[int], int]':
+            if isinstance(data, int):
+                return True
+            if isinstance(data, list):
+                if len(data) == 0:
+                    return True
+                return all(isinstance(item, int) for item in data)
+            return False
         case _:
             raise ValueError(f"undefined: {type_str}")

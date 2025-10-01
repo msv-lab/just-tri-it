@@ -268,13 +268,16 @@ def map_to_bool(origin):
         return False
 
 
-def get_priority_from_list(values: List[SpecialValue]) -> SpecialValue:
+def get_priority_from_list(values: List[SpecialValue], all_num=None) -> SpecialValue:
     has_demonic = any(isinstance(v, Demonic) for v in values)
     if has_demonic:
         return Demonic()
     has_undefined = any(isinstance(v, Undefined) for v in values)
     if has_undefined:
         return Undefined()
+    angelic_count = sum(1 for v in values if isinstance(v, Angelic))
+    if all_num and (angelic_count / all_num) > 0.34:
+        return Demonic()
     return Angelic()
 
 
@@ -327,6 +330,7 @@ def is_formula_true(executor,
             return get_priority_from_list([result_left, result_right])
         case ForAll(ele, domain, body):
             special_list = []
+            all_number = len(inputs[domain])
             for inp in inputs[domain]:
                 new_env = env.copy()
                 if isinstance(ele, Var):
@@ -342,7 +346,7 @@ def is_formula_true(executor,
                     print(f"\n{formula} failed on {inp}", file=sys.stderr, flush=True)
                     return False
             if len(special_list):
-                return get_priority_from_list(special_list)
+                return get_priority_from_list(special_list, all_number)
             return True
         case _:
             raise ValueError(f"Unsupported formula type {formula}")
