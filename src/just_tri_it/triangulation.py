@@ -42,12 +42,12 @@ class Triangulator(Agreement):
         }
         """
         transformed_left = self.triangulation.left_trans.transform(model, req)
-        left_inputs = generate_inputs(model, transformed_left, self.executor)
+        left_inputs = generate_inputs(model, transformed_left)
         left_programs = self.code_generator.generate(model, transformed_left, self.num_left_programs)
         left_programs = list(islice(left_programs, self.num_left_programs))
 
         transformed_right = self.triangulation.right_trans.transform(model, req)
-        right_inputs = generate_inputs(model, transformed_right, self.executor)        
+        right_inputs = generate_inputs(model, transformed_right)        
         right_programs = self.code_generator.generate(model, transformed_right, self.num_right_programs)
         right_programs = list(islice(right_programs, self.num_right_programs))
 
