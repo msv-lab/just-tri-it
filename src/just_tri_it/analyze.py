@@ -44,7 +44,7 @@ def abstention_measures(db):
     matrix_per_method = {}
 
     for obj in db.objects:
-        correct_samples = [ p for p, correct, _ in obj["sample_correctness"] if correct ]
+        correct_samples = [p for p, correct, _ in obj["sample_correctness"] if correct]
         ground_truth_is_select = len(correct_samples) > 0
         for selector_data in obj["selectors"]:
             method = selector_data["id"]
@@ -68,7 +68,7 @@ def abstention_measures(db):
                     assert selector_data["outcome"] == "abstained"
                     matrix_per_method[method][4] += 1
 
-    return { method: all_abstention_metrics(*matrix) for method, matrix in matrix_per_method.items() } 
+    return {method: all_abstention_metrics(*matrix) for method, matrix in matrix_per_method.items()}
 
 
 def plot_sorted_percentages(probs, label, output_file):
@@ -79,13 +79,13 @@ def plot_sorted_percentages(probs, label, output_file):
     methods, values = zip(*sorted_items, strict=True)
     percentages = [v * 100 for v in values]
 
-    colors = ["grey" if m == "unconditional" else "skyblue" for m in methods]    
+    colors = ["grey" if m == "unconditional" else "skyblue" for m in methods]
 
     plt.figure(figsize=(8, 5))
     bars = plt.bar(methods, percentages, color=colors, edgecolor='black')
 
     for bar, pct in zip(bars, percentages, strict=True):
-        plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
+        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 1,
                  f"{pct:.1f}%", ha='center', va='bottom', fontsize=9)
 
     plt.xticks(rotation=45)
@@ -100,19 +100,35 @@ def plot_sorted_percentages(probs, label, output_file):
 def prob_correct(db) -> float:
     probs = []
     for obj in db.objects:
-        correct_samples = [ p for p, correct, _ in obj["sample_correctness"] if correct ]
+        correct_samples = [p for p, correct, _ in obj["sample_correctness"] if correct]
         probs.append(len(correct_samples) / len(obj["sample_correctness"]))
-                
+
+    return mean(probs)
+
+
+def prob_correct_limit(db, limit_num=20) -> float:
+    probs = []
+    for obj in db.objects:
+        correct_samples = []
+        count_number = 0
+        for p, correct, _ in obj["sample_correctness"]:
+            if count_number >= limit_num:
+                break
+            if correct:
+                correct_samples.append(p)
+            count_number += 1
+        probs.append(len(correct_samples) / count_number)
+
     return mean(probs)
 
 
 def prob_correct_under_agreement(db) -> Dict[str, float]:
     probs_per_agreement_method = defaultdict(list)
-    
+
     for obj in db.objects:
-        correct_samples = [ p for p, correct, _ in obj["sample_correctness"] if correct ]
+        correct_samples = [p for p, correct, _ in obj["sample_correctness"] if correct]
         seen_methods = set()
-        
+
         for selector_data in obj["selectors"]:
             if selector_data["outcome"] == "abstained":
                 continue
@@ -128,9 +144,62 @@ def prob_correct_under_agreement(db) -> Dict[str, float]:
                 prob = num_faithful_agreements / num_total_agreements
                 probs_per_agreement_method[method].append(prob)
 
-    probs = { method: mean(probs) for method, probs in probs_per_agreement_method.items() }
+    probs = {method: mean(probs) for method, probs in probs_per_agreement_method.items()}
     probs["unconditional"] = prob_correct(db)
-                
+
+    return probs
+
+
+def prob_correct_under_agreement_limit(db, limit_num=20) -> Dict[str, float]:
+    """
+    this is another version of function 'prob_correct_under_agreement'
+    with a limit to the number of sample
+    """
+    probs_per_agreement_method = defaultdict(list)
+
+    for obj in db.objects:
+        # here we should just put the first 'limit_num'th correct samples in the list
+        correct_samples = []
+        count_number = 0
+        for p, correct, _ in obj["sample_correctness"]:
+            if count_number >= limit_num:
+                break
+            if correct:
+                correct_samples.append(p)
+            count_number += 1
+        seen_methods = set()
+
+        for selector_data in obj["selectors"]:
+            if selector_data["outcome"] == "abstained":
+                continue
+            # get first 'limit_num'th samples for p and q
+            if "programs" in selector_data["raw_data"]["agreement_raw_data"]:
+                first_p = selector_data["raw_data"]["agreement_raw_data"]["programs"]
+                if "tests" in selector_data["raw_data"]["agreement_raw_data"]:
+                    first_q = selector_data["raw_data"]["agreement_raw_data"]["tests"]
+                else:
+                    first_q = first_p
+            else:
+                first_p = selector_data["raw_data"]["agreement_raw_data"]["left_programs"][:limit_num]
+                first_q = selector_data["raw_data"]["agreement_raw_data"]["right_programs"][:limit_num]
+            method = selector_data["raw_data"]["agreement_raw_data"]["method"]
+            if method not in seen_methods:
+                seen_methods.add(method)
+                num_total_agreements = 0
+                num_faithful_agreements = 0
+                for (program, witnesses) in selector_data["raw_data"]["agreement"]:
+                    if program in first_p:
+                        new_witnesses = [witness for witness in witnesses if witness in first_q]
+                        num_total_agreements += len(new_witnesses)
+                        if program in correct_samples:
+                            num_faithful_agreements += len(new_witnesses)
+                if num_total_agreements == 0:
+                    continue
+                prob = num_faithful_agreements / num_total_agreements
+                probs_per_agreement_method[method].append(prob)
+
+    probs = {method: mean(probs) for method, probs in probs_per_agreement_method.items()}
+    probs["unconditional"] = prob_correct_limit(db, limit_num)
     return probs
 
 
@@ -230,7 +299,7 @@ def plot_box(data, output_file):
 def main():
     args = parse_args()
     data_dir = Path(args.data)
-    db = Database.load(data_dir)
+    db = Database.load_ignore(data_dir)
     report_dir = Path(args.report)
     report_dir.mkdir(parents=True, exist_ok=True)
 
@@ -241,18 +310,19 @@ def main():
         k2: {k1: method_to_measures[k1][k2] for k1 in method_to_measures}
         for k2 in next(iter(method_to_measures.values()))
     }
-    measure_to_methods["prob_correct_under_agreement"] = prob_correct_under_agreement(db)
+    measure_to_methods["prob_correct_under_agreement"] = prob_correct_under_agreement_limit(db, 20)
 
     for measure in measure_to_methods:
         plot_sorted_percentages(measure_to_methods[measure],
                                 measure,
-                                report_dir/f"{measure}.png")
+                                report_dir / f"{measure}.png")
 
     interval_data, box_data = cal_class_size_info(db)
-    plot_distribution(interval_data, report_dir/"distribution.png")
-    plot_box(box_data, report_dir/"box.png")
+    if interval_data and box_data:
+        plot_distribution(interval_data, report_dir / "distribution.png")
+        plot_box(box_data, report_dir / "box.png")
 
-    with (report_dir/"metrics.json").open("w", encoding="utf-8") as f:
+    with (report_dir / "metrics.json").open("w", encoding="utf-8") as f:
         json.dump(measure_to_methods, f, indent=4)
 
 

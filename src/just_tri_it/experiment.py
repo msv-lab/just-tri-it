@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 import argparse
 import sys
@@ -6,7 +7,7 @@ from itertools import islice
 import jsonlines
 from typing import List, Any, Dict
 
-from just_tri_it.cached_llm import Repeatable, AI302, XMCP
+from just_tri_it.cached_llm import Repeatable, AI302
 from just_tri_it.executor import SubprocessExecutor, PersistentWorkerExecutor
 from just_tri_it.dataset import load_dataset
 from just_tri_it.utils import (
@@ -83,7 +84,31 @@ class Database:
             for file_path in content_dir.glob("*.txt")
         }
         return Database(objects, id_to_content)
-                
+
+    @staticmethod
+    def load_ignore(directory: Path) -> 'Database':
+        content_dir = directory / "content"
+        object_file = directory / "data.jsonl"
+        object_file.touch(exist_ok=True)
+
+        objects = []
+        with object_file.open("r", encoding="utf-8") as f:
+            for i, line in enumerate(f, start=1):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                    objects.append(obj)
+                except json.JSONDecodeError as e:
+                    print(f"Warning: Ignore invalid JSON lines {i} - {e}")
+                    continue
+
+        id_to_content: Dict[str, str] = {
+            file_path.stem: file_path.read_text(encoding="utf-8")
+            for file_path in content_dir.glob("*.txt")
+        }
+        return Database(objects, id_to_content)
 
     def save(self, directory: Path):
         content_dir = directory / "content"
