@@ -201,47 +201,47 @@ def execute_experiment(model, executor, dataset, db, data_dir):
         print()
         print_annotated_hr(f"{index+1}/{task_num} —— Task {task.id}")
 
-        # try:
-        #     if len(generate_inputs(model, task.requirements)) < 15:
-        #         print("NO")
-        # except:
-        #     continue
+        try:
+            generate_inputs(model, task.requirements)
+        except:
+            print("Not enough inputs")
+            continue
 
-        print("\n[Sample correctness]", end="", file=sys.stderr, flush=True)
-        samples = list(islice(Vanilla().generate(model, task.requirements, NUM_LEFT_SAMPLES), NUM_LEFT_SAMPLES))
-        for s in samples:
-            status, details = s.passes(executor, task.tests)
-            obj["sample_correctness"].append((s, status, details))
+        # print("\n[Sample correctness]", end="", file=sys.stderr, flush=True)
+        # samples = list(islice(Vanilla().generate(model, task.requirements, NUM_LEFT_SAMPLES), NUM_LEFT_SAMPLES))
+        # for s in samples:
+        #     status, details = s.passes(executor, task.tests)
+        #     obj["sample_correctness"].append((s, status, details))
 
-        all_selectors = init_selectors(executor, Vanilla(), model)
-        selector_ids = all_selectors.keys()
+        # all_selectors = init_selectors(executor, Vanilla(), model)
+        # selector_ids = all_selectors.keys()
         
-        for selector_id in selector_ids:
-            if selector_ids in SKIP_SELECTORS:
-                continue
+        # for selector_id in selector_ids:
+        #     if selector_ids in SKIP_SELECTORS:
+        #         continue
             
-            print(f"\n[{selector_id}]", end="", file=sys.stderr, flush=True)
+        #     print(f"\n[{selector_id}]", end="", file=sys.stderr, flush=True)
             
-            selector_data = { "id": selector_id }
-            try:
-                selector = all_selectors[selector_id]
+        #     selector_data = { "id": selector_id }
+        #     try:
+        #         selector = all_selectors[selector_id]
 
-                if callable(selector):
-                    s = selector(task)
-                else:
-                    s = selector
-                outcome, raw_data = s.generate_and_select(model, task.requirements)
-                selector_data["raw_data"] = raw_data
-                match outcome:
-                    case Selected(program, witnesses):
-                        selector_data["outcome"] = "selected"
-                        selector_data["selected"] = program
-                        selector_data["witnesses"] = witnesses
-                    case Abstained():
-                        selector_data["outcome"] = "abstained"
-                obj["selectors"].append(selector_data)
-            except ExperimentFailure as e:
-                print(f"\n{selector_id} failed on {task.id} with {e}", file=sys.stderr, flush=True)
+        #         if callable(selector):
+        #             s = selector(task)
+        #         else:
+        #             s = selector
+        #         outcome, raw_data = s.generate_and_select(model, task.requirements)
+        #         selector_data["raw_data"] = raw_data
+        #         match outcome:
+        #             case Selected(program, witnesses):
+        #                 selector_data["outcome"] = "selected"
+        #                 selector_data["selected"] = program
+        #                 selector_data["witnesses"] = witnesses
+        #             case Abstained():
+        #                 selector_data["outcome"] = "abstained"
+        #         obj["selectors"].append(selector_data)
+        #     except ExperimentFailure as e:
+        #         print(f"\n{selector_id} failed on {task.id} with {e}", file=sys.stderr, flush=True)
     
         dbobj = replace_with_hash_and_update_map(obj, db.content)
         db.objects.append(dbobj)

@@ -11,8 +11,8 @@ from just_tri_it.utils import extract_all_code, remove_duplicates, ExperimentFai
 
 
 #FIXME: control number of inputs:
-MINIMUM_NUM_INPUTS = 10
-MAXIMUM_NUM_INPUTS = 50
+MINIMUM_NUM_INPUTS = 15
+MAXIMUM_NUM_INPUTS = 25
 
 
 def value_is_too_large(data, int_bound, seq_bound):
@@ -67,7 +67,7 @@ def input_checker(req, input_list):
     return filtered_input
 
 
-def generate_inputs(model, req: Requirements, min_tests: int = 15, max_attempts: int = 3) -> List[Any]:
+def generate_inputs(model, req: Requirements, max_attempts: int = 3) -> List[Any]:
     # Define three different types of prompts
     PROMPT_SMALL = f"""Given a problem description and the function
 signature, generate a comprehensive set of small-scale test cases to
@@ -140,7 +140,7 @@ Markdown code block:
     all_inputs = []
     attempts = 0
     ind_model = Independent(model)
-    while len(all_inputs) < min_tests and attempts < max_attempts:
+    while len(all_inputs) < MINIMUM_NUM_INPUTS and attempts < max_attempts:
         attempts += 1
         small_inputs = sample_and_extract_with_retry(PROMPT_SMALL, ind_model)
         medium_inputs = sample_and_extract_with_retry(PROMPT_MEDIUM, ind_model)
@@ -162,7 +162,10 @@ Markdown code block:
         
         # print(f"Attempt {attempts}: Generated {len(current_batch)} new inputs, total unique inputs: {len(all_inputs)}")
 
-    if len(all_inputs) < min_tests:
-        raise ExperimentFailure(f"Warning: Only generated {len(all_inputs)} unique inputs after {max_attempts} attempts (target: {min_tests})")
+    if len(all_inputs) < MINIMUM_NUM_INPUTS:
+        raise ExperimentFailure(f"Warning: Only generated {len(all_inputs)} unique inputs after {max_attempts} attempts (target: {MINIMUM_NUM_INPUTS})")
      
-    return all_inputs[:min_tests]
+    if len(all_inputs) > MAXIMUM_NUM_INPUTS:
+        return random.sample(all_inputs, MAXIMUM_NUM_INPUTS)
+
+    return all_inputs[:MINIMUM_NUM_INPUTS]
