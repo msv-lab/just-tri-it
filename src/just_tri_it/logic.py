@@ -349,7 +349,7 @@ def is_formula_true(executor,
 
 
 def eval_term(executor, env: Dict[str, Any], programs, term: Term) -> Any:
-    if isinstance(term, (str, int, bool, float, tuple)):
+    if isinstance(term, (str, int, bool, float, tuple)) or term is None:
         return term
     if isinstance(term, list):
         return eval_all(executor, env, programs, term)
@@ -360,12 +360,12 @@ def eval_term(executor, env: Dict[str, Any], programs, term: Term) -> Any:
             return term
         case Map(func, args):
             computed_args = eval_term(executor, env, programs, args)
-            if isinstance(computed_args, SpecialValue):
+            if isinstance(computed_args, SpecialValue) or computed_args is None:
                 computed_args = [computed_args]
             return [eval_term(executor, env, programs, func([a])) for a in computed_args]
         case MapUnpack(func, args):
             computed_args = eval_term(executor, env, programs, args)
-            if isinstance(computed_args, SpecialValue):
+            if isinstance(computed_args, SpecialValue) or computed_args is None:
                 computed_args = [computed_args]
             return [eval_term(executor, env, programs, func(a)) for a in computed_args]
         case App(func, args):
@@ -493,6 +493,11 @@ def _member_func(x, y):
         return Demonic()
     if isinstance(y, SpecialValue):
         y = [y]
+    if y is None:
+        if x is None:
+            return True
+        else:
+            return False
     y_has_A, _, _ = has_special_value_adu(y)
     if y_has_A:
         # if y has A, we can make sure x = A
