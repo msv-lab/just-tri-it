@@ -2,6 +2,8 @@
 def type_checker(data, type_str):
     type_str = type_str.lower()
     match type_str:
+        case 'bool':
+            return isinstance(data, bool)
         case 'int':
             return isinstance(data, int)
         case 'float':
