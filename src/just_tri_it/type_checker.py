@@ -144,4 +144,4 @@ def type_checker(data, type_str):
                         return False
             return True
         case _:
-            raise ValueError("undefined")
+            raise ValueError(f"undefined: {type_str}")

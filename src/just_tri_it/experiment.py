@@ -142,7 +142,7 @@ def main():
 
     data_dir = Path(args.data)
     data_dir.mkdir(parents=True, exist_ok=True)
-    database = Database.load(data_dir)
+    database = Database.load_ignore(data_dir)
 
     if args.task_list:
         task_list_file = Path(args.task_list)
