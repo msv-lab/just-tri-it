@@ -3,11 +3,6 @@ __pycache__/
 datasets/lcb_part6.json
 datasets/lcb_try
 datasets/lcb_try_batches
-src/viberate/executor_test.py
-src/viberate/new_executor_1.py
-src/viberate/new_executor_2.py
-src/viberate/yihan.py
-src/construct.json
 result/
 lcb_1/
 dataset_test/
@@ -18,3 +13,5 @@ datasets/lcb_random30_1.txt
 datasets/lcb_random30.txt
 datasets/no_use/
 datasets/no_use/random_select.py
+src/just_tri_it/analyze_change.py
+exp09*/
