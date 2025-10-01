@@ -106,28 +106,24 @@ def prob_correct(db) -> float:
     return mean(probs)
 
 
-def prob_correct_limit(db, limit_num=20) -> float:
-    probs = []
-    for obj in db.objects:
-        correct_samples = []
-        count_number = 0
-        for p, correct, _ in obj["sample_correctness"]:
-            if count_number >= limit_num:
-                break
-            if correct:
-                correct_samples.append(p)
-            count_number += 1
-        probs.append(len(correct_samples) / count_number)
-
-    return mean(probs)
+def get_num_inputs(obj):
+    for selector_data in obj["selectors"]:
+        method = selector_data["raw_data"]["agreement_raw_data"]["method"]
+        if method == 'plurality_0.0':
+            return len(selector_data["raw_data"]["agreement_raw_data"]["inputs"])
+    return -1
 
 
 def prob_correct_under_agreement(db) -> Dict[str, float]:
-    probs_per_agreement_method = defaultdict(list)
+    agreements_per_method = defaultdict(list)
 
     for obj in db.objects:
         correct_samples = [p for p, correct, _ in obj["sample_correctness"] if correct]
         seen_methods = set()
+
+        num_inputs = get_num_inputs(obj)
+        if num_inputs < 10:
+            print(f"{obj['task_id']}: has only {num_inputs} inputs")
 
         for selector_data in obj["selectors"]:
             if selector_data["outcome"] == "abstained":
@@ -142,64 +138,21 @@ def prob_correct_under_agreement(db) -> Dict[str, float]:
                     if program in correct_samples:
                         num_faithful_agreements += len(witnesses)
                 prob = num_faithful_agreements / num_total_agreements
-                probs_per_agreement_method[method].append(prob)
+                agreements_per_method[method].append((num_faithful_agreements, num_total_agreements))
 
-    probs = {method: mean(probs) for method, probs in probs_per_agreement_method.items()}
+    probs = {}
+
+    for method, results in agreements_per_method.items():
+        total_faithful = sum(f for f, t in results)
+        total_pairs = sum(t for f, t in results)
+
+        if total_pairs > 0:
+            probs[method] = total_faithful / total_pairs
+        else:
+            probs[method] = None
+                
     probs["unconditional"] = prob_correct(db)
 
-    return probs
-
-
-def prob_correct_under_agreement_limit(db, limit_num=20) -> Dict[str, float]:
-    """
-    this is another version of function 'prob_correct_under_agreement'
-    with a limit to the number of sample
-    """
-    probs_per_agreement_method = defaultdict(list)
-
-    for obj in db.objects:
-        # here we should just put the first 'limit_num'th correct samples in the list
-        correct_samples = []
-        count_number = 0
-        for p, correct, _ in obj["sample_correctness"]:
-            if count_number >= limit_num:
-                break
-            if correct:
-                correct_samples.append(p)
-            count_number += 1
-        seen_methods = set()
-
-        for selector_data in obj["selectors"]:
-            if selector_data["outcome"] == "abstained":
-                continue
-            # get first 'limit_num'th samples for p and q
-            if "programs" in selector_data["raw_data"]["agreement_raw_data"]:
-                first_p = selector_data["raw_data"]["agreement_raw_data"]["programs"]
-                if "tests" in selector_data["raw_data"]["agreement_raw_data"]:
-                    first_q = selector_data["raw_data"]["agreement_raw_data"]["tests"]
-                else:
-                    first_q = first_p
-            else:
-                first_p = selector_data["raw_data"]["agreement_raw_data"]["left_programs"][:limit_num]
-                first_q = selector_data["raw_data"]["agreement_raw_data"]["right_programs"][:limit_num]
-            method = selector_data["raw_data"]["agreement_raw_data"]["method"]
-            if method not in seen_methods:
-                seen_methods.add(method)
-                num_total_agreements = 0
-                num_faithful_agreements = 0
-                for (program, witnesses) in selector_data["raw_data"]["agreement"]:
-                    if program in first_p:
-                        new_witnesses = [witness for witness in witnesses if witness in first_q]
-                        num_total_agreements += len(new_witnesses)
-                        if program in correct_samples:
-                            num_faithful_agreements += len(new_witnesses)
-                if num_total_agreements == 0:
-                    continue
-                prob = num_faithful_agreements / num_total_agreements
-                probs_per_agreement_method[method].append(prob)
-
-    probs = {method: mean(probs) for method, probs in probs_per_agreement_method.items()}
-    probs["unconditional"] = prob_correct_limit(db, limit_num)
     return probs
 
 
@@ -310,7 +263,7 @@ def main():
         k2: {k1: method_to_measures[k1][k2] for k1 in method_to_measures}
         for k2 in next(iter(method_to_measures.values()))
     }
-    measure_to_methods["prob_correct_under_agreement"] = prob_correct_under_agreement_limit(db, 20)
+    measure_to_methods["prob_correct_under_agreement"] = prob_correct_under_agreement(db)
 
     for measure in measure_to_methods:
         plot_sorted_percentages(measure_to_methods[measure],
