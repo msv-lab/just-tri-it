@@ -129,7 +129,7 @@ Markdown code block:
                 response = next(ind_model.sample(prompt, num_retry))
                 blocks = extract_all_code(response)
                 inputs = [eval(block.strip()) for block in blocks]
-                inputs = [i for i in inputs if not value_is_too_large(i, 10000, 100)]
+                inputs = [i for i in inputs if not value_is_too_large(i, 10000, 20)]
                 break
             except Exception as e:
                 if attempt == num_retry - 1:
