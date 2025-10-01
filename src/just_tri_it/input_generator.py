@@ -168,4 +168,4 @@ Markdown code block:
     if len(all_inputs) > MAXIMUM_NUM_INPUTS:
         return random.sample(all_inputs, MAXIMUM_NUM_INPUTS)
 
-    return all_inputs[:MINIMUM_NUM_INPUTS]
+    return all_inputs
