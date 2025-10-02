@@ -1,6 +1,5 @@
 atcoder_arc194_e
 atcoder_abc388_f
-atcoder_abc390_e
 leetcode_3781
 atcoder_arc196_c
 atcoder_abc387_a
