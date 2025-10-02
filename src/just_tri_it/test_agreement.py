@@ -44,11 +44,14 @@ class TestAgreement(Agreement):
         for program in programs:
             agreed_tests = []
             for test in tests:
-                match self.executor.run_test(program, test):
-                    case Pass():
-                        agreed_tests.append(test)
-                    case _:
-                        pass
+                try:
+                    match self.executor.run_test(program, test):
+                        case Pass():
+                            agreed_tests.append(test)
+                        case _:
+                            pass
+                except AssertionError:
+                    continue
             if len(agreed_tests) > 0:
                 agreement.append((program, agreed_tests))
 
