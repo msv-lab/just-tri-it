@@ -171,6 +171,5 @@ def type_checker(data, type_str):
             if len(data) != 2:
                 return False
             return all(isinstance(item, int) for item in data)
-        case ""
         case _:
             raise ValueError(f"undefined: {type_str}")
