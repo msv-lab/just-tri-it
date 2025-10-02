@@ -187,6 +187,7 @@ def execute_experiment(model, executor, dataset, db, data_dir):
 
     print_legend()
     task_num = len(dataset)
+    # type_set = set()
     for index, task in enumerate(dataset):
         if task.id in map(lambda o: o["task_id"], db.objects):
             continue
@@ -206,6 +207,9 @@ def execute_experiment(model, executor, dataset, db, data_dir):
         # except:
         #     print("Not enough inputs")
         #     continue
+
+        # for output_type in task.requirements.signature.params:
+        #     type_set.add(output_type.type)
 
         print("\n[Sample correctness]", end="", file=sys.stderr, flush=True)
         samples = list(islice(Vanilla().generate(model, task.requirements, NUM_LEFT_SAMPLES), NUM_LEFT_SAMPLES))

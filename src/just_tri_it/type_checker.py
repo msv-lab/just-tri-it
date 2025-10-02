@@ -153,5 +153,24 @@ def type_checker(data, type_str):
                     return True
                 return all(isinstance(item, int) for item in data)
             return False
+        case "tuple[int, list[int]]":
+            if not isinstance(data, tuple):
+                return False
+            if len(data) != 2:
+                return False
+            if not isinstance(data[0], int):
+                return False
+            if not isinstance(data[1], list):
+                return False
+            if len(data[1]) > 0:
+                return all(isinstance(item, int) for item in data[1])
+            return True
+        case "tuple[int, int]":
+            if not isinstance(data, tuple):
+                return False
+            if len(data) != 2:
+                return False
+            return all(isinstance(item, int) for item in data)
+        case ""
         case _:
             raise ValueError(f"undefined: {type_str}")
