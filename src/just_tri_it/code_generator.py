@@ -34,7 +34,7 @@ raise a ValueError with the message 'Invalid input'.
 Problem:
 {req.description}
         """
-        for s in model.sample(PROMPT, batch+3):
+        for s in model.sample(PROMPT, batch):
             try:
                 yield Program(req.signature, extract_code(s))
             except DataExtractionFailure:
