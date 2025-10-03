@@ -267,15 +267,19 @@ def cal_class_size_info(db):
                 print(len(max_program_wrong), len(tri_i_win_wrong))
                 print("1 good for for-inv", obj["task_id"])
 
-        max_program = [p_program for p_program in max_program if p_program in correct_samples]
-        tri_i_win = [p_program for p_program in tri_i_win if p_program in correct_samples]
-        tri_f_win = [p_program for p_program in tri_f_win if p_program in correct_samples]
+        max_program_cor = [p_program for p_program in max_program if p_program in correct_samples]
+        tri_i_win_cor = [p_program for p_program in tri_i_win if p_program in correct_samples]
+        tri_f_win_cor = [p_program for p_program in tri_f_win if p_program in correct_samples]
         # we have more correct choices
         if len(correct_samples_wo_dup) and not false_split:
-            if len(max_program) < len(tri_f_win):
+            if len(max_program_cor) < len(tri_f_win_cor):
                 print("2 good for for-fib", obj["task_id"])
-            if len(max_program) < len(tri_i_win):
+            if len(max_program_cor) < len(tri_i_win_cor):
                 print("2 good for for-inv", obj["task_id"])
+
+        if not false_split and len(correct_samples_wo_dup) and len(max_program_cor) == 0 and len(max_program_wrong) != 0\
+                and len(tri_f_win) == 0:
+            print("potential example:", obj["task_id"])
 
     return interval_data, box_data
 

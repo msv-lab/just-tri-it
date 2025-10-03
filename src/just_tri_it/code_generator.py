@@ -34,4 +34,7 @@ Problem:
 {req.description}
         """
         for s in model.sample(PROMPT, batch):
-            yield Program(req.signature, extract_code(s))
+            try:
+                yield Program(req.signature, extract_code(s))
+            except:
+                continue
