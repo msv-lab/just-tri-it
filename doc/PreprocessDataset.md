@@ -21,3 +21,24 @@ The VibeRate format uses LiveCodeBench's test data compression. To decompress te
 
     uv run preprocess_dataset --decompress --dataset lcb_part6.json --task atcoder_abc387_b --output decompressed.json
     
+# Sanity Check for A Test Suite
+
+If your dataset has the fields `correct_solution` and `incorrect_solution` in the task metadata, i.e.
+
+    [
+        {
+            "id": ...,
+            ...
+            "metadata": { 
+                "correct_solution": ...
+                "incorrect_solution": ...
+            }
+        }
+        ...
+    ]
+    
+To run the sanity check, execute
+
+    uv run construct_judges --sanity-check --dataset datasets/test.json
+    
+It will check the ability of the test suite to classify the correct solution as correct, and the incorrect as incorrect.

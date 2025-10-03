@@ -22,7 +22,10 @@
                 "output": "8"
             }
         ],
-        "metadata": { }
+        "metadata": {
+            "correct_solution": "def f(n: int) -> int:\n    if n <= 0:\n        return 0\n    elif n == 1:\n        return 1\n    return f(n - 1) + f(n - 2)\n",
+            "incorrect_solution": "def f(n: int) -> int:\n    if n <= 0:\n        return 0\n    elif n == 1:\n        return 1\n    return f(n - 1) + f(n - 1)\n"
+        }
     },
     {
         "id": "1_plus",
