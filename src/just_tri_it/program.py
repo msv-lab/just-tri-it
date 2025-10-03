@@ -5,7 +5,7 @@ from typing import Any, List, Tuple
 
 from just_tri_it.cached_llm import Model
 from just_tri_it.utils import (
-    extract_code, RawData, gen_and_extract_answer_with_retry, ContentAddressable
+    gen_and_extract_answer_with_retry, ContentAddressable, gen_and_extract_code_with_retry
 )
 
 
@@ -64,7 +64,7 @@ return value. Please return only the function definition (with
 Problem:
 {desc}
         """
-        code = extract_code(next(model.sample(PROMPT_CODE)))
+        code = gen_and_extract_code_with_retry(model, PROMPT_CODE, 3)
         tree = ast.parse(code)
         for node in tree.body:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):

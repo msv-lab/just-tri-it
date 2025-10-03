@@ -108,6 +108,23 @@ def extract_code(content):
     raise DataExtractionFailure
 
 
+def gen_and_extract_code_with_retry(model, prompt, num_retry=3):
+    ind_model = Independent(model)
+    ans = None
+    tried_samples = []
+    for attempt in range(num_retry):
+        try:
+            sample = next(ind_model.sample(prompt, num_retry))
+            tried_samples.append(sample)
+            ans = extract_code(sample)
+            break
+        except Exception as e:
+            if attempt == num_retry - 1:
+                raise ExperimentFailure(f"retry failed with {type(e).__name__}: {e}")
+        pass
+    return ans
+
+
 def extract_all_code(content) -> list[str]:
     """Extract all markdown code blocks"""
     parsed = mistletoe.Document(content)
@@ -116,6 +133,7 @@ def extract_all_code(content) -> list[str]:
         if child.__class__.__name__ == "CodeFence":
             fragments.append(child.children[0].content)
     return fragments
+
 
 
 def extract_answer(s):

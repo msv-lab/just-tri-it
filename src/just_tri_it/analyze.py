@@ -1,4 +1,5 @@
 import argparse
+import copy
 import json
 from pathlib import Path
 from collections import defaultdict
@@ -150,10 +151,40 @@ def prob_correct_under_agreement(db) -> Dict[str, float]:
             probs[method] = total_faithful / total_pairs
         else:
             probs[method] = None
-                
+
     probs["unconditional"] = prob_correct(db)
 
     return probs
+
+
+def mixer_data_split(db):
+    ordered_selectors = [
+        "FOR_FIB", "FOR_INV", "MajorityVote", "Plurality",
+        "Postcondition", "Syntactic", "OffByOne",
+        "CodeT_IO", "CodeT_Assert"
+    ]
+    order_map = {id_val: idx for idx, id_val in enumerate(ordered_selectors)}
+
+    for obj in db.objects:
+        # sort
+        sorted_selector = copy.deepcopy(obj["selectors"])
+        sorted_selector.sort(key=lambda item: order_map.get(item["id"], float("inf")))
+
+        # choose
+        chosen = None
+        for selector_data in sorted_selector:
+            if selector_data["outcome"] != "abstained":
+                chosen = copy.deepcopy(selector_data)
+                break
+
+        if chosen is None and obj["selectors"]:
+            chosen = copy.deepcopy(sorted_selector[-1])
+
+        chosen["id"] = "mixer"
+
+        obj["selectors"].append(chosen)
+
+    return db
 
 
 def to_interval(x):
@@ -173,11 +204,16 @@ def cal_class_size_info(db):
     box_data = {}
 
     for obj in db.objects:
-        # for each task
+        # print(f"Task {obj["task_id"]} ------")
         correct_samples = [p for p, correct, _ in obj["sample_correctness"] if correct]
+
         all_length = len(obj["sample_correctness"])
         seen_methods = set()
         proportion = 0
+        false_split = False
+        tri_f_win = []
+        tri_i_win = []
+        max_program = []
 
         for selector_data in obj["selectors"]:
             if selector_data["outcome"] == "abstained":
@@ -185,9 +221,17 @@ def cal_class_size_info(db):
             if selector_data["id"] == "Plurality":
                 class_data_dict = selector_data["raw_data"]["agreement_raw_data"]["classes"]
                 size_of_class = 0
+                maxsize = 0
                 for key, value in class_data_dict.items():
+                    if len(value) > maxsize:
+                        maxsize = len(value)
+                        max_program = value
+                    elif len(value) == maxsize:
+                        max_program += value
                     for correct_sample in correct_samples:
                         if correct_sample in value:
+                            if size_of_class != 0:
+                                false_split = True
                             size_of_class = len(value)
                             break
                 proportion = size_of_class / all_length
@@ -195,13 +239,43 @@ def cal_class_size_info(db):
             if method not in seen_methods:
                 seen_methods.add(method)
                 for (program, witnesses) in selector_data["raw_data"]["agreement"]:
+                    if method == "tri_for-fib":
+                        tri_f_win.append(program)
+                    if method == "tri_for-inv":
+                        tri_i_win.append(program)
                     if program in correct_samples:
                         if method not in interval_data:
                             interval_data[method] = [0] * 10
                             box_data[method] = []
                         interval_data[method][to_interval(proportion)] += 1
                         box_data[method].append(proportion)
-                        break
+                        # break
+        tri_f_win = list(set(tri_f_win))
+        tri_i_win = list(set(tri_i_win))
+        max_program = list(set(max_program))
+        correct_samples_wo_dup = list(set(correct_samples))
+
+        max_program_wrong = [p_program for p_program in max_program if p_program not in correct_samples]
+        tri_i_win_wrong = [p_program for p_program in tri_i_win if p_program not in correct_samples]
+        tri_f_win_wrong = [p_program for p_program in tri_f_win if p_program not in correct_samples]
+        # we don't have bad choice, but they have
+        if len(correct_samples_wo_dup) and not false_split:
+            if len(max_program_wrong) > 0 and len(tri_f_win_wrong) == 0 and len(tri_f_win) > 0:
+                print(len(max_program_wrong), len(tri_f_win_wrong))
+                print("1 good for for-fib", obj["task_id"])
+            if len(max_program_wrong) > 0 and len(tri_i_win_wrong) == 0 and len(tri_i_win) > 0:
+                print(len(max_program_wrong), len(tri_i_win_wrong))
+                print("1 good for for-inv", obj["task_id"])
+
+        max_program = [p_program for p_program in max_program if p_program in correct_samples]
+        tri_i_win = [p_program for p_program in tri_i_win if p_program in correct_samples]
+        tri_f_win = [p_program for p_program in tri_f_win if p_program in correct_samples]
+        # we have more correct choices
+        if len(correct_samples_wo_dup) and not false_split:
+            if len(max_program) < len(tri_f_win):
+                print("2 good for for-fib", obj["task_id"])
+            if len(max_program) < len(tri_i_win):
+                print("2 good for for-inv", obj["task_id"])
 
     return interval_data, box_data
 
@@ -255,6 +329,8 @@ def main():
     db = Database.load_ignore(data_dir)
     report_dir = Path(args.report)
     report_dir.mkdir(parents=True, exist_ok=True)
+
+    db = mixer_data_split(db)
 
     method_to_measures = abstention_measures(db)
 
