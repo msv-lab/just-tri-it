@@ -85,7 +85,7 @@ type ExecutionOutcome = Success | Error | Panic | Timeout
 type TestOutcome = Pass | Fail | Error | Panic | Timeout
 
 
-EXECUTION_TIMEOUT_SECONDS = 2
+EXECUTION_TIMEOUT_SECONDS = 8
 
 
 class Executor(ABC):

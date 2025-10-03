@@ -10,9 +10,10 @@ from copy import deepcopy
 
 from just_tri_it.executor import Success, Error
 from just_tri_it.utils import ExperimentFailure
+from just_tri_it.input_generator import MINIMUM_NUM_INPUTS
 
 
-CHECKER_CALL_BUDGET = 8000
+CHECKER_CALL_BUDGET = 7500
 
 available_call_budget = 0
 
@@ -329,8 +330,11 @@ def is_formula_true(executor,
             # right and left both not bool
             return get_priority_from_list([result_left, result_right])
         case ForAll(ele, domain, body):
+            global available_call_budget
             special_list = []
             all_number = len(inputs[domain])
+            if available_call_budget == CHECKER_CALL_BUDGET:
+                available_call_budget = int(round(CHECKER_CALL_BUDGET / MINIMUM_NUM_INPUTS)) * all_number
             for inp in inputs[domain]:
                 new_env = env.copy()
                 if isinstance(ele, Var):
