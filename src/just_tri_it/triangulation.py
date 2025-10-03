@@ -171,6 +171,7 @@ Problem:
                 sample = next(ind_model.sample(PROMPT, 3))
                 tried_samples.append(sample)
                 valid_name = extract_answer(sample)
+                valid_name = valid_name.strip() if valid_name else None
                 if valid_name:
                     return_param = [p.name for p in req.signature.params].index(valid_name)
                     break
@@ -178,7 +179,6 @@ Problem:
                     continue
             except Exception as e:
                 if attempt == 2:
-                    print(tried_samples)
                     raise ExperimentFailure(f"retry failed with {type(e).__name__}: {e}")
         return return_param
 
