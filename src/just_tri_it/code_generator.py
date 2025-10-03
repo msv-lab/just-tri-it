@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Iterable
 from abc import ABC, abstractmethod
 
-from just_tri_it.utils import extract_code
+from just_tri_it.utils import extract_code, DataExtractionFailure
 from just_tri_it.program import Program, Requirements
 
 
@@ -36,5 +36,6 @@ Problem:
         for s in model.sample(PROMPT, batch):
             try:
                 yield Program(req.signature, extract_code(s))
-            except:
+            except DataExtractionFailure:
+                print("can't extract code")
                 continue
