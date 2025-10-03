@@ -208,31 +208,6 @@ class CompactJSONEncoder(json.JSONEncoder):
         else:
             yield json.dumps(obj, ensure_ascii=False)
 
-def write_dict_to_json(data_dict, file_path, indent=4, ensure_ascii=False):
-    """将字典写入 JSON 文件，列表保持在一行"""
-    file_path = Path(file_path)
-    
-    try:
-        # 确保目录存在
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # 使用自定义编码器写入文件
-        with open(file_path, 'w', encoding='utf-8') as f:
-            if any(isinstance(v, list) for v in data_dict.values()):
-                # 如果数据中有列表，使用自定义编码器
-                json.dump(data_dict, f, indent=indent, ensure_ascii=ensure_ascii, 
-                         cls=CompactJSONEncoder)
-            else:
-                # 如果没有列表，使用标准编码器
-                json.dump(data_dict, f, indent=indent, ensure_ascii=ensure_ascii)
-        
-        print(f"数据已成功写入: {file_path}")
-        return True
-        
-    except Exception as e:
-        print(f"写入JSON文件时出错: {e}")
-        return False
-
 
 def add_cache_options(parser):
     parser.add_argument(

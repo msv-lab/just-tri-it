@@ -1,3 +1,4 @@
+import sys
 from dataclasses import dataclass
 from typing import Iterable
 from abc import ABC, abstractmethod
@@ -33,9 +34,9 @@ raise a ValueError with the message 'Invalid input'.
 Problem:
 {req.description}
         """
-        for s in model.sample(PROMPT, batch):
+        for s in model.sample(PROMPT, batch+3):
             try:
                 yield Program(req.signature, extract_code(s))
             except DataExtractionFailure:
-                print("can't extract code")
+                print("can't extract code", file=sys.stderr, flush=True)
                 continue
