@@ -277,8 +277,7 @@ def cal_class_size_info(db):
             if len(max_program_cor) < len(tri_i_win_cor):
                 print("2 good for for-inv", obj["task_id"])
 
-        if not false_split and len(correct_samples_wo_dup) and len(max_program_cor) == 0 and len(max_program_wrong) != 0\
-                and len(tri_f_win) == 0:
+        if not false_split and len(correct_samples_wo_dup) and len(max_program_cor) != 0 and len(max_program_wrong) != 0:
             print("potential example:", obj["task_id"])
 
     return interval_data, box_data

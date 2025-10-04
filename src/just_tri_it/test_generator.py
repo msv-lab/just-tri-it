@@ -187,7 +187,7 @@ def test_boundary_condition():
                 try:
                     assertion = TestFunction.from_code(code.strip(), target_signature)
                     tests.append(assertion)
-                except ValueError as e:
+                except Exception as e:
                     print(f"Failed to create assertion from code: {e}")
                     continue
 
