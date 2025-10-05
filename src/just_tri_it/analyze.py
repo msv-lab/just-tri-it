@@ -107,6 +107,43 @@ def prob_correct(db) -> float:
     return mean(probs)
 
 
+def prob_correct_by_task(db) -> Dict[str, float]:
+    probs = {}
+    between_zero_and_half = 0
+    for obj in db.objects:
+        correct_samples = [p for p, correct, _ in obj["sample_correctness"] if correct]
+        p = (len(correct_samples) / len(obj["sample_correctness"]))
+        if p > 0 and p < 0.5:
+            between_zero_and_half += 1
+        probs[obj["task_id"]] = p
+    #print(f"difficult but feasible: {between_zero_and_half}/{len(probs)}")
+    return probs
+
+
+def plot_distribution_with_separate_zero(data, output_file):
+
+    data = np.array(data)
+
+    zeros = data[data == 0]
+    non_zeros = data[data > 0]
+
+    # Define bins
+    bins = np.linspace(0, 1, 11)  # 10 bins from 0 to 1
+
+    # Plot histogram for non-zero values
+    plt.hist(non_zeros, bins=bins, color='blue', edgecolor='blue', alpha=0.7, label='Non-zero values')
+
+    # Overlay histogram for zeros (in a separate bin)
+    plt.hist(zeros, bins=[-0.001, 0.001], color='red', edgecolor='red', alpha=0.8, label='Zero values')
+
+    # Labels and legend
+    plt.xlabel("Value")
+    plt.ylabel("Frequency")
+    plt.title("Distribution of Values (Zeros Highlighted)")
+    plt.legend()
+    plt.savefig(output_file, dpi=300)
+
+
 def get_num_inputs(obj):
     for selector_data in obj["selectors"]:
         method = selector_data["raw_data"]["agreement_raw_data"]["method"]
@@ -351,11 +388,14 @@ def main():
 
     interval_data, box_data = cal_class_size_info(db)
     if interval_data and box_data:
-        plot_distribution(interval_data, report_dir / "distribution.png")
+        plot_distribution(interval_data, report_dir / "prob_selected_distribution.png")
         plot_box(box_data, report_dir / "box.png")
 
     with (report_dir / "metrics.json").open("w", encoding="utf-8") as f:
         json.dump(measure_to_methods, f, indent=4)
+
+    corr_dist =  prob_correct_by_task(db)
+    plot_distribution_with_separate_zero(list(corr_dist.values()), report_dir / "prob_correct_distribution.png")
 
 
 if __name__ == "__main__":
