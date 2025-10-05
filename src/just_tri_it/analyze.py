@@ -130,18 +130,41 @@ def plot_distribution_with_separate_zero(data, output_file):
     # Define bins
     bins = np.linspace(0, 1, 11)  # 10 bins from 0 to 1
 
-    # Plot histogram for non-zero values
-    plt.hist(non_zeros, bins=bins, color='blue', edgecolor='blue', alpha=0.7, label='Non-zero values')
+    plt.rcParams.update({
+        "text.usetex": True,       # LaTeX rendering
+        "font.family": "serif",    # Academic serif font
+        "axes.labelsize": 12,      # Axis label size
+        "axes.titlesize": 13,      # Title size
+        "legend.fontsize": 10,     # Legend size
+        "xtick.labelsize": 10,
+        "ytick.labelsize": 10
+    })
 
-    # Overlay histogram for zeros (in a separate bin)
-    plt.hist(zeros, bins=[-0.001, 0.001], color='red', edgecolor='red', alpha=0.8, label='Zero values')
+    fig, ax = plt.subplots(figsize=(4.5, 3))
 
-    # Labels and legend
-    plt.xlabel("Value")
-    plt.ylabel("Frequency")
-    plt.title("Distribution of Values (Zeros Highlighted)")
-    plt.legend()
-    plt.savefig(output_file, dpi=300)
+    # Plot histogram
+    ax.hist(non_zeros, bins=bins, color='skyblue', edgecolor='skyblue', alpha=0.7, label=r'Non-zero probability')
+    ax.hist(zeros, bins=[-0.001, 0.001], color='darkred', edgecolor='darkred', alpha=0.8, label=r'Zero probability')
+
+    # Labels
+    ax.set_xlabel(r"Probability", labelpad=6)
+    ax.set_ylabel(r"Count", labelpad=6)
+    #ax.set_title(r"Distribution of Probabilities of Correctness")
+
+    # Academic look: clean spines
+    for spine in ["top", "right"]:
+        ax.spines[spine].set_visible(False)
+
+    # Ticks outward
+    ax.tick_params(axis="both", direction="out", length=5)
+
+    # Legend outside for clarity
+    ax.legend(frameon=False, loc="upper right")
+
+    # Save high-quality vector format
+    plt.tight_layout()
+    plt.savefig(output_file, format="pdf", bbox_inches="tight")
+    plt.close()
 
 
 def get_num_inputs(obj):
@@ -395,7 +418,7 @@ def main():
         json.dump(measure_to_methods, f, indent=4)
 
     corr_dist =  prob_correct_by_task(db)
-    plot_distribution_with_separate_zero(list(corr_dist.values()), report_dir / "prob_correct_distribution.png")
+    plot_distribution_with_separate_zero(list(corr_dist.values()), report_dir / "prob_correct_distribution.pdf")
 
 
 if __name__ == "__main__":

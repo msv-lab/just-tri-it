@@ -21,6 +21,10 @@ The VibeRate format uses LiveCodeBench's test data compression. To decompress te
 
     uv run preprocess_dataset --decompress --dataset lcb_part6.json --task atcoder_abc387_b --output decompressed.json
     
+To check problem descriptions, etc, use the following command:
+
+    jq -r '.[] | select(.id == "atcoder_abc387_b") | .requirements.description' datasets/lcb_part6.json
+    
 # Sanity Check for A Test Suite
 
 If your dataset has the fields `correct_solution` and `incorrect_solution` in the task metadata, i.e.
