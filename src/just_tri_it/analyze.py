@@ -125,7 +125,8 @@ def plot_distribution_with_separate_zero(data, output_file):
     data = np.array(data)
 
     zeros = data[data == 0]
-    non_zeros = data[data > 0]
+    low_probs = data[(data > 0) & (data < 0.5)]
+    high_probs = data[data >= 0.5]
 
     # Define bins
     bins = np.linspace(0, 1, 11)  # 10 bins from 0 to 1
@@ -143,9 +144,9 @@ def plot_distribution_with_separate_zero(data, output_file):
     fig, ax = plt.subplots(figsize=(4.5, 3))
 
     # Plot histogram
-    ax.hist(non_zeros, bins=bins, color='skyblue', edgecolor='skyblue', alpha=0.7, label=r'Non-zero probability')
-    ax.hist(zeros, bins=[-0.001, 0.001], color='darkred', edgecolor='darkred', alpha=0.8, label=r'Zero probability')
-
+    ax.hist(high_probs, bins=bins, color='seagreen', edgecolor='seagreen', alpha=0.7, label=r'$P \geq 0.5$')
+    ax.hist(low_probs, bins=bins, color='skyblue', edgecolor='skyblue', alpha=0.7, label=r'$0 < P < 0.5$')
+    ax.hist(zeros, bins=[-0.001, 0.001], color='darkred', edgecolor='darkred', alpha=0.8, label=r'$P = 0$')
     # Labels
     ax.set_xlabel(r"Probability", labelpad=6)
     ax.set_ylabel(r"Count", labelpad=6)
