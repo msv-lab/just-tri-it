@@ -29,8 +29,9 @@ class TestAgreement(Agreement):
           "tests": ...
         }
         """
-        
-        programs = list(islice(self.code_generator.generate(model, req, self.num_programs), self.num_programs))
+
+        programs = self.code_generator.generate(model, req, self.num_programs)
+        programs = list(islice(programs, self.num_programs))
         tests = list(self.test_generator.generate(model, req))
 
         raw_data = {

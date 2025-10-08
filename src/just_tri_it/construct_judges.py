@@ -9,6 +9,7 @@ from just_tri_it.triangulation import make_postcondition
 from just_tri_it.dataset import load_dataset
 from just_tri_it.utils import print_annotated_hr
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -28,6 +29,7 @@ def parse_args():
         help="Left program."
     )
     return parser.parse_args()
+
 
 def main():
     args = parse_args()

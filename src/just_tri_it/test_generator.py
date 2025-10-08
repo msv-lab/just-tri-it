@@ -1,14 +1,16 @@
 import sys
+import random
 from typing import Iterator, List
 from abc import ABC, abstractmethod
 
-from just_tri_it.program import Test, TestFunction, InputOutput, Requirements
+from just_tri_it.program import Test, TestFunction, InputOutput, Requirements, Signature
 from just_tri_it.utils import extract_all_code, ExperimentFailure
 from just_tri_it.input_generator import value_is_too_large
+from just_tri_it.type_checker import check_type, args_match_signature
 
 
-MINIMUM_NUM_TESTS = 10
-MAXIMUM_NUM_TESTS = 50  #FIXME: too many?
+MINIMUM_NUM_TESTS = 15
+MAXIMUM_NUM_TESTS = 50  # the upper bound is less important here
 
 
 class TestGenerator(ABC):
@@ -29,28 +31,49 @@ class InputOutputGenerator(TestGenerator):
 
     def generate(self, model, req: Requirements) -> Iterator[Test]:
         tests = self._generate_initial_tests(model, req)
+        tests = self._fix_and_filter_bad_tests(tests, req.signature)
 
-        while len(tests) < MINIMUM_NUM_TESTS:
+        max_attempts = 3
+        attempt = 0
+        
+        while len(tests) < MINIMUM_NUM_TESTS and attempt < max_attempts:
+            attempt += 1
             additional = self._generate_additional_tests(model, req, tests)
+            additional = self._fix_and_filter_bad_tests(additional, req.signature)
             tests.extend(additional)
 
-            if len(additional) == 0:
-                break
+        if len(tests) < MINIMUM_NUM_TESTS:
+            raise ExperimentFailure(f"only generated {len(tests)} tests after {max_attempts} attempts (target: {MINIMUM_NUM_TESTS})")
 
+        if len(tests) > MAXIMUM_NUM_TESTS:
+            return random.sample(tests, MAXIMUM_NUM_INPUTS)
+
+        return tests
+
+    def _fix_and_filter_bad_tests(self, tests: List[InputOutput], sig: Signature):
         adjusted_tests = []
 
         for t in tests:
-            if len(t.inputs) != len(req.signature.params) and len(req.signature.params) == 1:
-                adjusted_inputs = [t.inputs]
+            unchecked_input = t.inputs
+            if not isinstance(unchecked_input, list):
+                if len(sig.params) == 1:
+                    unchecked_input = [unchecked_input]
+                else:
+                    continue
             else:
-                adjusted_inputs = t.inputs
-                
-            new_test = InputOutput(adjusted_inputs, t.output)
-            adjusted_tests.append(new_test)
+                if len(unchecked_input) != len(sig.params):
+                    if len(param_list) == 1:
+                        unchecked_input = [unchecked_input]
+                    else:
+                        continue
+
+            if args_match_signature(unchecked_input, sig) and \
+               check_type(t.output, sig.return_type):
+                adjusted_tests.append(InputOutput(unchecked_input, t.output))
             
         return adjusted_tests
 
-    def _extract_test_case(self, blocks):
+    def _extract_test_case(self, blocks, ):
         test_cases = []
         for block in blocks:
             try:
