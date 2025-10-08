@@ -9,7 +9,7 @@ from just_tri_it.input_generator import value_is_too_large
 from just_tri_it.type_checker import check_type, args_match_signature
 
 
-MINIMUM_NUM_TESTS = 15
+MINIMUM_NUM_TESTS = 10
 MAXIMUM_NUM_TESTS = 50  # the upper bound is less important here
 
 
@@ -73,7 +73,7 @@ class InputOutputGenerator(TestGenerator):
             
         return adjusted_tests
 
-    def _extract_test_case(self, blocks, ):
+    def _extract_test_cases(self, blocks):
         test_cases = []
         for block in blocks:
             try:
@@ -125,12 +125,12 @@ output: expected_output
         """
 
         response = next(model.sample(PROMPT))
-        test_cases = self._extract_test_case(extract_all_code(response))
+        test_cases = self._extract_test_cases(extract_all_code(response))
 
         return test_cases
 
 
-    def _generate_additional_tests(self, model, req, existing_cases, executor=None):
+    def _generate_additional_tests(self, model, req, existing_cases):
         existing_inputs_str = "\n".join([repr(c.inputs) for c in existing_cases])
 
         PROMPT = f"""Given a problem description, a function
@@ -162,7 +162,7 @@ Output only new tests.
         """
         response = next(model.sample(PROMPT))
 
-        additional_cases = self._extract_test_case(extract_all_code(response))
+        additional_cases = self._extract_test_cases(extract_all_code(response))
         return additional_cases
 
 
@@ -171,9 +171,62 @@ class TestFunctionGenerator(TestGenerator):
     def display_name(self) -> str:
         return "assert"
 
-    def generate(self, model, req: Requirements) -> Iterator[Test]:
+    def _extract_test_cases(self, blocks, target_signature):
+        tests = []
+        for code in blocks:
+            try:
+                assertion = TestFunction.from_code(code.strip(), target_signature)
+                tests.append(assertion)
+            except Exception as e:
+                print(f"Error parsing test case: {e}", file=sys.stderr)
+                continue
+        return tests
+
+    def _generate_additional_tests(self, model, req, existing_cases):
         target_signature = req.signature
-        PROMPT_ASSERTIONS = f"""For the given problem description,
+        existing_tests_str = "\n".join([c.test_function_code for c in existing_cases])
+
+        PROMPT = f"""Given a problem description, a function
+signature, and a list of existing tests, generate additional
+tests that cover missing cases.
+
+The signature of the target function under test is
+{target_signature.pretty_print()}. Each test should be a function
+whose name starts with test_, it calls the target function, and
+contains assertions to check output correctness. Account for cases
+when the problem description allows multiple correct outputs for the
+same input if such cases exists.
+        
+Problem description:
+{req.description}
+
+Output each test function in a separate code block, for example
+
+```python
+def test_basic_functionality():
+    result = {target_signature.name}(typical_input)
+    assert result == expected_value
+```
+
+```python  
+def test_boundary_condition():
+    result = {target_signature.name}(edge_case_input)
+    assert some_property_holds(result)
+```        
+
+# **Existing Test Cases**:
+{existing_tests_str}
+
+Output only new tests.
+        """
+        response = next(model.sample(PROMPT))
+        tests = self._extract_test_cases(extract_all_code(response), target_signature)
+        return tests
+    
+
+    def _generate_initial_tests(self, model, req: Requirements) -> Iterator[Test]:
+        target_signature = req.signature
+        PROMPT = f"""For the given problem description,
 write a comprehensive set of tests. The signature of the target
 function under test is {target_signature.pretty_print()}. Each test
 should be a function whose name starts with test_, it calls the
@@ -198,23 +251,27 @@ def test_boundary_condition():
     assert some_property_holds(result)
 ```
         """
+        response = next(model.sample(PROMPT))
+        tests = self._extract_test_cases(extract_all_code(response), target_signature)
+        return tests
+    
 
-        #FIXME: why in this generator we do not use MINIMUM_NUM_TESTS?
-        response = next(model.sample(PROMPT_ASSERTIONS))
+    def generate(self, model, req: Requirements) -> Iterator[Test]:
+        target_signature = req.signature
+        tests = self._generate_initial_tests(model, req)
 
-        code_blocks = extract_all_code(response)
+        max_attempts = 3
+        attempt = 0
+        
+        while len(tests) < MINIMUM_NUM_TESTS and attempt < max_attempts:
+            attempt += 1
+            additional = self._generate_additional_tests(model, req, tests)
+            tests.extend(additional)
 
-        tests = []
-        for code in code_blocks:
-            if code and code.strip():
-                try:
-                    assertion = TestFunction.from_code(code.strip(), target_signature)
-                    tests.append(assertion)
-                except Exception as e:
-                    print(f"Failed to create assertion from code: {e}")
-                    continue
+        if len(tests) < MINIMUM_NUM_TESTS:
+            raise ExperimentFailure(f"only generated {len(tests)} tests after {max_attempts} attempts (target: {MINIMUM_NUM_TESTS})")
 
-        if len(tests) == 0:
-            raise ExperimentFailure("Failed to generate test functions")
+        if len(tests) > MAXIMUM_NUM_TESTS:
+            return random.sample(tests, MAXIMUM_NUM_INPUTS)
 
         return tests
