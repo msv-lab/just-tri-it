@@ -130,7 +130,7 @@ Markdown code block:
     
     ind_model = Independent(model)
 
-    max_attempts = 3
+    max_attempts = 5
     attempt = 0
     
     while len(all_inputs) < MINIMUM_NUM_INPUTS and attempt < max_attempts:

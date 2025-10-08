@@ -10,7 +10,7 @@ from just_tri_it.code_generator import Generator
 from just_tri_it.selection import Agreement, AgreementOutcome
 from just_tri_it.input_generator import generate_inputs
 from just_tri_it.logic import (
-    Formula, check, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, MapUnpack, Member, Tolerate
+    Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, MapUnpack, Member, Tolerate
 )
 from just_tri_it.program import Requirements, NamedReturnSignature, Signature, Parameter
 from just_tri_it.utils import (
@@ -18,6 +18,7 @@ from just_tri_it.utils import (
     ExperimentFailure,
     RawData, extract_answer
 )
+from just_tri_it.property_checker import EvaluatorChecker
 
 
 class Triangulator(Agreement):
@@ -27,7 +28,7 @@ class Triangulator(Agreement):
                  triangulation: 'Triangulation',
                  num_left_programs: int,
                  num_right_programs: int):
-        self.executor = executor
+        self.checker = EvaluatorChecker(executor)
         self.code_generator = code_generator
         self.triangulation = triangulation
         self.num_left_programs = num_left_programs
@@ -47,7 +48,7 @@ class Triangulator(Agreement):
         left_programs = list(islice(left_programs, self.num_left_programs))
 
         transformed_right = self.triangulation.right_trans.transform(model, req)
-        right_inputs = generate_inputs(model, transformed_right, True)        
+        right_inputs = generate_inputs(model, transformed_right)        
         right_programs = self.code_generator.generate(model, transformed_right, self.num_right_programs)
         right_programs = list(islice(right_programs, self.num_right_programs))
 
@@ -56,10 +57,9 @@ class Triangulator(Agreement):
         for p in left_programs:
             p_witnesses = []
             for q in right_programs:
-                if check(self.executor,
-                         { Side.LEFT: left_inputs, Side.RIGHT: right_inputs },
-                         { Side.LEFT: p, Side.RIGHT: q },
-                         self.triangulation.hyperproperty):
+                if self.checker.check({ Side.LEFT: left_inputs, Side.RIGHT: right_inputs },
+                                      { Side.LEFT: p, Side.RIGHT: q },
+                                      self.triangulation.hyperproperty):
                     p_witnesses.append(q)
             if len(p_witnesses) > 0:
                 programs_and_witnesses.append((p, p_witnesses))
