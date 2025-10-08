@@ -1,3 +1,6 @@
+from typing import List, Any
+from just_tri_it.program import Signature
+
 
 def type_checker(data, type_str):
     type_str = type_str.lower()
@@ -173,3 +176,10 @@ def type_checker(data, type_str):
             return all(isinstance(item, int) for item in data)
         case _:
             raise ValueError(f"undefined: {type_str}")
+
+
+def args_match_signature(args: List[Any], sig: Signature):
+    for index in range(len(sig.params)):
+        if not type_checker(args[index], sig.params[index].type):
+            return False
+    return True

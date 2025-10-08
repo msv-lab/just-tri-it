@@ -16,7 +16,8 @@ from just_tri_it.utils import (
     setup_cache,
     replace_with_hash_and_update_map,
     ExperimentFailure,
-    print_legend
+    print_legend,
+    init_random
 )
 from just_tri_it.config import init_selectors, NUM_LEFT_SAMPLES
 from just_tri_it.code_generator import Vanilla
@@ -124,6 +125,8 @@ class Database:
 
 
 def main():
+    init_random()
+    
     args = parse_args()
     
     model = AI302(args.model, 1.0)
@@ -187,7 +190,7 @@ def execute_experiment(model, executor, dataset, db, data_dir):
 
     print_legend()
     task_num = len(dataset)
-    # type_set = set()
+
     for index, task in enumerate(dataset):
         if task.id in map(lambda o: o["task_id"], db.objects):
             continue
@@ -201,15 +204,6 @@ def execute_experiment(model, executor, dataset, db, data_dir):
         
         print()
         print_annotated_hr(f"{index+1}/{task_num} —— Task {task.id}")
-
-        # try:
-        #     generate_inputs(model, task.requirements)
-        # except:
-        #     print("Not enough inputs")
-        #     continue
-
-        # for output_type in task.requirements.signature.params:
-        #     type_set.add(output_type.type)
 
         print("\n[Sample correctness]", end="", file=sys.stderr, flush=True)
         samples = list(islice(Vanilla().generate(model, task.requirements, NUM_LEFT_SAMPLES), NUM_LEFT_SAMPLES))

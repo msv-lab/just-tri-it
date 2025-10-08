@@ -3,6 +3,7 @@ import shutil
 import mistletoe
 import json
 from pathlib import Path
+import random
 from typing import Any
 import hashlib
 from abc import ABC, abstractmethod
@@ -69,6 +70,10 @@ def replace_with_hash_and_update_map(data, id_to_content):
 def print_hr():
     width = shutil.get_terminal_size(fallback=(80, 20)).columns
     print('-' * width, file=sys.stderr, flush=True)
+
+
+def init_random():
+    random.seed(42)
 
 
 def print_annotated_hr(message):

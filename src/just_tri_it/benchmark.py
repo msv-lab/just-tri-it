@@ -6,7 +6,7 @@ from just_tri_it.executor import SubprocessExecutor, PersistentWorkerExecutor
 from just_tri_it.dataset import load_dataset
 from just_tri_it.code_generator import Vanilla
 from just_tri_it.selection import Selected, Abstained
-from just_tri_it.utils import print_annotated_hr, add_cache_options, setup_cache, print_legend
+from just_tri_it.utils import print_annotated_hr, add_cache_options, setup_cache, print_legend, init_random
 from just_tri_it.config import init_selectors
 from just_tri_it.program import Program
 
@@ -68,6 +68,8 @@ def evaluate_selector(model, executor, selector, dataset):
                 print("\nABSTAINED")
 
 def main():
+    init_random()
+    
     args = parse_args()
     
     model = AI302(args.model, 1.0, max_batch=50)

@@ -2,15 +2,14 @@ import copy
 import sys
 import random
 from typing import List, Any
-from just_tri_it.type_checker import type_checker
+from just_tri_it.type_checker import args_match_signature
 from just_tri_it.cached_llm import Independent
 from just_tri_it.executor import Executor, Success
 from just_tri_it.utils import extract_code
-from just_tri_it.program import Program, Requirements
+from just_tri_it.program import Program, Requirements, Signature
 from just_tri_it.utils import extract_all_code, remove_duplicates, ExperimentFailure
 
 
-#FIXME: control number of inputs:
 MINIMUM_NUM_INPUTS = 15
 MAXIMUM_NUM_INPUTS = 25
 
@@ -39,35 +38,26 @@ def value_is_too_large(data, int_bound, seq_bound):
     return False
 
 
-def input_checker(req, input_list):
+def fix_and_filter_bad_inputs(input_list: List[Any], sig: Signature):
     filtered_input = []
-    param_list = req.signature.params
-    # print(param_list, file=sys.stderr, flush=True)
     for unchecked_input in input_list:
-        # print(unchecked_input, file=sys.stderr, flush=True)
         if not isinstance(unchecked_input, list):
-            if len(param_list) == 1:
+            if len(sig.params) == 1:
                 unchecked_input = [unchecked_input]
             else:
                 continue
         else:
-            if len(unchecked_input) != len(param_list):
+            if len(unchecked_input) != len(sig.params):
                 if len(param_list) == 1:
                     unchecked_input = [unchecked_input]
                 else:
                     continue
-        type_error = True
-        for index in range(len(param_list)):
-            # print(unchecked_input[index], param_list[index].type, file=sys.stderr, flush=True)
-            if not type_checker(unchecked_input[index], param_list[index].type):
-                type_error = False
-                break
-        if type_error:
+        if args_match_signature(unchecked_input, sig):
             filtered_input.append(unchecked_input)
     return filtered_input
 
 
-def generate_inputs(model, req: Requirements, ignore_num = False, max_attempts: int = 3) -> List[Any]:
+def generate_inputs(model, req: Requirements) -> List[Any]:
     # Define three different types of prompts
     PROMPT_SMALL = f"""Given a problem description and the function
 signature, generate a comprehensive set of small-scale test cases to
@@ -138,34 +128,27 @@ Markdown code block:
         return inputs
 
     all_inputs = []
-    attempts = 0
+    
     ind_model = Independent(model)
-    while len(all_inputs) < MINIMUM_NUM_INPUTS and attempts < max_attempts:
-        attempts += 1
-        small_inputs = sample_and_extract_with_retry(PROMPT_SMALL, ind_model)
-        medium_inputs = sample_and_extract_with_retry(PROMPT_MEDIUM, ind_model)
-        boundary_inputs = sample_and_extract_with_retry(PROMPT_BOUNDARY, ind_model)
 
-        small_inputs = input_checker(req, small_inputs)
-        medium_inputs = input_checker(req, medium_inputs)
-        boundary_inputs = input_checker(req, boundary_inputs)
+    max_attempts = 3
+    attempt = 0
+    
+    while len(all_inputs) < MINIMUM_NUM_INPUTS and attempt < max_attempts:
+        attempt += 1
 
         current_batch = []
-        current_batch.extend(small_inputs)
-        current_batch.extend(medium_inputs)
-        current_batch.extend(boundary_inputs)
-        
-        current_batch = remove_duplicates(current_batch)
+        current_batch.extend(sample_and_extract_with_retry(PROMPT_SMALL, ind_model))
+        current_batch.extend(sample_and_extract_with_retry(PROMPT_MEDIUM, ind_model))
+        current_batch.extend(sample_and_extract_with_retry(PROMPT_BOUNDARY, ind_model))
+
+        current_batch = fix_and_filter_bad_inputs(current_batch, req.signature)
         
         all_inputs.extend(current_batch)
         all_inputs = remove_duplicates(all_inputs)
         
-        # print(f"Attempt {attempts}: Generated {len(current_batch)} new inputs, total unique inputs: {len(all_inputs)}")
-    if ignore_num:
-        return all_inputs
-    
     if len(all_inputs) < MINIMUM_NUM_INPUTS:
-        raise ExperimentFailure(f"Warning: Only generated {len(all_inputs)} unique inputs after {max_attempts} attempts (target: {MINIMUM_NUM_INPUTS})")
+        raise ExperimentFailure(f"only generated {len(all_inputs)} unique inputs after {max_attempts} attempts (target: {MINIMUM_NUM_INPUTS})")
      
     if len(all_inputs) > MAXIMUM_NUM_INPUTS:
         return random.sample(all_inputs, MAXIMUM_NUM_INPUTS)
