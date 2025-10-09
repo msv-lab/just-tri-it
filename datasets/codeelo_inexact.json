@@ -1,825 +1,1373 @@
 [
     {
-        "problem_id": "1971B",
-        "url": "https://codeforces.com/problemset/problem/1971/B",
-        "title": "Different String",
-        "rating": 800,
-        "tags": [
-            "implementation",
-            "strings"
-        ],
-        "div": "Div. 4",
-        "time_limit_ms": 1000,
-        "memory_limit_mb": 256,
-        "description": "You are given a string $s$ consisting of lowercase English letters.\n\nRearrange the characters of $s$ to form a new string $r$ that is not equal to $s$, or report that it's impossible.",
-        "input": "The first line contains a single integer $t$ ($1 \\leq t \\leq 1000$) — the number of test cases.\n\nThe only line of each test case contains a string $s$ of length at most $10$ consisting of lowercase English letters.",
-        "output": "For each test case, if no such string $r$ exists as described in the statement, output \"NO\" (without quotes).\n\nOtherwise, output \"YES\" (without quotes). Then, output one line — the string $r$, consisting of letters of string $s$.\n\nYou can output \"YES\" and \"NO\" in any case (for example, strings \"yEs\", \"yes\", and \"Yes\" will be recognized as a positive response).\n\nIf multiple answers are possible, you can output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "different_string",
+        "requirements": {
+            "signature": "def different_string(s: str) -> str",
+            "description": "Given a string s consisting of lowercase English letters, rearrange the characters to form a new string r that is not equal to s. If it's impossible, return 'NO'. Otherwise, return 'YES' followed by a newline and the rearranged string."
+        },
+        "judge": "def __judge(s: str, result: str) -> bool:\n    lines = result.strip().split('\\n')\n    if len(lines) == 1 and lines[0].upper() == 'NO':\n        # Check if all characters in s are the same\n        return len(set(s)) == 1\n    if len(lines) != 2:\n        return False\n    if lines[0].upper() != 'YES':\n        return False\n    r = lines[1]\n    # Check if r is a valid rearrangement of s and r != s\n    return sorted(s) == sorted(r) and s != r",
+        "tests": [
             {
-                "input": "8\ncodeforces\naaaaa\nxxxxy\nco\nd\nnutdealer\nmwistht\nhhhhhhhhhh",
-                "output": "YES\nforcodesec\nNO\nYES\nxxyxx\nYES\noc\nNO\nYES\nundertale\nYES\nthtsiwm\nNO"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge('codeforces', different_string('codeforces'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge('aaaaa', different_string('aaaaa'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge('xxxxy', different_string('xxxxy'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge('co', different_string('co'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_5():\n    assert __judge('d', different_string('d'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_6():\n    assert __judge('nutdealer', different_string('nutdealer'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_7():\n    assert __judge('mwistht', different_string('mwistht'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_8():\n    assert __judge('hhhhhhhhhh', different_string('hhhhhhhhhh'))"
             }
         ],
-        "note": "In the first test case, another possible answer is $\\texttt{forcescode}$.\n\nIn the second test case, all rearrangements of $\\texttt{aaaaa}$ are equal to $\\texttt{aaaaa}$."
+        "metadata": {
+            "problem_id": "1971B",
+            "url": "https://codeforces.com/problemset/problem/1971/B",
+            "title": "Different String",
+            "rating": 800,
+            "tags": [
+                "implementation",
+                "strings"
+            ],
+            "div": "Div. 4",
+            "time_limit_ms": 1000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1974D",
-        "url": "https://codeforces.com/problemset/problem/1974/D",
-        "title": "Ingenuity-2",
-        "rating": 1400,
-        "tags": [
-            "constructive algorithms",
-            "greedy",
-            "implementation"
-        ],
-        "div": "Div. 3",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "Let's imagine the surface of Mars as an infinite coordinate plane. Initially, the rover Perseverance-2 and the helicopter Ingenuity-2 are located at the point with coordinates $(0, 0)$. A set of instructions $s$ consisting of $n$ instructions of the following types was specially developed for them:\n\n  * N: move one meter north (from point $(x, y)$ to $(x, y + 1)$);    * S: move one meter south (from point $(x, y)$ to $(x, y - 1)$);    * E: move one meter east (from point $(x, y)$ to $(x + 1, y)$);    * W: move one meter west (from point $(x, y)$ to $(x - 1, y)$). \n\nEach instruction must be executed either by the rover or by the helicopter. Moreover, each device must execute at least one instruction. Your task is to distribute the instructions in such a way that after executing all $n$ instructions, the helicopter and the rover end up at the same point, or determine that this is impossible.",
-        "input": "The first line of input contains $t$ ($1 \\leq t \\leq 10^4$) — the number of test cases.\n\nThe first line of each test case contains a single integer $n$ ($1 \\le n \\le 2 \\cdot 10^5$) — the number of instructions.\n\nThe second line of each test case contains a string $s$ of length $n$ consisting of the characters 'N', 'S', 'E', 'W' — the sequence of instructions.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10 ^ 5$.",
-        "output": "For each test case, if the required distribution of instructions exists, output a string $p$ of length $n$ consisting of the characters 'R', 'H'. If the $i$-th operation should be executed by the rover, then $p_i=\\text{R}$, if the $i$-th operation should be executed by the helicopter, then $p_i=\\text{H}$. If there are multiple solutions, output any of them.\n\nOtherwise, output NO.",
-        "interaction": null,
-        "examples": [
+        "id": "ingenuity_2",
+        "requirements": {
+            "signature": "def ingenuity_2(n: int, s: str) -> str",
+            "description": "Given n instructions (N/S/E/W), distribute them between a rover and helicopter so both end at the same position. Each device must execute at least one instruction. Return distribution string with 'R' for rover, 'H' for helicopter, or 'NO' if impossible."
+        },
+        "judge": "def __judge(n: int, s: str, result: str) -> bool:\n    if result == 'NO':\n        x_total = 0\n        y_total = 0\n        for c in s:\n            if c == 'E':\n                x_total += 1\n            elif c == 'W':\n                x_total -= 1\n            elif c == 'N':\n                y_total += 1\n            elif c == 'S':\n                y_total -= 1\n        if x_total % 2 != 0 or y_total % 2 != 0:\n            return True\n        if x_total == 0 and y_total == 0:\n            if n == 2:\n                return True\n            else:\n                return False\n        return False\n    if len(result) != n:\n        return False\n    rx, ry, hx, hy = 0, 0, 0, 0\n    r_count, h_count = 0, 0\n    for i in range(n):\n        dx, dy = 0, 0\n        if s[i] == 'N': dy = 1\n        elif s[i] == 'S': dy = -1\n        elif s[i] == 'E': dx = 1\n        elif s[i] == 'W': dx = -1\n        if result[i] == 'R':\n            rx += dx\n            ry += dy\n            r_count += 1\n        elif result[i] == 'H':\n            hx += dx\n            hy += dy\n            h_count += 1\n        else:\n            return False\n    return rx == hx and ry == hy and r_count > 0 and h_count > 0",
+        "tests": [
             {
-                "input": "10\n6\nNENSNE\n3\nWWW\n6\nNESSWS\n2\nSN\n2\nWE\n4\nSSNN\n4\nWESN\n2\nSS\n4\nEWNN\n4\nWEWE",
-                "output": "RRHRRH\nNO\nHRRHRH\nNO\nNO\nRHRH\nRRHH\nRH\nRRRH\nRRHH"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(6, 'NENSNE', ingenuity_2(6, 'NENSNE'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(3, 'WWW', ingenuity_2(3, 'WWW'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(6, 'NESSWS', ingenuity_2(6, 'NESSWS'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(2, 'SN', ingenuity_2(2, 'SN'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_5():\n    assert __judge(2, 'WE', ingenuity_2(2, 'WE'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_6():\n    assert __judge(4, 'SSNN', ingenuity_2(4, 'SSNN'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_7():\n    assert __judge(4, 'WESN', ingenuity_2(4, 'WESN'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_8():\n    assert __judge(2, 'SS', ingenuity_2(2, 'SS'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_9():\n    assert __judge(4, 'EWNN', ingenuity_2(4, 'EWNN'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_10():\n    assert __judge(4, 'WEWE', ingenuity_2(4, 'WEWE'))"
             }
         ],
-        "note": "Let's consider the first example: the string $S = \\texttt{NENSNE}$. One of the possible solutions, shown in the figure below, is $p = \\texttt{RRHRRH}$, using which both the rover and the helicopter will end up one meter north and one meter east.\n\n![](CDN_BASE_URL/266d0d868dd4494e2ec9dbaf74403e88)\n\nFor WWW, the solution is impossible."
+        "metadata": {
+            "problem_id": "1974D",
+            "url": "https://codeforces.com/problemset/problem/1974/D",
+            "title": "Ingenuity-2",
+            "rating": 1400,
+            "tags": [
+                "constructive algorithms",
+                "greedy",
+                "implementation"
+            ],
+            "div": "Div. 3",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1977B",
-        "url": "https://codeforces.com/problemset/problem/1977/B",
-        "title": "Binary Colouring",
-        "rating": 1100,
-        "tags": [
-            "bitmasks",
-            "constructive algorithms",
-            "greedy",
-            "math"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 1000,
-        "memory_limit_mb": 256,
-        "description": "You are given a positive integer $x$. Find any array of integers $a_0, a_1, \\ldots, a_{n-1}$ for which the following holds:\n\n  * $1 \\le n \\le 32$,    * $a_i$ is $1$, $0$, or $-1$ for all $0 \\le i \\le n - 1$,    * $x = \\displaystyle{\\sum_{i=0}^{n - 1}{a_i \\cdot 2^i}}$,    * There does not exist an index $0 \\le i \\le n - 2$ such that both $a_{i} \\neq 0$ and $a_{i + 1} \\neq 0$. \n\nIt can be proven that under the constraints of the problem, a valid array always exists.",
-        "input": "Each test contains multiple test cases. The first line of input contains a single integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of the test cases follows.\n\nThe only line of each test case contains a single positive integer $x$ ($1 \\le x < 2^{30}$).",
-        "output": "For each test case, output two lines.\n\nOn the first line, output an integer $n$ ($1 \\le n \\le 32$) — the length of the array $a_0, a_1, \\ldots, a_{n-1}$.\n\nOn the second line, output the array $a_0, a_1, \\ldots, a_{n-1}$.\n\nIf there are multiple valid arrays, you can output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "binary_colouring",
+        "requirements": {
+            "signature": "def binary_colouring(x: int) -> tuple[int, list[int]]",
+            "description": "Find array a of length n (1≤n≤32) where each a[i] is -1, 0, or 1, such that x = sum(a[i] * 2^i), and no two consecutive elements are both non-zero. Return (n, array)."
+        },
+        "judge": "def __judge(x: int, result: tuple[int, list[int]]) -> bool:\n    n, a = result\n    if not (1 <= n <= 32):\n        return False\n    if len(a) != n:\n        return False\n    # Check each element is -1, 0, or 1\n    for val in a:\n        if val not in [-1, 0, 1]:\n            return False\n    # Check sum equals x\n    total = sum(a[i] * (2 ** i) for i in range(n))\n    if total != x:\n        return False\n    # Check no consecutive non-zero elements\n    for i in range(n - 1):\n        if a[i] != 0 and a[i + 1] != 0:\n            return False\n    return True",
+        "tests": [
             {
-                "input": "7\n1\n14\n24\n15\n27\n11\n19",
-                "output": "1\n1\n5\n0 -1 0 0 1\n6\n0 0 0 -1 0 1\n5\n-1 0 0 0 1\n6\n-1 0 -1 0 0 1\n5\n-1 0 -1 0 1\n5\n-1 0 1 0 1"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(1, binary_colouring(1))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(14, binary_colouring(14))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(24, binary_colouring(24))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(15, binary_colouring(15))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_5():\n    assert __judge(27, binary_colouring(27))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_6():\n    assert __judge(11, binary_colouring(11))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_7():\n    assert __judge(19, binary_colouring(19))"
             }
         ],
-        "note": "In the first test case, one valid array is $[1]$, since $(1) \\cdot 2^0 = 1$.\n\nIn the second test case, one possible valid array is $[0,-1,0,0,1]$, since $(0) \\cdot 2^0 + (-1) \\cdot 2^1 + (0) \\cdot 2^2 + (0) \\cdot 2^3 + (1) \\cdot 2^4 = -2 + 16 = 14$."
+        "metadata": {
+            "problem_id": "1977B",
+            "url": "https://codeforces.com/problemset/problem/1977/B",
+            "title": "Binary Colouring",
+            "rating": 1100,
+            "tags": [
+                "bitmasks",
+                "constructive algorithms",
+                "greedy",
+                "math"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 1000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1977D",
-        "url": "https://codeforces.com/problemset/problem/1977/D",
-        "title": "XORificator",
-        "rating": 2300,
-        "tags": [
-            "bitmasks",
-            "brute force",
-            "greedy",
-            "hashing"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "You are given a binary (consisting only of 0s and 1s) $n \\times m$ matrix. You are also given a XORificator, using which you can invert all the values in a chosen row (i.e. replace 0 with 1 and 1 with 0).\n\nA column in the matrix is considered special if it contains exactly one 1. Your task is to find the maximum number of columns that can be made special at the same time, and the set of rows the XORificator should be used on to achieve that.",
-        "input": "Each test contains multiple test cases. The first line of input contains a single integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains two integers $n$ and $m$ ($1 \\leq n, m \\leq 3 \\cdot 10^5$, $n \\cdot m \\leq 3 \\cdot 10^5$).\n\nEach of the following $n$ lines of the test case contains a binary string of length $m$.\n\nIt is guaranteed that the sum of $n \\cdot m$ over all test cases does not exceed $3 \\cdot 10^5$.",
-        "output": "For each test case, output two lines.\n\nIn the first line, output the maximum number of special columns that is possible to get simultaneously.\n\nIn the second line, output a binary string of length $n$, where the $i$-th character is 0, if you don't use the XORificator on the $i$-th row, and 1, if you use the XORificator on the $i$-th row.\n\nIf there are multiple valid XORificator configurations that achieve the optimal answer, you can output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "xorificator",
+        "requirements": {
+            "signature": "def xorificator(n: int, m: int, matrix: list[str]) -> tuple[int, str]",
+            "description": "Given n×m binary matrix, find which rows to XOR (invert) to maximize columns with exactly one 1. Return (max_special_columns, binary_string) where binary_string[i]='1' if row i should be XORed."
+        },
+        "judge": "def __judge(n: int, m: int, matrix: list[str], result: tuple[int, str]) -> bool:\n    from collections import Counter\n    import random\n\n    if not isinstance(matrix, list) or len(matrix) != n:\n        return False\n    for row in matrix:\n        if not isinstance(row, str) or len(row) != m or any(ch not in \"01\" for ch in row):\n            return False\n\n    if not isinstance(result, (list, tuple)) or len(result) != 2:\n        return False\n    max_cols, config = result\n\n    if not isinstance(max_cols, int) or max_cols < 0 or max_cols > m:\n        return False\n    if not isinstance(config, str) or len(config) != n or any(ch not in \"01\" for ch in config):\n        return False\n\n    rng = random.Random(123456789)\n    rand1 = [rng.getrandbits(64) for _ in range(n)]\n    rand2 = [rng.getrandbits(64) for _ in range(n)]\n\n    col_h1 = [0] * m\n    col_h2 = [0] * m\n    for i in range(n):\n        r1 = rand1[i]\n        r2 = rand2[i]\n        for j, ch in enumerate(matrix[i]):\n            if ch == '1':\n                col_h1[j] ^= r1\n                col_h2[j] ^= r2\n\n    cnt = Counter()\n    for j in range(m):\n        h1 = col_h1[j]\n        h2 = col_h2[j]\n        for i in range(n):\n            key = (h1 ^ rand1[i], h2 ^ rand2[i])\n            cnt[key] += 1\n\n    optimal = max(cnt.values()) if cnt else 0\n    if max_cols != optimal:\n        return False\n\n    r_h1 = 0\n    r_h2 = 0\n    for i, ch in enumerate(config):\n        if ch == '1':\n            r_h1 ^= rand1[i]\n            r_h2 ^= rand2[i]\n\n    if cnt.get((r_h1, r_h2), 0) != optimal:\n        return False\n\n    special = 0\n    for j in range(m):\n        ones = 0\n        for i in range(n):\n            if (matrix[i][j] == '1') ^ (config[i] == '1'):\n                ones += 1\n                if ones > 1:\n                    break\n        if ones == 1:\n            special += 1\n\n    return special == optimal",
+        "tests": [
             {
-                "input": "5\n3 4\n1010\n0110\n0100\n1 1\n1\n1 1\n0\n2 5\n00101\n10110\n3 3\n101\n111\n000",
-                "output": "3\n010\n1\n0\n1\n1\n3\n00\n2\n010"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(3, 4, ['1010', '0110', '0100'], xorificator(3, 4, ['1010', '0110', '0100']))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(1, 1, ['1'], xorificator(1, 1, ['1']))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(1, 1, ['0'], xorificator(1, 1, ['0']))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(2, 5, ['00101', '10110'], xorificator(2, 5, ['00101', '10110']))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_5():\n    assert __judge(3, 3, ['101', '111', '000'], xorificator(3, 3, ['101', '111', '000']))"
             }
         ],
-        "note": "In the first test case, you can use the XORificator on the second row to make the columns $2$, $3$, and $4$ special.\n\nIn the second test case, the only column is already special, so you don't need to use the XORificator."
+        "metadata": {
+            "problem_id": "1977D",
+            "url": "https://codeforces.com/problemset/problem/1977/D",
+            "title": "XORificator",
+            "rating": 2300,
+            "tags": [
+                "bitmasks",
+                "brute force",
+                "greedy",
+                "hashing"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1978C",
-        "url": "https://codeforces.com/problemset/problem/1978/C",
-        "title": "Manhattan Permutations",
-        "rating": 1300,
-        "tags": [
-            "constructive algorithms",
-            "data structures",
-            "greedy",
-            "implementation'\n 'math"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "Let's call the Manhattan value of a permutation$^{\\dagger}$ $p$ the value of the expression $|p_1 - 1| + |p_2 - 2| + \\ldots + |p_n - n|$.\n\nFor example, for the permutation $[1, 2, 3]$, the Manhattan value is $|1 - 1| + |2 - 2| + |3 - 3| = 0$, and for the permutation $[3, 1, 2]$, the Manhattan value is $|3 - 1| + |1 - 2| + |2 - 3| = 2 + 1 + 1 = 4$.\n\nYou are given integers $n$ and $k$. Find a permutation $p$ of length $n$ such that its Manhattan value is equal to $k$, or determine that no such permutation exists.\n\n$^{\\dagger}$A permutation of length $n$ is an array consisting of $n$ distinct integers from $1$ to $n$ in arbitrary order. For example, $[2,3,1,5,4]$ is a permutation, but $[1,2,2]$ is not a permutation ($2$ appears twice in the array), and $[1,3,4]$ is also not a permutation ($n=3$ but there is $4$ in the array).",
-        "input": "Each test consists of multiple test cases. The first line contains a single integer $t$ ($1 \\leq t \\leq 10^{4}$) — the number of test cases. The description of the test cases follows.\n\nThe only line of each test case contains two integers $n$ and $k$ ($1 \\le n \\le 2 \\cdot 10^{5}, 0 \\le k \\le 10^{12}$) — the length of the permutation and the required Manhattan value.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^{5}$.",
-        "output": "For each test case, if there is no suitable permutation, output \"No\". Otherwise, in the first line, output \"Yes\", and in the second line, output $n$ distinct integers $p_1, p_2, \\ldots, p_n$ ($1 \\le p_i \\le n$) — a suitable permutation.\n\nIf there are multiple solutions, output any of them.\n\nYou can output the answer in any case (for example, the strings \"yEs\", \"yes\", \"Yes\", and \"YES\" will be recognized as a positive answer).",
-        "interaction": null,
-        "examples": [
+        "id": "manhattan_permutations",
+        "requirements": {
+            "signature": "def manhattan_permutations(n: int, k: int) -> str",
+            "description": "Find permutation p of [1,2,...,n] with Manhattan value |p[0]-1|+|p[1]-2|+...+|p[n-1]-n| equal to k. Return 'No' if impossible, otherwise 'Yes\\n' followed by the permutation."
+        },
+        "judge": "def __judge(n: int, k: int, result: str) -> bool:\n    lines = result.strip().split('\\n')\n    if lines[0].upper() == 'NO':\n        max_val = (n * n) // 2\n        return k > max_val or k % 2 != 0\n    if lines[0].upper() != 'YES' or len(lines) != 2:\n        return False\n    try:\n        perm = list(map(int, lines[1].split()))\n    except:\n        return False\n    if len(perm) != n:\n        return False\n    if sorted(perm) != list(range(1, n + 1)):\n        return False\n    manhattan = sum(abs(perm[i] - (i + 1)) for i in range(n))\n    return manhattan == k",
+        "tests": [
             {
-                "input": "8\n3 4\n4 5\n7 0\n1 1000000000000\n8 14\n112 777\n5 12\n5 2",
-                "output": "Yes\n3 1 2\nNo\nYes\n1 2 3 4 5 6 7\nNo\nYes\n8 2 3 4 5 6 1 7\nNo\nYes\n5 4 3 1 2\nYes\n2 1 3 4 5"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(3, 4, manhattan_permutations(3, 4))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(4, 5, manhattan_permutations(4, 5))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(7, 0, manhattan_permutations(7, 0))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(1, 1000000000000, manhattan_permutations(1, 1000000000000))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_5():\n    assert __judge(8, 14, manhattan_permutations(8, 14))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_6():\n    assert __judge(112, 777, manhattan_permutations(112, 777))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_7():\n    assert __judge(5, 12, manhattan_permutations(5, 12))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_8():\n    assert __judge(5, 2, manhattan_permutations(5, 2))"
             }
         ],
-        "note": "In the first test case, the permutation $[3, 1, 2]$ is suitable, its Manhattan value is $|3 - 1| + |1 - 2| + |2 - 3| = 2 + 1 + 1 = 4$.\n\nIn the second test case, it can be proven that there is no permutation of length $4$ with a Manhattan value of $5$.\n\nIn the third test case, the permutation $[1,2,3,4,5,6,7]$ is suitable, its Manhattan value is $|1-1|+|2-2|+|3-3|+|4-4|+|5-5|+|6-6|+|7-7|=0$."
+        "metadata": {
+            "problem_id": "1978C",
+            "url": "https://codeforces.com/problemset/problem/1978/C",
+            "title": "Manhattan Permutations",
+            "rating": 1300,
+            "tags": [
+                "constructive algorithms",
+                "data structures",
+                "greedy",
+                "implementation",
+                "math"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1979C",
-        "url": "https://codeforces.com/problemset/problem/1979/C",
-        "title": "Earning on Bets",
-        "rating": 1200,
-        "tags": [
-            "binary search",
-            "combinatorics",
-            "constructive algorithms",
-            "number theory"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "You have been offered to play a game. In this game, there are $n$ possible outcomes, and for each of them, you must bet a certain integer amount of coins. In the event that the $i$-th outcome turns out to be winning, you will receive back the amount of coins equal to your bet on that outcome, multiplied by $k_i$. Note that exactly one of the $n$ outcomes will be winning.\n\nYour task is to determine how to distribute the coins in such a way that you will come out ahead in the event of any winning outcome. More formally, the total amount of coins you bet on all outcomes must be strictly less than the number of coins received back for each possible winning outcome.",
-        "input": "Each test consists of multiple test cases. The first line contains a single integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($1 \\le n \\le 50$) — the number of outcomes.\n\nThe second line of each test case contains $n$ integers $k_1,k_2,\\ldots,k_n$ ($2 \\le k_i \\le 20$) — the multiplier for the amount of coins if the $i$-th outcome turns out to be winning.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.",
-        "output": "For each test case, output $-1$ if there is no way to distribute the coins as required. Otherwise, output $n$ integers $x_1, x_2,\\ldots, x_n$ ($1 \\le x_i \\le 10^{9}$) — your bets on the outcomes.\n\nIt can be shown that if a solution exists, there is always a solution that satisfies these constraints.\n\nIf there are multiple suitable solutions, output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "earning_on_bets",
+        "requirements": {
+            "signature": "def earning_on_bets(n: int, k: list[int]) -> str",
+            "description": "Given n outcomes with multipliers k[i], find bets x[i] such that sum(x[i]) < x[j]*k[j] for all j. Return '-1' if impossible, otherwise return space-separated bets."
+        },
+        "judge": "def __judge(n: int, k: list[int], result: str) -> bool:\n    if result == '-1':\n        from math import gcd\n        def lcm(a, b):\n            return a * b // gcd(a, b)\n        current_lcm = 1\n        for ki in k:\n            current_lcm = lcm(current_lcm, ki)\n        sum_terms = 0\n        for ki in k:\n            sum_terms += current_lcm // ki\n        return sum_terms >= current_lcm\n    try:\n        x = list(map(int, result.split()))\n    except:\n        return False\n    if len(x) != n:\n        return False\n    if any(xi < 1 or xi > 10**9 for xi in x):\n        return False\n    total = sum(x)\n    for i in range(n):\n        if x[i] * k[i] <= total:\n            return False\n    return True",
+        "tests": [
             {
-                "input": "6\n3\n3 2 7\n2\n3 3\n5\n5 5 5 5 5\n6\n7 9 3 17 9 13\n3\n6 3 2\n5\n9 4 6 8 3",
-                "output": "27 41 12 \n1 1 \n-1\n1989 1547 4641 819 1547 1071 \n-1\n8 18 12 9 24"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(3, [3, 2, 7], earning_on_bets(3, [3, 2, 7]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(2, [3, 3], earning_on_bets(2, [3, 3]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(5, [5, 5, 5, 5, 5], earning_on_bets(5, [5, 5, 5, 5, 5]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(6, [7, 9, 3, 17, 9, 13], earning_on_bets(6, [7, 9, 3, 17, 9, 13]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_5():\n    assert __judge(3, [6, 3, 2], earning_on_bets(3, [6, 3, 2]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_6():\n    assert __judge(5, [9, 4, 6, 8, 3], earning_on_bets(5, [9, 4, 6, 8, 3]))"
             }
         ],
-        "note": "In the first test case, the coins can be distributed as follows: $27$ coins on the first outcome, $41$ coins on the second outcome, $12$ coins on the third outcome. Then the total amount of coins bet on all outcomes is $27 + 41 + 12 = 80$ coins. If the first outcome turns out to be winning, you will receive back $3 \\cdot 27 = 81$ coins, if the second outcome turns out to be winning, you will receive back $2 \\cdot 41 = 82$ coins, if the third outcome turns out to be winning, you will receive back $7 \\cdot 12 = 84$ coins. All these values are strictly greater than $80$.\n\nIn the second test case, one way is to bet one coin on each of the outcomes."
+        "metadata": {
+            "problem_id": "1979C",
+            "url": "https://codeforces.com/problemset/problem/1979/C",
+            "title": "Earning on Bets",
+            "rating": 1200,
+            "tags": [
+                "binary search",
+                "combinatorics",
+                "constructive algorithms",
+                "number theory"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1979D",
-        "url": "https://codeforces.com/problemset/problem/1979/D",
-        "title": "Fixing a Binary String",
-        "rating": 1800,
-        "tags": [
-            "bitmasks",
-            "brute force",
-            "constructive algorithms",
-            "dp",
-            "greedy'\n 'hashing",
-            "strings"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "You are given a binary string $s$ of length $n$, consisting of zeros and ones. You can perform the following operation exactly once:\n\n  1. Choose an integer $p$ ($1 \\le p \\le n$).    2. Reverse the substring $s_1 s_2 \\ldots s_p$. After this step, the string $s_1 s_2 \\ldots s_n$ will become $s_p s_{p-1} \\ldots s_1 s_{p+1} s_{p+2} \\ldots s_n$.    3. Then, perform a cyclic shift of the string $s$ to the left $p$ times. After this step, the initial string $s_1s_2 \\ldots s_n$ will become $s_{p+1}s_{p+2} \\ldots s_n s_p s_{p-1} \\ldots s_1$. \n\nFor example, if you apply the operation to the string 110001100110 with $p=3$, after the second step, the string will become 011001100110, and after the third step, it will become 001100110011.\n\nA string $s$ is called $k$-proper if two conditions are met:\n\n  * $s_1=s_2=\\ldots=s_k$;    * $s_{i+k} \\neq s_i$ for any $i$ ($1 \\le i \\le n - k$). \n\nFor example, with $k=3$, the strings 000, 111000111, and 111000 are $k$-proper, while the strings 000000, 001100, and 1110000 are not.\n\nYou are given an integer $k$, which is a divisor of $n$. Find an integer $p$ ($1 \\le p \\le n$) such that after performing the operation, the string $s$ becomes $k$-proper, or determine that it is impossible. Note that if the string is initially $k$-proper, you still need to apply exactly one operation to it.",
-        "input": "Each test consists of multiple test cases. The first line contains one integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains two integers $n$ and $k$ ($1 \\le k \\le n$, $2 \\le n \\le 10^5$) — the length of the string $s$ and the value of $k$. It is guaranteed that $k$ is a divisor of $n$.\n\nThe second line of each test case contains a binary string $s$ of length $n$, consisting of the characters 0 and 1.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.",
-        "output": "For each test case, output a single integer — the value of $p$ to make the string $k$-proper, or $-1$ if it is impossible.\n\nIf there are multiple solutions, output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "fixing_binary_string",
+        "requirements": {
+            "signature": "def fixing_binary_string(n: int, k: int, s: str) -> int",
+            "description": "Given binary string s and divisor k of n, find p such that after reversing s[0:p] and shifting left p times, the result is k-proper. Return p or -1 if impossible."
+        },
+        "judge": "def __judge(n: int, k: int, s: str, p: int) -> bool:\n    if p == -1:\n        # Check if no valid p exists\n        last_char = s[-1]\n        x = 0\n        for i in reversed(range(n)):\n            if s[i] == last_char:\n                x += 1\n            else:\n                break\n        \n        if x > k:\n            return True  # No solution exists\n        \n        candidates = []\n        if x == k:\n            # Case x == k\n            found = False\n            for i in reversed(range(n - k)):\n                if s[i] == s[i + k]:\n                    candidates.append(i + 1)\n                    found = True\n                    break\n            candidates.append(n)  # Fallback to p = n\n        else:\n            # Case x < k\n            i = 0\n            added = False\n            while i < n:\n                if s[i] != last_char:\n                    i += 1\n                    continue\n                j = i\n                while j + 1 < n and s[j + 1] == last_char:\n                    j += 1\n                block_len = j - i + 1\n                if block_len + x == k:\n                    candidates.append(j + 1)\n                    added = True\n                    break\n                elif block_len + x == 2 * k:\n                    candidates.append(i + (k - x))\n                    added = True\n                    break\n                i = j + 1\n            if not added:\n                candidates.append(n)\n        \n        # Check all candidates\n        valid_found = False\n        for candidate_p in candidates:\n            if not (1 <= candidate_p <= n):\n                continue\n            # Apply reverse and shift\n            reversed_part = s[candidate_p - 1::-1]\n            new_s = reversed_part + s[candidate_p:]\n            rotated = new_s[candidate_p:] + new_s[:candidate_p]\n            # Check if k-proper\n            valid = True\n            if not all(c == rotated[0] for c in rotated[:k]):\n                valid = False\n            else:\n                for i in range(len(rotated) - k):\n                    if rotated[i] == rotated[i + k]:\n                        valid = False\n                        break\n            if valid:\n                valid_found = True\n                break\n        return not valid_found\n    else:\n        # Check if p is valid\n        if not (1 <= p <= n):\n            return False\n        # Apply reverse and shift\n        reversed_part = s[p - 1::-1]\n        new_s = reversed_part + s[p:]\n        rotated = new_s[p:] + new_s[:p]\n        # Check if k-proper\n        if not all(c == rotated[0] for c in rotated[:k]):\n            return False\n        for i in range(n - k):\n            if rotated[i] == rotated[i + k]:\n                return False\n        return True",
+        "tests": [
             {
-                "input": "7\n8 4\n11100001\n4 2\n1110\n12 3\n111000100011\n5 5\n00000\n6 1\n101001\n8 4\n01110001\n12 2\n110001100110",
-                "output": "3\n-1\n7\n5\n4\n-1\n3"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(8, 4, '11100001', fixing_binary_string(8, 4, '11100001'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(4, 2, '1110', fixing_binary_string(4, 2, '1110'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(12, 3, '111000100011', fixing_binary_string(12, 3, '111000100011'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(5, 5, '00000', fixing_binary_string(5, 5, '00000'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_5():\n    assert __judge(6, 1, '101001', fixing_binary_string(6, 1, '101001'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_6():\n    assert __judge(8, 4, '01110001', fixing_binary_string(8, 4, '01110001'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_7():\n    assert __judge(12, 2, '110001100110', fixing_binary_string(12, 2, '110001100110'))"
             }
         ],
-        "note": "In the first test case, if you apply the operation with $p=3$, after the second step of the operation, the string becomes 11100001, and after the third step, it becomes 00001111. This string is $4$-proper.\n\nIn the second test case, it can be shown that there is no operation after which the string becomes $2$-proper.\n\nIn the third test case, if you apply the operation with $p=7$, after the second step of the operation, the string becomes 100011100011, and after the third step, it becomes 000111000111. This string is $3$-proper.\n\nIn the fourth test case, after the operation with any $p$, the string becomes $5$-proper."
+        "metadata": {
+            "problem_id": "1979D",
+            "url": "https://codeforces.com/problemset/problem/1979/D",
+            "title": "Fixing a Binary String",
+            "rating": 1800,
+            "tags": [
+                "bitmasks",
+                "brute force",
+                "constructive algorithms",
+                "dp",
+                "greedy",
+                "hashing",
+                "strings"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1979E",
-        "url": "https://codeforces.com/problemset/problem/1979/E",
-        "title": "Manhattan Triangle",
-        "rating": 2400,
-        "tags": [
-            "binary search",
-            "constructive algorithms",
-            "data structures",
-            "geometry'\n 'implementation",
-            "two pointers"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 3000,
-        "memory_limit_mb": 256,
-        "description": "The Manhattan distance between two points $(x_1, y_1)$ and $(x_2, y_2)$ is defined as: $$|x_1 - x_2| + |y_1 - y_2|.$$\n\nWe call a Manhattan triangle three points on the plane, the Manhattan distances between each pair of which are equal.\n\nYou are given a set of pairwise distinct points and an even integer $d$. Your task is to find any Manhattan triangle, composed of three distinct points from the given set, where the Manhattan distance between any pair of vertices is equal to $d$.",
-        "input": "Each test consists of multiple test cases. The first line contains one integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains two integers $n$ and $d$ ($3 \\le n \\le 2 \\cdot 10^5$, $2 \\le d \\le 4 \\cdot 10^5$, $d$ is even) — the number of points and the required Manhattan distance between the vertices of the triangle.\n\nThe $(i + 1)$-th line of each test case contains two integers $x_i$ and $y_i$ ($-10^5 \\le x_i, y_i \\le 10^5$) — the coordinates of the $i$-th point. It is guaranteed that all points are pairwise distinct.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.",
-        "output": "For each test case, output three distinct integers $i$, $j$, and $k$ ($1 \\le i,j,k \\le n$) — the indices of the points forming the Manhattan triangle. If there is no solution, output \"$0\\ 0\\ 0$\" (without quotes).\n\nIf there are multiple solutions, output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "manhattan_triangle",
+        "requirements": {
+            "signature": "def manhattan_triangle(n: int, d: int, points: list[tuple[int, int]]) -> tuple[int, int, int]",
+            "description": "Find three points from the given set that form a Manhattan triangle with distance d between each pair. Return indices (1-based) or (0, 0, 0) if impossible."
+        },
+        "judge": "def __judge(n: int, d: int, points: list[tuple[int, int]], result: tuple[int, int, int]) -> bool:\n    i, j, k = result\n    if (i, j, k) == (0, 0, 0):\n        sum_groups = {}\n        for idx, (x, y) in enumerate(points):\n            s = x + y\n            if s not in sum_groups:\n                sum_groups[s] = []\n            sum_groups[s].append((x, idx))\n        for key in sum_groups:\n            sum_groups[key].sort()\n        found = False\n        for idx, (x, y) in enumerate(points):\n            s = x + y\n            if s not in sum_groups:\n                continue\n            lst = sum_groups[s]\n            xs = [item[0] for item in lst]\n            target_x = x + (d // 2)\n            low = 0\n            high = len(xs)\n            while low < high:\n                mid = (low + high) // 2\n                if xs[mid] < target_x:\n                    low = mid + 1\n                else:\n                    high = mid\n            pos = low\n            if pos < len(xs) and xs[pos] == target_x:\n                s_plus = s + d\n                if s_plus in sum_groups:\n                    third_list = sum_groups[s_plus]\n                    t_xs = [item[0] for item in third_list]\n                    x_min = target_x\n                    x_max = target_x + (d // 2)\n                    low3 = 0\n                    high3 = len(t_xs)\n                    while low3 < high3:\n                        mid3 = (low3 + high3) // 2\n                        if t_xs[mid3] < x_min:\n                            low3 = mid3 + 1\n                        else:\n                            high3 = mid3\n                    pos3 = low3\n                    if pos3 < len(t_xs) and t_xs[pos3] <= x_max:\n                        found = True\n                        break\n                if not found:\n                    s_minus = s - d\n                    if s_minus in sum_groups:\n                        third_list = sum_groups[s_minus]\n                        t_xs = [item[0] for item in third_list]\n                        x_min = x - (d // 2)\n                        x_max = target_x - (d // 2)\n                        low3 = 0\n                        high3 = len(t_xs)\n                        while low3 < high3:\n                            mid3 = (low3 + high3) // 2\n                            if t_xs[mid3] < x_min:\n                                low3 = mid3 + 1\n                            else:\n                                high3 = mid3\n                        pos3 = low3\n                        if pos3 < len(t_xs) and t_xs[pos3] <= x_max:\n                            found = True\n                            break\n            if found:\n                break\n        if not found:\n            diff_groups = {}\n            for idx, (x, y) in enumerate(points):\n                diff = x - y\n                if diff not in diff_groups:\n                    diff_groups[diff] = []\n                diff_groups[diff].append((x, idx))\n            for key in diff_groups:\n                diff_groups[key].sort()\n            for idx, (x, y) in enumerate(points):\n                diff = x - y\n                if diff not in diff_groups:\n                    continue\n                lst = diff_groups[diff]\n                xs = [item[0] for item in lst]\n                target_x = x + (d // 2)\n                low = 0\n                high = len(xs)\n                while low < high:\n                    mid = (low + high) // 2\n                    if xs[mid] < target_x:\n                        low = mid + 1\n                    else:\n                        high = mid\n                pos = low\n                if pos < len(xs) and xs[pos] == target_x:\n                    diff_plus = diff + d\n                    if diff_plus in diff_groups:\n                        third_list = diff_groups[diff_plus]\n                        t_xs = [item[0] for item in third_list]\n                        x_min = target_x\n                        x_max = target_x + (d // 2)\n                        low3 = 0\n                        high3 = len(t_xs)\n                        while low3 < high3:\n                            mid3 = (low3 + high3) // 2\n                            if t_xs[mid3] < x_min:\n                                low3 = mid3 + 1\n                            else:\n                                high3 = mid3\n                        pos3 = low3\n                        if pos3 < len(t_xs) and t_xs[pos3] <= x_max:\n                            found = True\n                            break\n                    if not found:\n                        diff_minus = diff - d\n                        if diff_minus in diff_groups:\n                            third_list = diff_groups[diff_minus]\n                            t_xs = [item[0] for item in third_list]\n                            x_min = x - (d // 2)\n                            x_max = target_x - (d // 2)\n                            low3 = 0\n                            high3 = len(t_xs)\n                            while low3 < high3:\n                                mid3 = (low3 + high3) // 2\n                                if t_xs[mid3] < x_min:\n                                    low3 = mid3 + 1\n                                else:\n                                    high3 = mid3\n                            pos3 = low3\n                            if pos3 < len(t_xs) and t_xs[pos3] <= x_max:\n                                found = True\n                                break\n                if found:\n                    break\n        return not found\n    else:\n        if not (1 <= i <= n and 1 <= j <= n and 1 <= k <= n):\n            return False\n        if len({i-1, j-1, k-1}) != 3:\n            return False\n        p1 = points[i-1]\n        p2 = points[j-1]\n        p3 = points[k-1]\n        d12 = abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])\n        d13 = abs(p1[0] - p3[0]) + abs(p1[1] - p3[1])\n        d23 = abs(p2[0] - p3[0]) + abs(p2[1] - p3[1])\n        return d12 == d and d13 == d and d23 == d",
+        "tests": [
             {
-                "input": "6\n6 4\n3 1\n0 0\n0 -2\n5 -3\n3 -5\n2 -2\n5 4\n0 0\n0 -2\n5 -3\n3 -5\n2 -2\n6 6\n3 1\n0 0\n0 -2\n5 -3\n3 -5\n2 -2\n4 4\n3 0\n0 3\n-3 0\n0 -3\n10 8\n2 1\n-5 -1\n-4 -1\n-5 -3\n0 1\n-2 5\n-4 4\n-4 2\n0 0\n-4 1\n4 400000\n100000 100000\n-100000 100000\n100000 -100000\n-100000 -100000",
-                "output": "2 6 1\n4 3 5\n3 5 1\n0 0 0\n6 1 3\n0 0 0"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(6, 4, [(3, 1), (0, 0), (0, -2), (5, -3), (3, -5), (2, -2)], manhattan_triangle(6, 4, [(3, 1), (0, 0), (0, -2), (5, -3), (3, -5), (2, -2)]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(5, 4, [(0, 0), (0, -2), (5, -3), (3, -5), (2, -2)], manhattan_triangle(5, 4, [(0, 0), (0, -2), (5, -3), (3, -5), (2, -2)]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(6, 6, [(3, 1), (0, 0), (0, -2), (5, -3), (3, -5), (2, -2)], manhattan_triangle(6, 6, [(3, 1), (0, 0), (0, -2), (5, -3), (3, -5), (2, -2)]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(4, 4, [(3, 0), (0, 3), (-3, 0), (0, -3)], manhattan_triangle(4, 4, [(3, 0), (0, 3), (-3, 0), (0, -3)]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_5():\n    assert __judge(10, 8, [(2, 1), (-5, -1), (-4, -1), (-5, -3), (0, 1), (-2, 5), (-4, 4), (-4, 2), (0, 0), (-4, 1)], manhattan_triangle(10, 8, [(2, 1), (-5, -1), (-4, -1), (-5, -3), (0, 1), (-2, 5), (-4, 4), (-4, 2), (0, 0), (-4, 1)]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_6():\n    assert __judge(4, 400000, [(100000, 100000), (-100000, 100000), (100000, -100000), (-100000, -100000)], manhattan_triangle(4, 400000, [(100000, 100000), (-100000, 100000), (100000, -100000), (-100000, -100000)]))"
             }
         ],
-        "note": "In the first test case:\n\n![](CDN_BASE_URL/d4e05137288270ab95be887865fe7aa8) Points $A$, $B$, and $F$ form a Manhattan triangle, the Manhattan distance between each pair of vertices is $4$. Points $D$, $E$, and $F$ can also be the answer.\n\nIn the third test case:\n\n![](CDN_BASE_URL/ccf6b49ba1a3bb8d87cffad3da846f32) Points $A$, $C$, and $E$ form a Manhattan triangle, the Manhattan distance between each pair of vertices is $6$.\n\nIn the fourth test case, there are no two points with a Manhattan distance of $4$, and therefore there is no suitable Manhattan triangle."
+        "metadata": {
+            "problem_id": "1979E",
+            "url": "https://codeforces.com/problemset/problem/1979/E",
+            "title": "Manhattan Triangle",
+            "rating": 2400,
+            "tags": [
+                "binary search",
+                "constructive algorithms",
+                "data structures",
+                "geometry",
+                "implementation",
+                "two pointers"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 3000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1981C",
-        "url": "https://codeforces.com/problemset/problem/1981/C",
-        "title": "Turtle and an Incomplete Sequence",
-        "rating": 1800,
-        "tags": [
-            "bitmasks",
-            "brute force",
-            "constructive algorithms",
-            "greedy'\n 'implementation",
-            "math"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 3000,
-        "memory_limit_mb": 256,
-        "description": "Turtle was playing with a sequence $a_1, a_2, \\ldots, a_n$ consisting of positive integers. Unfortunately, some of the integers went missing while playing.\n\nNow the sequence becomes incomplete. There may exist an arbitrary number of indices $i$ such that $a_i$ becomes $-1$. Let the new sequence be $a'$.\n\nTurtle is sad. But Turtle remembers that for every integer $i$ from $1$ to $n - 1$, either $a_i = \\left\\lfloor\\frac{a_{i + 1}}{2}\\right\\rfloor$ or $a_{i + 1} = \\left\\lfloor\\frac{a_i}{2}\\right\\rfloor$ holds for the original sequence $a$.\n\nTurtle wants you to help him complete the sequence. But sometimes Turtle makes mistakes, so you need to tell him if you can't complete the sequence.\n\nFormally, you need to find another sequence $b_1, b_2, \\ldots, b_n$ consisting of positive integers such that:\n\n  * For every integer $i$ from $1$ to $n$, if $a'_i \\ne -1$, then $b_i = a'_i$.    * For every integer $i$ from $1$ to $n - 1$, either $b_i = \\left\\lfloor\\frac{b_{i + 1}}{2}\\right\\rfloor$ or $b_{i + 1} = \\left\\lfloor\\frac{b_i}{2}\\right\\rfloor$ holds.    * For every integer $i$ from $1$ to $n$, $1 \\le b_i \\le 10^9$. \n\nIf there is no sequence $b_1, b_2, \\ldots, b_n$ that satisfies all of the conditions above, you need to report $-1$.",
-        "input": "Each test contains multiple test cases. The first line contains the number of test cases $t$ ($1 \\le t \\le 10^5$). The description of the test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($2 \\le n \\le 2 \\cdot 10^5$) — the length of the sequence.\n\nThe second line of each test case contains $n$ integers $a'_1, a'_2, \\ldots, a'_n$ ($a'_i = -1$ or $1 \\le a'_i \\le 10^8$) — the elements of the sequence $a'$.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.",
-        "output": "For each test case, if there is no sequence $b_1, b_2, \\ldots, b_n$ that satisfies all of the conditions, output a single integer $-1$.\n\nOtherwise, output $n$ integers $b_1, b_2, \\ldots, b_n$ — the elements of the sequence $b_1, b_2, \\ldots, b_n$ you find. The sequence should satisfy that $1 \\le b_i \\le 10^9$ for every integer $i$ from $1$ to $n$. If there are multiple answers, print any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "turtle_incomplete_sequence",
+        "requirements": {
+            "signature": "def turtle_incomplete_sequence(n: int, a: list[int]) -> str",
+            "description": "Complete sequence where -1s are missing values. Adjacent elements must satisfy: a[i] = a[i+1]//2 or a[i+1] = a[i]//2. Return completed sequence or '-1' if impossible."
+        },
+        "judge": "def __judge(n: int, a: list[int], result: str) -> bool:\n    def my_lg(x): return x.bit_length()-1 if x else -1\n    if result.strip() == '-1':\n        all_neg = all(x == -1 for x in a)\n        if all_neg: return False\n        l, r, vc = -1, -1, []\n        for i in range(n):\n            if a[i] != -1:\n                if l == -1: l = i\n                r = i\n                vc.append(i)\n        if l == -1: return False\n        possible = True\n        for k in range(len(vc)-1):\n            i1, i2 = vc[k], vc[k+1]\n            x, y = a[i1], a[i2]\n            L, R = [], []\n            a1, b = x, y\n            while my_lg(a1) > my_lg(b):\n                L.append(a1)\n                a1 >>=1\n            while my_lg(b) > my_lg(a1):\n                R.append(b)\n                b >>=1\n            while a1 != b:\n                L.append(a1)\n                R.append(b)\n                a1 >>=1\n                b >>=1\n            path = L + [a1] + R[::-1]\n            path_len = len(path)\n            required_length = i2 - i1\n            if path_len > required_length +1 or (path_len %2) != ((required_length +1) %2):\n                possible = False\n                break\n        return not possible\n    try:\n        b = list(map(int, result.strip().split()))\n    except:\n        return False\n    if len(b)!=n: return False\n    for i in range(n):\n        if a[i] != -1 and b[i] != a[i]: return False\n        if not (1<=b[i]<=10**9): return False\n    for i in range(n-1):\n        if b[i] != (b[i+1]//2) and b[i+1] != (b[i]//2): return False\n    return True",
+        "tests": [
             {
-                "input": "9\n8\n-1 -1 -1 2 -1 -1 1 -1\n4\n-1 -1 -1 -1\n6\n3 -1 -1 -1 9 -1\n4\n-1 5 -1 6\n4\n2 -1 -1 3\n4\n1 2 3 4\n2\n4 2\n5\n-1 3 -1 3 6\n13\n-1 -1 3 -1 -1 -1 -1 7 -1 -1 3 -1 -1",
-                "output": "4 9 4 2 4 2 1 2\n7 3 6 13\n3 1 2 4 9 18\n-1\n-1\n-1\n4 2\n6 3 1 3 6\n3 1 3 1 3 7 3 7 3 1 3 1 3"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(8, [-1, -1, -1, 2, -1, -1, 1, -1], turtle_incomplete_sequence(8, [-1, -1, -1, 2, -1, -1, 1, -1]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(4, [-1, -1, -1, -1], turtle_incomplete_sequence(4, [-1, -1, -1, -1]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(6, [3, -1, -1, -1, 9, -1], turtle_incomplete_sequence(6, [3, -1, -1, -1, 9, -1]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(4, [-1, 5, -1, 6], turtle_incomplete_sequence(4, [-1, 5, -1, 6]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_5():\n    assert __judge(4, [2, -1, -1, 3], turtle_incomplete_sequence(4, [2, -1, -1, 3]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_6():\n    assert __judge(4, [1, 2, 3, 4], turtle_incomplete_sequence(4, [1, 2, 3, 4]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_7():\n    assert __judge(2, [4, 2], turtle_incomplete_sequence(2, [4, 2]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_8():\n    assert __judge(5, [-1, 3, -1, 3, 6], turtle_incomplete_sequence(5, [-1, 3, -1, 3, 6]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_9():\n    assert __judge(13, [-1, -1, 3, -1, -1, -1, -1, 7, -1, -1, 3, -1, -1], turtle_incomplete_sequence(13, [-1, -1, 3, -1, -1, -1, -1, 7, -1, -1, 3, -1, -1]))"
             }
         ],
-        "note": "In the first test case, $[4, 2, 1, 2, 1, 2, 1, 3]$ can also be the answer, while $[4, 2, 5, 10, 5, 2, 1, 3]$ and $[4, 2, 1, 2, 1, 2, 1, 4]$ cannot.\n\nIn the second test case, $[1, 2, 5, 2]$ can also be the answer.\n\nFrom the fourth to the sixth test cases, it can be shown that there is no answer, so you should output $-1$."
+        "metadata": {
+            "problem_id": "1981C",
+            "url": "https://codeforces.com/problemset/problem/1981/C",
+            "title": "Turtle and an Incomplete Sequence",
+            "rating": 1800,
+            "tags": [
+                "bitmasks",
+                "brute force",
+                "constructive algorithms",
+                "greedy",
+                "implementation",
+                "math"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 3000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1981D",
-        "url": "https://codeforces.com/problemset/problem/1981/D",
-        "title": "Turtle and Multiplication",
-        "rating": 2400,
-        "tags": [
-            "constructive algorithms",
-            "dfs and similar",
-            "graphs",
-            "number theory"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 3000,
-        "memory_limit_mb": 512,
-        "description": "Turtle just learned how to multiply two integers in his math class, and he was very excited.\n\nThen Piggy gave him an integer $n$, and asked him to construct a sequence $a_1, a_2, \\ldots, a_n$ consisting of integers which satisfied the following conditions:\n\n  * For all $1 \\le i \\le n$, $1 \\le a_i \\le 3 \\cdot 10^5$.    * For all $1 \\le i < j \\le n - 1$, $a_i \\cdot a_{i + 1} \\ne a_j \\cdot a_{j + 1}$. \n\nOf all such sequences, Piggy asked Turtle to find the one with the minimum number of distinct elements.\n\nTurtle definitely could not solve the problem, so please help him!",
-        "input": "Each test contains multiple test cases. The first line contains the number of test cases $t$ ($1 \\le t \\le 10^4$). The description of the test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($2 \\le n \\le 10^6$) — the length of the sequence $a$.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $10^6$.",
-        "output": "For each test case, output $n$ integers $a_1, a_2, \\ldots, a_n$ — the elements of the sequence $a$.\n\nIf there are multiple answers, print any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "turtle_multiplication",
+        "requirements": {
+            "signature": "def turtle_multiplication(n: int) -> list[int]",
+            "description": "Construct sequence of length n where all elements are between 1 and 300000, and all products a[i]*a[i+1] are distinct, minimizing number of distinct elements."
+        },
+        "judge": "def __judge(n: int, result: list[int]) -> bool:\n    if len(result) != n:\n        return False\n    if any(x < 1 or x > 300000 for x in result):\n        return False\n    products = set()\n    for i in range(n - 1):\n        prod = result[i] * result[i + 1]\n        if prod in products:\n            return False\n        products.add(prod)\n    def compute_min_m(n_val):\n        left, right = 1, 2 * 10**6\n        ans = -1\n        while left <= right:\n            mid = (left + right) // 2\n            ok = False\n            if mid % 2 == 1:\n                edges = mid * (mid + 1) // 2\n                if edges >= n_val - 1:\n                    ok = True\n            else:\n                edges = (mid * mid) // 2 + 1\n                if edges >= n_val - 1:\n                    ok = True\n            if ok:\n                ans = mid\n                right = mid - 1\n            else:\n                left = mid + 1\n        return ans\n    m_required = compute_min_m(n)\n    if m_required == -1 or len(set(result)) != m_required:\n        return False\n    return True",
+        "tests": [
             {
-                "input": "3\n2\n3\n4",
-                "output": "114514 114514\n1 2 2\n3 3 4 4"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(2, turtle_multiplication(2))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(3, turtle_multiplication(3))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(4, turtle_multiplication(4))"
             }
         ],
-        "note": "In the third test case, $a = [3, 4, 2, 6]$ violates the second condition since $a_1 \\cdot a_2 = a_3 \\cdot a_4$. $a = [2, 3, 4, 4]$ satisfy the conditions but its number of distinct elements isn't minimum."
+        "metadata": {
+            "problem_id": "1981D",
+            "url": "https://codeforces.com/problemset/problem/1981/D",
+            "title": "Turtle and Multiplication",
+            "rating": 2400,
+            "tags": [
+                "constructive algorithms",
+                "dfs and similar",
+                "graphs",
+                "number theory"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 3000,
+            "memory_limit_mb": 512
+        }
     },
     {
-        "problem_id": "1988C",
-        "url": "https://codeforces.com/problemset/problem/1988/C",
-        "title": "Increasing Sequence with Fixed OR",
-        "rating": 1300,
-        "tags": [
-            "bitmasks",
-            "constructive algorithms",
-            "greedy"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 512,
-        "description": "You are given a positive integer $n$. Find the longest sequence of positive integers $a=[a_1,a_2,\\ldots,a_k]$ that satisfies the following conditions, and print the sequence:\n\n  * $a_i\\le n$ for all $1\\le i\\le k$.    * $a$ is strictly increasing. That is, $a_i>a_{i-1}$ for all $2\\le i\\le k$.    * $a_i\\,|\\,a_{i-1}=n$ for all $2\\le i\\le k$, where $|$ denotes the [bitwise OR operation](https://en.wikipedia.org/wiki/Bitwise_operation#OR).",
-        "input": "Each test contains multiple test cases. The first line contains the number of test cases $t$ ($1 \\le t \\le 1000$). Description of the test cases follows.\n\nThe only line of each test case contains one integer $n$ ($1\\le n\\le 10^{18}$).\n\nIt's guaranteed that the sum of lengths of the longest valid sequences does not exceed $5\\cdot 10^5$.",
-        "output": "For each testcase, print two lines. In the first line, print the length of your constructed sequence, $k$. In the second line, print $k$ positive integers, denoting the sequence. If there are multiple longest sequences, you can print any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "increasing_sequence_fixed_or",
+        "requirements": {
+            "signature": "def increasing_sequence_fixed_or(n: int) -> list[int]",
+            "description": "Find longest strictly increasing sequence a where each element <= n and a[i]|a[i-1] = n for all i >= 2. Return the sequence."
+        },
+        "judge": "def __judge(n: int, result: list[int]) -> bool:\n    if not result:\n        return False\n    if any(x < 1 or x > n for x in result):\n        return False\n    for i in range(1, len(result)):\n        if result[i] <= result[i-1]:\n            return False\n    for i in range(1, len(result)):\n        if (result[i] | result[i-1]) != n:\n            return False\n    m = bin(n).count('1')\n    expected_length = 1 if m == 1 else m + 1\n    return len(result) == expected_length",
+        "tests": [
             {
-                "input": "4\n1\n3\n14\n23",
-                "output": "1\n1\n3\n1 2 3\n4\n4 10 12 14\n5\n7 18 21 22 23"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(1, increasing_sequence_fixed_or(1))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(3, increasing_sequence_fixed_or(3))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(14, increasing_sequence_fixed_or(14))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(23, increasing_sequence_fixed_or(23))"
             }
         ],
-        "note": null
+        "metadata": {
+            "problem_id": "1988C",
+            "url": "https://codeforces.com/problemset/problem/1988/C",
+            "title": "Increasing Sequence with Fixed OR",
+            "rating": 1300,
+            "tags": [
+                "bitmasks",
+                "constructive algorithms",
+                "greedy"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 512
+        }
     },
     {
-        "problem_id": "1991B",
-        "url": "https://codeforces.com/problemset/problem/1991/B",
-        "title": "AND Reconstruction",
-        "rating": 1100,
-        "tags": [
-            "bitmasks",
-            "constructive algorithms",
-            "greedy"
-        ],
-        "div": "Div. 1 + 2",
-        "time_limit_ms": 1000,
-        "memory_limit_mb": 256,
-        "description": "You are given an array $b$ of $n - 1$ integers.\n\null array $a$ of $n$ integers is called good if $b_i = a_i \\, \\& \\, a_{i + 1}$ for $1 \\le i \\le n-1$, where $\\&$ denotes the [bitwise AND operator](https://en.wikipedia.org/wiki/Bitwise_operation#AND).\n\nConstruct a good array, or report that no good arrays exist.",
-        "input": "Each test contains multiple test cases. The first line contains a single integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($2 \\le n \\le 10^5$) — the length of the array $a$.\n\nThe second line of each test case contains $n - 1$ integers $b_1, b_2, \\ldots, b_{n - 1}$ ($0 \\le b_i < 2^{30}$) — the elements of the array $b$.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $10^5$.",
-        "output": "For each test case, output a single integer $-1$ if no good arrays exist.\n\nOtherwise, output $n$ space-separated integers $a_1, a_2, \\ldots, a_n$ ($0 \\le a_i < 2^{30}$) — the elements of a good array $a$.\n\nIf there are multiple solutions, you may output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "and_reconstruction",
+        "requirements": {
+            "signature": "def and_reconstruction(n: int, b: list[int]) -> str",
+            "description": "Given array b where b[i] = a[i] & a[i+1], reconstruct array a. Return space-separated integers or '-1' if impossible."
+        },
+        "judge": "def __judge(n: int, b: list[int], result: str) -> bool:\n    if result == '-1':\n        a = []\n        for i in range(n):\n            left = b[i - 1] if i > 0 else 0\n            right = b[i] if i < n - 1 else 0\n            a.append(left | right)\n        for i in range(n - 1):\n            if (a[i] & a[i + 1]) != b[i]:\n                return True\n        return False\n    try:\n        a = list(map(int, result.split()))\n    except:\n        return False\n    if len(a) != n:\n        return False\n    if any(x < 0 or x >= 2**30 for x in a):\n        return False\n    # Check AND condition\n    for i in range(n - 1):\n        if a[i] & a[i + 1] != b[i]:\n            return False\n    return True",
+        "tests": [
             {
-                "input": "4\n2\n1\n3\n2 0\n4\n1 2 3\n5\n3 5 4 2",
-                "output": "5 3\n3 2 1\n-1\n3 7 5 6 3"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(2, [1], and_reconstruction(2, [1]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(3, [2, 0], and_reconstruction(3, [2, 0]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(4, [1, 2, 3], and_reconstruction(4, [1, 2, 3]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(5, [3, 5, 4, 2], and_reconstruction(5, [3, 5, 4, 2]))"
             }
         ],
-        "note": "In the first test case, $b = [1]$. A possible good array is $a=[5, 3]$, because $a_1 \\, \\& \\, a_2 = 5 \\, \\& \\, 3 = 1 = b_1$.\n\nIn the second test case, $b = [2, 0]$. A possible good array is $a=[3, 2, 1]$, because $a_1 \\, \\& \\, a_2 = 3 \\, \\& \\, 2 = 2 = b_1$ and $a_2 \\, \\& \\, a_3 = 2 \\, \\& \\, 1 = 0 = b_2$.\n\nIn the third test case, $b = [1, 2, 3]$. It can be shown that no good arrays exist, so the output is $-1$.\n\nIn the fourth test case, $b = [3, 5, 4, 2]$. A possible good array is $a=[3, 7, 5, 6, 3]$."
+        "metadata": {
+            "problem_id": "1991B",
+            "url": "https://codeforces.com/problemset/problem/1991/B",
+            "title": "AND Reconstruction",
+            "rating": 1100,
+            "tags": [
+                "bitmasks",
+                "constructive algorithms",
+                "greedy"
+            ],
+            "div": "Div. 1 + 2",
+            "time_limit_ms": 1000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1991C",
-        "url": "https://codeforces.com/problemset/problem/1991/C",
-        "title": "Absolute Zero",
-        "rating": 1300,
-        "tags": [
-            "constructive algorithms",
-            "greedy",
-            "math"
-        ],
-        "div": "Div. 1 + 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "You are given an array $a$ of $n$ integers.\n\nIn one operation, you will perform the following two-step move:\n\n  1. Choose an integer $x$ ($0 \\le x \\le 10^{9}$).    2. Replace each $a_i$ with $|a_i - x|$, where $|v|$ denotes the [absolute value](https://en.wikipedia.org/wiki/Absolute_value) of $v$. \n\nFor example, by choosing $x = 8$, the array $[5, 7, 10]$ will be changed into $[|5-8|, |7-8|, |10-8|] = [3,1,2]$.\n\nConstruct a sequence of operations to make all elements of $a$ equal to $0$ in at most $40$ operations or determine that it is impossible. You do not need to minimize the number of operations.",
-        "input": "Each test contains multiple test cases. The first line contains a single integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($1 \\le n \\le 2 \\cdot 10^5$) — the length of the array $a$.\n\nThe second line of each test case contains $n$ integers $a_1, a_2, \\ldots, a_n$ ($0 \\le a_i \\le 10^9$) — the elements of the array $a$.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.",
-        "output": "For each test case, output a single integer $-1$ if it is impossible to make all array elements equal to $0$ in at most $40$ operations.\n\nOtherwise, output two lines. The first line of output should contain a single integer $k$ ($0 \\le k \\le 40$) — the number of operations. The second line of output should contain $k$ integers $x_1, x_2, \\ldots, x_k$ ($0 \\le x_i \\le 10^{9}$) — the sequence of operations, denoting that on the $i$-th operation, you chose $x=x_i$.\n\nIf there are multiple solutions, output any of them.\n\nYou do not need to minimize the number of operations.",
-        "interaction": null,
-        "examples": [
+        "id": "absolute_zero",
+        "requirements": {
+            "signature": "def absolute_zero(n: int, a: list[int]) -> str",
+            "description": "Make all elements zero using operations: choose x and replace each a[i] with |a[i]-x|. Return number of operations and values of x, or '-1' if impossible."
+        },
+        "judge": "def __judge(n: int, a: list[int], result: str) -> bool:\n    result = result.strip()\n    if result == '-1':\n        has_even = any(num % 2 == 0 for num in a)\n        has_odd = any(num % 2 == 1 for num in a)\n        return has_even and has_odd\n    lines = result.split('\\n')\n    if len(lines) != 2:\n        return False\n    try:\n        k = int(lines[0])\n        ops = list(map(int, lines[1].split()))\n    except:\n        return False\n    if k < 0 or k > 40 or len(ops) != k:\n        return False\n    if any(x < 0 or x > 10**9 for x in ops):\n        return False\n    arr = a[:]\n    for x in ops:\n        arr = [abs(ai - x) for ai in arr]\n    return all(x == 0 for x in arr)",
+        "tests": [
             {
-                "input": "5\n1\n5\n2\n0 0\n3\n4 6 8\n4\n80 40 20 10\n5\n1 2 3 4 5",
-                "output": "1\n5\n0\n\n3\n6 1 1\n7\n60 40 20 10 30 25 5\n-1"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(1, [5], absolute_zero(1, [5]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(2, [0, 0], absolute_zero(2, [0, 0]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(3, [4, 6, 8], absolute_zero(3, [4, 6, 8]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(4, [80, 40, 20, 10], absolute_zero(4, [80, 40, 20, 10]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_5():\n    assert __judge(5, [1, 2, 3, 4, 5], absolute_zero(5, [1, 2, 3, 4, 5]))"
             }
         ],
-        "note": "In the first test case, we can perform only one operation by choosing $x = 5$, changing the array from $[5]$ to $[0]$.\n\nIn the second test case, no operations are needed because all elements of the array are already $0$.\n\nIn the third test case, we can choose $x = 6$ to change the array from $[4, 6, 8]$ to $[2, 0, 2]$, then choose $x = 1$ to change it to $[1, 1, 1]$, and finally choose $x = 1$ again to change the array into $[0, 0, 0]$.\n\nIn the fourth test case, we can make all elements $0$ by following the operation sequence $(60, 40, 20, 10, 30, 25, 5)$.\n\nIn the fifth test case, it can be shown that it is impossible to make all elements $0$ in at most $40$ operations. Therefore, the output is $-1$."
+        "metadata": {
+            "problem_id": "1991C",
+            "url": "https://codeforces.com/problemset/problem/1991/C",
+            "title": "Absolute Zero",
+            "rating": 1300,
+            "tags": [
+                "constructive algorithms",
+                "greedy",
+                "math"
+            ],
+            "div": "Div. 1 + 2",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1991D",
-        "url": "https://codeforces.com/problemset/problem/1991/D",
-        "title": "Prime XOR Coloring",
-        "rating": 1900,
-        "tags": [
-            "bitmasks",
-            "constructive algorithms",
-            "graphs",
-            "greedy",
-            "math'\n 'number theory"
-        ],
-        "div": "Div. 1 + 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "You are given an undirected graph with $n$ vertices, numbered from $1$ to $n$. There is an edge between vertices $u$ and $v$ if and only if $u \\oplus v$ is a [prime number](https://en.wikipedia.org/wiki/Prime_number), where $\\oplus$ denotes the [bitwise XOR operator](https://en.wikipedia.org/wiki/Bitwise_operation#XOR).\n\nColor all vertices of the graph using the minimum number of colors, such that no two vertices directly connected by an edge have the same color.",
-        "input": "Each test contains multiple test cases. The first line contains the number of test cases $t$ ($1 \\le t \\le 500$). The description of test cases follows.\n\nThe only line contains a single integer $n$ ($1 \\le n \\le 2 \\cdot 10^5$) — the number of vertices in the graph.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.",
-        "output": "For each test case, output two lines.\n\nThe first line should contain a single integer $k$ ($1 \\le k \\le n$) — the minimum number of colors required.\n\nThe second line should contain $n$ integers $c_1, c_2, \\ldots, c_n$ ($1 \\le c_i \\le k$) — the color of each vertex.\n\nIf there are multiple solutions, output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "prime_xor_coloring",
+        "requirements": {
+            "signature": "def prime_xor_coloring(n: int) -> tuple[int, list[int]]",
+            "description": "Color vertices 1 to n where edge exists if XOR is prime. Return (num_colors, colors) where colors[i] is color of vertex i+1."
+        },
+        "judge": "def __judge(n:int,result:tuple[int,list[int]])->bool:\n    k,colors=result\n    if n==1: optimal_k=1\n    elif n==2: optimal_k=2\n    elif n==3: optimal_k=2\n    elif n==4: optimal_k=3\n    elif n==5: optimal_k=3\n    else: optimal_k=4\n    if k!=optimal_k: return False\n    if not isinstance(colors,(list,tuple)): return False\n    if len(colors)!=n: return False\n    if any((not isinstance(c,int)) or c<1 or c>k for c in colors): return False\n    import math\n    size=1\n    while size< n+1: size<<=1\n    sieve=bytearray(b'\\x01')*size\n    sieve[0:2]=b'\\x00\\x00'\n    limit=int(math.isqrt(size-1))\n    for i in range(2,limit+1):\n        if sieve[i]: sieve[i*i:size:i]=b'\\x00'*(((size-1-i*i)//i)+1)\n    primes=[i for i,is_p in enumerate(sieve) if is_p]\n    def fwht(a):\n        n2=len(a)\n        h=1\n        while h<n2:\n            step=h<<1\n            for i in range(0,n2,step):\n                for j in range(i,i+h):\n                    x=a[j]; y=a[j+h]\n                    a[j]=x+y; a[j+h]=x-y\n            h<<=1\n    for col_id in range(1,k+1):\n        arr=[0]*size\n        for i,c in enumerate(colors, start=1):\n            if c==col_id: arr[i]=1\n        fa=arr[:]\n        fwht(fa)\n        for i in range(len(fa)): fa[i]=fa[i]*fa[i]\n        fwht(fa)\n        for i in range(len(fa)): fa[i]//=size\n        for p in primes:\n            if fa[p]>0: return False\n    return True",
+        "tests": [
             {
-                "input": "6\n1\n2\n3\n4\n5\n6",
-                "output": "1\n1\n2\n1 2\n2\n1 2 2\n3\n1 2 2 3\n3\n1 2 2 3 3\n4\n1 2 2 3 3 4"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(1, prime_xor_coloring(1))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(2, prime_xor_coloring(2))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(3, prime_xor_coloring(3))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(4, prime_xor_coloring(4))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_5():\n    assert __judge(5, prime_xor_coloring(5))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_6():\n    assert __judge(6, prime_xor_coloring(6))"
             }
         ],
-        "note": "In the first test case, the minimum number of colors is $1$, because there is only one vertex.\n\nIn the second test case, the minimum number of colors is $2$, because there is an edge connecting $1$ and $2$ ($1 \\oplus 2 = 3$, which is a prime number).\n\nIn the third test case, the minimum number of colors is still $2$, because $2$ and $3$ can be colored the same since there is no edge between $2$ and $3$ ($2 \\oplus 3 = 1$, which is not a prime number).\n\nIn the fourth test case, it can be shown that the minimum number of colors is $3$.\n\nIn the fifth test case, it can be shown that the minimum number of colors is $3$.\n\nIn the sixth test case, it can be shown that the minimum number of colors is $4$."
+        "metadata": {
+            "problem_id": "1991D",
+            "url": "https://codeforces.com/problemset/problem/1991/D",
+            "title": "Prime XOR Coloring",
+            "rating": 1900,
+            "tags": [
+                "bitmasks",
+                "constructive algorithms",
+                "graphs",
+                "greedy",
+                "math",
+                "number theory"
+            ],
+            "div": "Div. 1 + 2",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1991G",
-        "url": "https://codeforces.com/problemset/problem/1991/G",
-        "title": "Grid Reset",
-        "rating": 2700,
-        "tags": [
-            "constructive algorithms",
-            "greedy",
-            "implementation"
-        ],
-        "div": "Div. 1 + 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "You are given a grid consisting of $n$ rows and $m$ columns, where each cell is initially white. Additionally, you are given an integer $k$, where $1 \\le k \\le \\min(n, m)$.\n\nYou will process $q$ operations of two types:\n\n  * $\\mathtt{H}$ (horizontal operation) — You choose a $1 \\times k$ rectangle completely within the grid, where all cells in this rectangle are white. Then, all cells in this rectangle are changed to black.    * $\\mathtt{V}$ (vertical operation) — You choose a $k \\times 1$ rectangle completely within the grid, where all cells in this rectangle are white. Then, all cells in this rectangle are changed to black. \n\nAfter each operation, if any rows or columns become completely black, all cells in these rows and columns are simultaneously reset to white. Specifically, if all cells in the row and column a cell is contained in become black, all cells in both the row and column will be reset to white.\n\nChoose the rectangles in a way that you can perform all given operations, or determine that it is impossible.",
-        "input": "Each test contains multiple test cases. The first line contains a single integer $t$ ($1 \\le t \\le 1000$) — the number of test cases. The description of test cases follows.\n\nThe first line of each test case contains four integers $n$, $m$, $k$, and $q$ ($1 \\le n, m \\le 100$, $1 \\le k \\le \\min(n, m)$, $1 \\le q \\le 1000$) — the number of rows and columns in the grid, the size of the operation rectangle, and the number of operations, respectively.\n\nThe second line of each test case contains a string $s$ of length $q$, consisting only of characters $\\mathtt{H}$ and $\\mathtt{V}$ — the sequence of operation types.\n\nIt is guaranteed that the sum of $q$ over all test cases does not exceed $1000$.",
-        "output": "For each test case, output a single integer $-1$ if it is impossible to perform all the operations.\n\nOtherwise, output $q$ lines. Each line contains two integers $i$, $j$ ($1 \\le i \\le n$, $1 \\le j \\le m$) — the coordinates of the top-left cell of the operation rectangle.\n\nIf there are multiple solutions, output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "grid_reset",
+        "requirements": {
+            "signature": "def grid_reset(n: int, m: int, k: int, ops: str) -> str",
+            "description": "Process H (horizontal 1×k) and V (vertical k×1) operations on n×m grid. Return '-1' if impossible, else k lines of 'c i j' for each operation."
+        },
+        "judge": "def __judge(n: int, m: int, k: int, ops: str, result: str) -> bool:\n    if result == '-1':\n        return False\n    lines = [ln.strip() for ln in result.strip().splitlines() if ln.strip() != \"\"]\n    if len(lines) != len(ops):\n        return False\n    grid = [[False] * m for _ in range(n)]\n    for step, (op_char, line) in enumerate(zip(ops, lines), start=1):\n        parts = line.split()\n        if len(parts) != 2:\n            return False\n        try:\n            i = int(parts[0])\n            j = int(parts[1])\n        except ValueError:\n            return False\n        if not (1 <= i <= n and 1 <= j <= m):\n            return False\n        r0 = i - 1\n        c0 = j - 1\n        if op_char == 'H':\n            if c0 + k - 1 >= m:\n                return False\n            for c in range(c0, c0 + k):\n                if grid[r0][c]:\n                    return False\n            for c in range(c0, c0 + k):\n                grid[r0][c] = True\n        elif op_char == 'V':\n            if r0 + k - 1 >= n:\n                return False\n            for r in range(r0, r0 + k):\n                if grid[r][c0]:\n                    return False\n            for r in range(r0, r0 + k):\n                grid[r][c0] = True\n        else:\n            return False\n        full_rows = [r for r in range(n) if all(grid[r][c] for c in range(m))]\n        full_cols = [c for c in range(m) if all(grid[r][c] for r in range(n))]\n        if full_rows or full_cols:\n            for r in full_rows:\n                for c in range(m):\n                    grid[r][c] = False\n            for c in full_cols:\n                for r in range(n):\n                    grid[r][c] = False\n    return True",
+        "tests": [
             {
-                "input": "1\n4 5 3 6\nHVVHHV",
-                "output": "1 1\n2 1\n1 1\n2 3\n3 3\n2 2"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(4, 5, 3, 'HVVHHV', grid_reset(4, 5, 3, 'HVVHHV'))"
             }
         ],
-        "note": "![](CDN_BASE_URL/4e8cc9bc31ec8a5ba8c074c199a00b25) Illustration of example.\n\nThe first operation is horizontal. The operation rectangle starts at $(1,1)$ and is a $1 \\times 3$ rectangle. After the operation, cells $(1,1)$, $(1,2)$, and $(1,3)$ become black.\n\nThe second operation is vertical. The operation rectangle starts at $(2,1)$ and is a $3 \\times 1$ rectangle. After the operation, cells $(2,1)$, $(3,1)$, and $(4,1)$ become black. At this point, the first column becomes completely black, so all cells in the first column are reset to white.\n\nThe third operation is vertical. The operation rectangle starts at $(1,1)$ and is a $3 \\times 1$ rectangle. After the operation, cells $(1,1)$, $(2,1)$, and $(3,1)$ become black.\n\nThe fourth operation is horizontal. The operation rectangle starts at $(2,3)$ and is a $1 \\times 3$ rectangle. After the operation, cells $(2,3)$, $(2,4)$, and $(2,5)$ become black.\n\nThe fifth operation is horizontal. The operation rectangle starts at $(3,3)$ and is a $1 \\times 3$ rectangle. After the operation, cells $(3,3)$, $(3,4)$, and $(3,5)$ become black.\n\nThe sixth operation is vertical. The operation rectangle starts at $(2,2)$ and is a $3 \\times 1$ rectangle. After the operation, cells $(2,2)$, $(3,2)$, and $(4,2)$ become black. At this point, two rows and one column become completely black, so all cells in these rows and the column are reset to white."
+        "metadata": {
+            "problem_id": "1991G",
+            "url": "https://codeforces.com/problemset/problem/1991/G",
+            "title": "Grid Reset",
+            "rating": 2700,
+            "tags": [
+                "constructive algorithms",
+                "greedy",
+                "implementation"
+            ],
+            "div": "Div. 1 + 2",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1992C",
-        "url": "https://codeforces.com/problemset/problem/1992/C",
-        "title": "Gorilla and Permutation",
-        "rating": 900,
-        "tags": [
-            "constructive algorithms",
-            "math"
-        ],
-        "div": "Div. 3",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "Gorilla and Noobish_Monk found three numbers $n$, $m$, and $k$ ($m < k$). They decided to construct a permutation$^{\\dagger}$ of length $n$.\n\nFor the permutation, Noobish_Monk came up with the following function: $g(i)$ is the sum of all the numbers in the permutation on a prefix of length $i$ that are not greater than $m$. Similarly, Gorilla came up with the function $f$, where $f(i)$ is the sum of all the numbers in the permutation on a prefix of length $i$ that are not less than $k$. A prefix of length $i$ is a subarray consisting of the first $i$ elements of the original array.\n\nFor example, if $n = 5$, $m = 2$, $k = 5$, and the permutation is $[5, 3, 4, 1, 2]$, then:\n\n  * $f(1) = 5$, because $5 \\ge 5$; $g(1) = 0$, because $5 > 2$;    * $f(2) = 5$, because $3 < 5$; $g(2) = 0$, because $3 > 2$;    * $f(3) = 5$, because $4 < 5$; $g(3) = 0$, because $4 > 2$;    * $f(4) = 5$, because $1 < 5$; $g(4) = 1$, because $1 \\le 2$;    * $f(5) = 5$, because $2 < 5$; $g(5) = 1 + 2 = 3$, because $2 \\le 2$. \n\nHelp them find a permutation for which the value of $\\left(\\sum_{i=1}^n f(i) - \\sum_{i=1}^n g(i)\\right)$ is maximized.\n\n$^{\\dagger}$A permutation of length $n$ is an array consisting of $n$ distinct integers from $1$ to $n$ in any order. For example, $[2,3,1,5,4]$ is a permutation, but $[1,2,2]$ is not a permutation (as $2$ appears twice in the array) and $[1,3,4]$ is also not a permutation (as $n=3$, but $4$ appears in the array).",
-        "input": "The first line contains a single integer $t$ ($1 \\le t \\le 10^4$)  — the number of test cases.\n\nThe only line of each case contains three integers $n$, $m$, $k$ ($2\\le n \\le 10^5$; $1 \\le m < k \\le n$) — the size of the permutation to be constructed and two integers.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.",
-        "output": "For each test case, output the permutation  — a set of numbers that satisfies the conditions of the problem. If there are multiple solutions, output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "gorilla_and_permutation",
+        "requirements": {
+            "signature": "def gorilla_and_permutation(n: int, m: int, k: int) -> list[int]",
+            "description": "Construct permutation of length n maximizing f(i)-g(i) where f(i) is sum of prefix elements >= k, g(i) is sum of prefix elements <= m."
+        },
+        "judge": "def __judge(n: int, m: int, k: int, result: list[int]) -> bool:\n    if len(result) != n:\n        return False\n    if sorted(result) != list(range(1, n + 1)):\n        return False\n    std_perm = list(range(n, m, -1)) + list(range(1, m + 1))\n    def compute_score(perm):\n        score = 0\n        for idx, num in enumerate(perm):\n            pos = idx + 1\n            if num >= k:\n                score += num * (n - pos + 1)\n            if num <= m:\n                score -= num * (n - pos + 1)\n        return score\n    given_score = compute_score(result)\n    optimal_score = compute_score(std_perm)\n    return given_score == optimal_score",
+        "tests": [
             {
-                "input": "3\n5 2 5\n3 1 3\n10 3 8",
-                "output": "5 3 4 1 2\n3 2 1\n10 9 8 4 7 5 6 1 2 3"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(5, 2, 5, gorilla_and_permutation(5, 2, 5))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(3, 1, 3, gorilla_and_permutation(3, 1, 3))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(10, 3, 8, gorilla_and_permutation(10, 3, 8))"
             }
         ],
-        "note": "In the first example, $\\left(\\sum_{i=1}^n f(i) - \\sum_{i=1}^n g(i)\\right) = 5 \\cdot 5 - (0 \\cdot 3 + 1 + 3) = 25 - 4 = 21$"
+        "metadata": {
+            "problem_id": "1992C",
+            "url": "https://codeforces.com/problemset/problem/1992/C",
+            "title": "Gorilla and Permutation",
+            "rating": 900,
+            "tags": [
+                "constructive algorithms",
+                "math"
+            ],
+            "div": "Div. 3",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1994F",
-        "url": "https://codeforces.com/problemset/problem/1994/F",
-        "title": "Stardew Valley",
-        "rating": 2500,
-        "tags": [
-            "constructive algorithms",
-            "dfs and similar",
-            "graphs",
-            "trees"
-        ],
-        "div": "Div. 1 + 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "Pelican Town represents $n$ houses connected by $m$ bidirectional roads. Some roads have NPCs standing on them. Farmer Buba needs to walk on each road with an NPC and talk to them.\n\nHelp the farmer find a route satisfying the following properties:\n\n  * The route starts at some house, follows the roads, and ends at the same house.    * The route does not follow any road more than once (in both directions together).    * The route follows each road with an NPC exactly once. \n\nNote that the route can follow roads without NPCs, and you do not need to minimize the length of the route.\n\nIt is guaranteed that you can reach any house from any other by walking on the roads with NPCs only.",
-        "input": "Each test consists of multiple test cases. The first line contains an integer $t$ ($1 \\le t \\le 10^{4}$) — the number of test cases. Then follows the description of the test cases.\n\nThe first line of each test case contains two integers $n$ and $m$ ($2 \\leq n \\leq 5 \\cdot 10^5, 1 \\leq m \\leq 5 \\cdot 10^5$) — the number of houses and roads in Pelican Town respectively.\n\nIn each of the next $m$ lines, three integers $u$, $v$, and $c$ ($1 \\leq u, v \\leq n, c = 0/1$) are given — the ends of the road and whether an NPC is on this road. If $c = 1$, then the road has an NPC. If $c = 0$, then the road has no NPC.\n\nThe graph may contain multiple edges and loops, and if there are multiple edges with NPCs standing on them, the route must follow each of these roads.\n\nIt is guaranteed that you can reach any house from any other by walking on the roads with NPCs only.\n\nIt is guaranteed that the sum of $n$ and $m$ for all test cases does not exceed $5 \\cdot 10^5$.",
-        "output": "For each test case, if there is no solution, then output \"No\" (without quotes).\n\nOtherwise, output \"Yes\" (without quotes), and then output $k$ — the number of roads in the route. In the next line, output $k + 1$ numbers — the houses of the route in the order of traversal. Note that the first house should match the last one, as the route is cyclic.\n\nIf there are multiple answers, you can print any of them.\n\nYou can output each letter in any case (for example, the strings \"yEs\", \"yes\", \"Yes\", and \"YES\" will be recognized as a positive answer).",
-        "interaction": null,
-        "examples": [
+        "id": "stardew_valley",
+        "requirements": {
+            "signature": "def stardew_valley(n: int, m: int, edges: list[tuple[int, int, int]]) -> str",
+            "description": "Find cyclic route visiting each NPC road exactly once. Return 'NO' if impossible, else 'YES\\nk\\nroute' where route has k+1 houses."
+        },
+        "judge": "def __judge(n: int, m: int, edges: list, result: str) -> bool:\n    from collections import defaultdict\n    lines = result.strip().split('\\n')\n    if not lines:\n        return False\n    first = lines[0].strip().upper()\n    def exists_solution():\n        edg = [0]*m\n        g = [[] for _ in range(n)]\n        black = [[] for _ in range(n)]\n        for i in range(m):\n            u,v,c = edges[i]\n            u -= 1; v -= 1\n            edg[i] = u ^ v\n            g[u].append(i); g[v].append(i)\n            if c == 0:\n                black[u].append(i); black[v].append(i)\n        deg = [len(g[i]) & 1 for i in range(n)]\n        removed = [False]*m\n        usedv = [False]*n\n        import sys\n        sys.setrecursionlimit(1000000)\n        def dfs(u):\n            usedv[u] = True\n            for id in black[u]:\n                to = edg[id] ^ u\n                if usedv[to]: continue\n                dfs(to)\n                if deg[to]:\n                    removed[id] = True\n                    deg[to] ^= 1\n                    deg[u] ^= 1\n        ok = True\n        for i in range(n):\n            if not usedv[i]:\n                dfs(i)\n                if deg[i]:\n                    ok = False\n        if not ok:\n            return False\n        used_edge = [False]*m\n        start = 0\n        for i in range(n):\n            for id in g[i]:\n                if not removed[id]:\n                    start = i; break\n            else:\n                continue\n            break\n        it = [list(lst) for lst in g]\n        path = []\n        stack = [start]\n        while stack:\n            v = stack[-1]\n            while it[v] and (removed[it[v][-1]] or used_edge[it[v][-1]]):\n                it[v].pop()\n            if not it[v]:\n                path.append(v)\n                stack.pop()\n            else:\n                id = it[v].pop()\n                used_edge[id] = True\n                to = edg[id] ^ v\n                stack.append(to)\n        for i in range(m):\n            if not removed[i] and not used_edge[i]:\n                return False\n        return True\n    if first == 'NO':\n        return not exists_solution()\n    if first != 'YES' or len(lines) < 3:\n        return False\n    try:\n        k = int(lines[1].strip())\n    except:\n        return False\n    try:\n        route = list(map(int, lines[2].strip().split()))\n    except:\n        return False\n    if len(route) != k + 1 or route[0] != route[-1]:\n        return False\n    for house in route:\n        if not (1 <= house <= n):\n            return False\n    adj = [defaultdict(list) for _ in range(n + 1)]\n    used = [False] * m\n    for idx in range(m):\n        u, v, c = edges[idx]\n        adj[u][v].append(idx)\n        adj[v][u].append(idx)\n    for i in range(k):\n        a = route[i]\n        b = route[i + 1]\n        if b not in adj[a]:\n            return False\n        found = False\n        while adj[a][b]:\n            idx = adj[a][b].pop()\n            if not used[idx]:\n                used[idx] = True\n                found = True\n                break\n        if not found:\n            return False\n    for idx in range(m):\n        u, v, c = edges[idx]\n        if c == 1 and not used[idx]:\n            return False\n    return True\n",
+        "tests": [
             {
-                "input": "3\n3 2\n1 2 1\n2 3 1\n3 3\n1 2 1\n1 3 1\n2 3 0\n5 9\n1 2 0\n5 2 1\n5 4 1\n5 1 1\n2 3 1\n5 2 1\n4 1 0\n4 3 0\n5 2 0",
-                "output": "NO\nYES\n3\n1 2 3 1 \nYES\n7\n1 2 5 4 3 2 5 1"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(3, 2, [(1, 2, 1), (2, 3, 1)], stardew_valley(3, 2, [(1, 2, 1), (2, 3, 1)]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(3, 3, [(1, 2, 1), (1, 3, 1), (2, 3, 0)], stardew_valley(3, 3, [(1, 2, 1), (1, 3, 1), (2, 3, 0)]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(5, 9, [(1, 2, 0), (5, 2, 1), (5, 4, 1), (5, 1, 1), (2, 3, 1), (5, 2, 1), (4, 1, 0), (4, 3, 0), (5, 2, 0)], stardew_valley(5, 9, [(1, 2, 0), (5, 2, 1), (5, 4, 1), (5, 1, 1), (2, 3, 1), (5, 2, 1), (4, 1, 0), (4, 3, 0), (5, 2, 0)]))"
             }
         ],
-        "note": "Note that in the third test case, there are multiple edges $(5, 2)$. You must walk on two of them."
+        "metadata": {
+            "problem_id": "1994F",
+            "url": "https://codeforces.com/problemset/problem/1994/F",
+            "title": "Stardew Valley",
+            "rating": 2500,
+            "tags": [
+                "constructive algorithms",
+                "dfs and similar",
+                "graphs",
+                "trees"
+            ],
+            "div": "Div. 1 + 2",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1997A",
-        "url": "https://codeforces.com/problemset/problem/1997/A",
-        "title": "Strong Password",
-        "rating": 800,
-        "tags": [
-            "brute force",
-            "implementation",
-            "strings"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 512,
-        "description": "Monocarp's current password on Codeforces is a string $s$, consisting of lowercase Latin letters. Monocarp thinks that his current password is too weak, so he wants to insert exactly one lowercase Latin letter into the password to make it stronger. Monocarp can choose any letter and insert it anywhere, even before the first character or after the last character.\n\nMonocarp thinks that the password's strength is proportional to the time it takes him to type the password. The time it takes to type the password is calculated as follows:\n\n  * the time to type the first character is $2$ seconds;    * for each character other than the first, the time it takes to type it is $1$ second if it is the same as the previous character, or $2$ seconds otherwise. \n\nFor example, the time it takes to type the password abacaba is $14$; the time it takes to type the password a is $2$; the time it takes to type the password aaabacc is $11$.\n\nYou have to help Monocarp — insert a lowercase Latin letter into his password so that the resulting password takes the maximum possible amount of time to type.",
-        "input": "The first line contains one integer $t$ ($1 \\le t \\le 1000$) — the number of test cases.\n\nEach test case consists of one line containing the string $s$ ($1 \\le |s| \\le 10$), consisting of lowercase Latin letters.",
-        "output": "For each test case, print one line containing the new password — a string which can be obtained from $s$ by inserting one lowercase Latin letter. The string you print should have the maximum possible required time to type it. If there are multiple answers, print any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "strong_password",
+        "requirements": {
+            "signature": "def strong_password(s: str) -> str",
+            "description": "Insert one lowercase letter into password s to maximize typing time. First char takes 2 seconds, subsequent chars take 1 second if same as previous, 2 otherwise."
+        },
+        "judge": "def __judge(s: str, result: str) -> bool:\n    if len(result) != len(s) + 1:\n        return False\n    if not all('a' <= c <= 'z' for c in result):\n        return False\n    valid_insertion = False\n    for i in range(len(result)):\n        if result[:i] + result[i+1:] == s:\n            valid_insertion = True\n            break\n    if not valid_insertion:\n        return False\n    def typing_time(x: str) -> int:\n        p = sum(1 for i in range(1, len(x)) if x[i] == x[i-1])\n        return 2 * len(x) - p\n    res_time = typing_time(result)\n    best_time = -1\n    for i in range(len(s) + 1):\n        for code in range(ord('a'), ord('z') + 1):\n            cand = s[:i] + chr(code) + s[i:]\n            t = typing_time(cand)\n            if t > best_time:\n                best_time = t\n    return res_time == best_time",
+        "tests": [
             {
-                "input": "4\na\naaa\nabb\npassword",
-                "output": "wa\naada\nabcb\npastsword"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge('a', strong_password('a'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge('aaa', strong_password('aaa'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge('abb', strong_password('abb'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge('password', strong_password('password'))"
             }
         ],
-        "note": null
+        "metadata": {
+            "problem_id": "1997A",
+            "url": "https://codeforces.com/problemset/problem/1997/A",
+            "title": "Strong Password",
+            "rating": 800,
+            "tags": [
+                "brute force",
+                "implementation",
+                "strings"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 512
+        }
     },
     {
-        "problem_id": "1998A",
-        "url": "https://codeforces.com/problemset/problem/1998/A",
-        "title": "Find K Distinct Points with Fixed Center",
-        "rating": 800,
-        "tags": [
-            "constructive algorithms",
-            "implementation",
-            "math"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 1000,
-        "memory_limit_mb": 256,
-        "description": "I couldn't think of a good title for this problem, so I decided to learn from LeetCode.\n\n— Sun Tzu, The Art of War\n\nYou are given three integers $x_c$, $y_c$, and $k$ ($-100 \\leq x_c, y_c \\leq 100$, $1 \\leq k \\leq 1000$).\n\nYou need to find $k$ distinct points ($x_1, y_1$), ($x_2, y_2$), $\\ldots$, ($x_k, y_k$), having integer coordinates, on the 2D coordinate plane such that:\n\n  * their center$^{\\text{∗}}$ is ($x_c, y_c$)    * $-10^9 \\leq x_i, y_i \\leq 10^9$ for all $i$ from $1$ to $k$ \n\nIt can be proven that at least one set of $k$ distinct points always exists that satisfies these conditions.\n\n$^{\\text{∗}}$The center of $k$ points ($x_1, y_1$), ($x_2, y_2$), $\\ldots$, ($x_k, y_k$) is $\\left( \\frac{x_1 + x_2 + \\ldots + x_k}{k}, \\frac{y_1 + y_2 + \\ldots + y_k}{k} \\right)$.",
-        "input": "The first line contains $t$ ($1 \\leq t \\leq 100$) — the number of test cases.\n\nEach test case contains three integers $x_c$, $y_c$, and $k$ ($-100 \\leq x_c, y_c \\leq 100$, $1 \\leq k \\leq 1000$) — the coordinates of the center and the number of distinct points you must output.\n\nIt is guaranteed that the sum of $k$ over all test cases does not exceed $1000$.",
-        "output": "For each test case, output $k$ lines, the $i$-th line containing two space separated integers, $x_i$ and $y_i$, ($-10^9 \\leq x_i, y_i \\leq 10^9$) — denoting the position of the $i$-th point.\n\nIf there are multiple answers, print any of them. It can be shown that a solution always exists under the given constraints.",
-        "interaction": null,
-        "examples": [
+        "id": "find_k_distinct_points",
+        "requirements": {
+            "signature": "def find_k_distinct_points(xc: int, yc: int, k: int) -> list[tuple[int, int]]",
+            "description": "Find k distinct integer points whose center is (xc, yc). Return list of (x, y) tuples."
+        },
+        "judge": "def __judge(xc: int, yc: int, k: int, result: list[tuple[int, int]]) -> bool:\n    if len(result) != k:\n        return False\n    if len(set(result)) != k:  # Check distinct\n        return False\n    # Check all coordinates are within bounds\n    for x, y in result:\n        if not (-10**9 <= x <= 10**9 and -10**9 <= y <= 10**9):\n            return False\n    # Check center\n    sum_x = sum(x for x, y in result)\n    sum_y = sum(y for x, y in result)\n    return sum_x == k * xc and sum_y == k * yc",
+        "tests": [
             {
-                "input": "4\n10 10 1\n0 0 3\n-5 -8 8\n4 -5 3",
-                "output": "10 10\n-1 -1\n5 -1\n-4 2\n-6 -7\n-5 -7\n-4 -7\n-4 -8\n-4 -9\n-5 -9\n-6 -9\n-6 -8\n1000 -1000\n-996 995\n8 -10"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(10, 10, 1, find_k_distinct_points(10, 10, 1))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(0, 0, 3, find_k_distinct_points(0, 0, 3))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(-5, -8, 8, find_k_distinct_points(-5, -8, 8))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(4, -5, 3, find_k_distinct_points(4, -5, 3))"
             }
         ],
-        "note": "For the first test case, $\\left( \\frac{10}{1}, \\frac{10}{1} \\right) = (10, 10)$.\n\nFor the second test case, $\\left( \\frac{-1 + 5 - 4}{3}, \\frac{-1 -1 + 2}{3} \\right) = (0, 0)$."
+        "metadata": {
+            "problem_id": "1998A",
+            "url": "https://codeforces.com/problemset/problem/1998/A",
+            "title": "Find K Distinct Points with Fixed Center",
+            "rating": 800,
+            "tags": [
+                "constructive algorithms",
+                "implementation",
+                "math"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 1000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "1999D",
-        "url": "https://codeforces.com/problemset/problem/1999/D",
-        "title": "Slavic's Exam",
-        "rating": 1100,
-        "tags": [
-            "greedy",
-            "implementation",
-            "strings"
-        ],
-        "div": "Div. 4",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "Slavic has a very tough exam and needs your help in order to pass it. Here is the question he is struggling with:\n\nThere exists a string $s$, which consists of lowercase English letters and possibly zero or more \"?\".\n\nSlavic is asked to change each \"?\" to a lowercase English letter such that string $t$ becomes a subsequence (not necessarily continuous) of the string $s$.\n\nOutput any such string, or say that it is impossible in case no string that respects the conditions exists.",
-        "input": "The first line contains a single integer $T$ ($1 \\leq T \\leq 10^4$) — the number of test cases.\n\nThe first line of each test case contains a single string $s$ ($1 \\leq |s| \\leq 2 \\cdot 10^5$, and $s$ consists only of lowercase English letters and \"?\"-s)  – the original string you have.\n\nThe second line of each test case contains a single string $t$ ($1 \\leq |t| \\leq |s|$, and $t$ consists only of lowercase English letters)  – the string that should be a subsequence of string $s$.\n\nThe sum of $|s|$ over all test cases doesn't exceed $2 \\cdot 10^5$, where $|x|$ denotes the length of the string $x$.",
-        "output": "For each test case, if no such string exists as described in the statement, output \"NO\" (without quotes).\n\nOtherwise, output \"YES\" (without quotes). Then, output one line — the string that respects all conditions.\n\nYou can output \"YES\" and \"NO\" in any case (for example, strings \"yEs\", \"yes\", and \"Yes\" will be recognized as a positive response).\n\nIf multiple answers are possible, you can output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "slavics_exam",
+        "requirements": {
+            "signature": "def slavics_exam(s: str, t: str) -> str",
+            "description": "Replace each '?' in s with a lowercase letter so that t becomes a subsequence. Return modified string or 'NO' if impossible."
+        },
+        "judge": "def __judge(s: str, t: str, result: str) -> bool:\n    if result == \"NO\":\n        j = 0\n        for c in s:\n            if c == '?':\n                if j < len(t):\n                    j += 1\n            elif j < len(t) and c == t[j]:\n                j += 1\n        return j < len(t)\n    else:\n        if len(result) != len(s):\n            return False\n        for i in range(len(s)):\n            sc = s[i]\n            rc = result[i]\n            if sc != '?' and sc != rc:\n                return False\n            if sc == '?' and not ('a' <= rc <= 'z'):\n                return False\n        j = 0\n        for c in result:\n            if j < len(t) and c == t[j]:\n                j += 1\n        return j == len(t)",
+        "tests": [
             {
-                "input": "5\n?????\nxbx\nab??e\nabcde\nayy?x\na\nab??e\ndac\npaiu\nmom",
-                "output": "YES\nxabax\nYES\nabcde\nYES\nayyyx\nNO\nNO"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge('?????', 'xbx', slavics_exam('?????', 'xbx'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge('ab??e', 'abcde', slavics_exam('ab??e', 'abcde'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge('ayy?x', 'a', slavics_exam('ayy?x', 'a'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge('ab??e', 'dac', slavics_exam('ab??e', 'dac'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_5():\n    assert __judge('paiu', 'mom', slavics_exam('paiu', 'mom'))"
             }
         ],
-        "note": null
+        "metadata": {
+            "problem_id": "1999D",
+            "url": "https://codeforces.com/problemset/problem/1999/D",
+            "title": "Slavic's Exam",
+            "rating": 1100,
+            "tags": [
+                "greedy",
+                "implementation",
+                "strings"
+            ],
+            "div": "Div. 4",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "2001B",
-        "url": "https://codeforces.com/problemset/problem/2001/B",
-        "title": "Generate Permutation",
-        "rating": 800,
-        "tags": [
-            "constructive algorithms"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 1500,
-        "memory_limit_mb": 256,
-        "description": "There is an integer sequence $a$ of length $n$, where each element is initially $-1$.\n\nMisuki has two typewriters where the first one writes letters from left to right, with a pointer initially pointing to $1$, and another writes letters from right to left with a pointer initially pointing to $n$.\n\nMisuki would choose one of the typewriters and use it to perform the following operations until $a$ becomes a permutation of $[1, 2, \\ldots, n]$\n\n  * write number: write the minimum positive integer that isn't present in the array $a$ to the element $a_i$, $i$ is the position where the pointer points at. Such operation can be performed only when $a_i = -1$.    * carriage return: return the pointer to its initial position (i.e. $1$ for the first typewriter, $n$ for the second)    * move pointer: move the pointer to the next position, let $i$ be the position the pointer points at before this operation, if Misuki is using the first typewriter, $i := i + 1$ would happen, and $i := i - 1$ otherwise. Such operation can be performed only if after the operation, $1 \\le i \\le n$ holds. \n\nYour task is to construct any permutation $p$ of length $n$, such that the minimum number of carriage return operations needed to make $a = p$ is the same no matter which typewriter Misuki is using.",
-        "input": "Each test contains multiple test cases. The first line of input contains a single integer $t$ ($1 \\le t \\le 500$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($1 \\le n \\le 2 \\cdot 10^5$) — the length of the permutation.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.",
-        "output": "For each test case, output a line of $n$ integers, representing the permutation $p$ of length $n$ such that the minimum number of carriage return operations needed to make $a = p$ is the same no matter which typewriter Misuki is using, or $-1$ if it is impossible to do so.\n\nIf there are multiple valid permutations, you can output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "generate_permutation",
+        "requirements": {
+            "signature": "def generate_permutation(n: int) -> list[int]",
+            "description": "Find permutation where minimum carriage returns needed is same for both left-to-right and right-to-left typewriters. Return permutation or [-1] if impossible."
+        },
+        "judge": "def __judge(n: int, result: list[int]) -> bool:\n    if result == [-1]:\n        return n % 2 == 0\n    if len(result) != n:\n        return False\n    if sorted(result) != list(range(1, n + 1)):\n        return False\n    pos = [0] * (n + 1)\n    for idx in range(n):\n        pos[result[idx]] = idx\n    c1 = sum(1 for x in range(1, n) if pos[x] > pos[x + 1])\n    c2 = sum(1 for x in range(1, n) if pos[x] < pos[x + 1])\n    return c1 == c2",
+        "tests": [
             {
-                "input": "3\n1\n2\n3",
-                "output": "1\n-1\n3 1 2"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(1, generate_permutation(1))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(2, generate_permutation(2))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(3, generate_permutation(3))"
             }
         ],
-        "note": "In the first testcase, it's possible to make $a = p = [1]$ using $0$ carriage return operations.\n\nIn the second testcase, it is possible to make $a = p = [1, 2]$ with the minimal number of carriage returns as follows:\n\nIf Misuki is using the first typewriter:\n\n  * Write number: write $1$ to $a_1$, $a$ becomes $[1, -1]$    * Move pointer: move the pointer to the next position. (i.e. $2$)    * Write number: write $2$ to $a_2$, $a$ becomes $[1, 2]$ \n\nIf Misuki is using the second typewriter:\n\n  * Move pointer: move the pointer to the next position. (i.e. $1$)    * Write number: write $1$ to $a_1$, $a$ becomes $[1, -1]$    * Carriage return: return the pointer to $2$.    * Write number: write $2$ to $a_2$, $a$ becomes $[1, 2]$ \n\nIt can be proven that the minimum number of carriage returns needed to transform $a$ into $p$ when using the first typewriter is $0$ and it is $1$ when using the second one, so this permutation is not valid.\n\nSimilarly, $p = [2, 1]$ is also not valid, so there is no solution for $n = 2$.\n\nIn the third testcase, it is possibile to make $a = p = [3, 1, 2]$ with $1$ carriage return with both the first and the second typewriter. It can be proven that, for both typewriters, it is impossible to write $p$ with $0$ carriage returns.\n\nWith the first typewriter it is possible to:\n\n  * Move pointer: move the pointer to the next position. (i.e. $2$)    * Write number: write $1$ to $a_2$, $a$ becomes $[-1, 1, -1]$    * Move pointer: move the pointer to the next position. (i.e. $3$)    * Write number: write $2$ to $a_3$, $a$ becomes $[-1, 1, 2]$    * Carriage return: return the pointer to $1$.    * Write number: write $3$ to $a_1$, $a$ becomes $[3,1,2]$ \n\nWith the second typewriter it is possible to:\n\n  * Move pointer: move the pointer to the next position. (i.e. $2$)    * Write number: write $1$ to $a_2$, $a$ becomes $[-1, 1, -1]$    * Carriage return: return the pointer to $3$.    * Write number: write $2$ to $a_3$, $a$ becomes $[-1, 1, 2]$    * Move pointer: move the pointer to the next position. (i.e. $2$)    * Move pointer: move the pointer to the next position. (i.e. $1$)    * Write number: write $3$ to $a_1$, $a$ becomes $[3, 1, 2]$"
+        "metadata": {
+            "problem_id": "2001B",
+            "url": "https://codeforces.com/problemset/problem/2001/B",
+            "title": "Generate Permutation",
+            "rating": 800,
+            "tags": [
+                "constructive algorithms"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 1500,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "2003C",
-        "url": "https://codeforces.com/problemset/problem/2003/C",
-        "title": "Turtle and Good Pairs",
-        "rating": 1200,
-        "tags": [
-            "constructive algorithms",
-            "greedy",
-            "sortings",
-            "strings"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "Turtle gives you a string $s$, consisting of lowercase Latin letters.\n\nTurtle considers a pair of integers $(i, j)$ ($1 \\le i < j \\le n$) to be a pleasant pair if and only if there exists an integer $k$ such that $i \\le k < j$ and both of the following two conditions hold:\n\n  * $s_k \\ne s_{k + 1}$;    * $s_k \\ne s_i$ or $s_{k + 1} \\ne s_j$. \n\nBesides, Turtle considers a pair of integers $(i, j)$ ($1 \\le i < j \\le n$) to be a good pair if and only if $s_i = s_j$ or $(i, j)$ is a pleasant pair.\n\nTurtle wants to reorder the string $s$ so that the number of good pairs is maximized. Please help him!",
-        "input": "Each test contains multiple test cases. The first line contains the number of test cases $t$ ($1 \\le t \\le 10^4$). The description of the test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($2 \\le n \\le 2 \\cdot 10^5$) — the length of the string.\n\nThe second line of each test case contains a string $s$ of length $n$, consisting of lowercase Latin letters.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.",
-        "output": "For each test case, output the string $s$ after reordering so that the number of good pairs is maximized. If there are multiple answers, print any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "turtle_and_good_pairs",
+        "requirements": {
+            "signature": "def turtle_and_good_pairs(n: int, s: str) -> str",
+            "description": "Reorder string s to maximize good pairs. A pair (i,j) is good if s[i]=s[j] or it's a pleasant pair (has index k where s[k]!=s[k+1] and conditions hold)."
+        },
+        "judge": "def __judge(n: int, s: str, result: str) -> bool:\n    if len(result) != n: return False\n    cnt_s = [0] * 26\n    cnt_result = [0] * 26\n    for c in s:\n        cnt_s[ord(c) - 97] += 1\n    for c in result:\n        cnt_result[ord(c) - 97] += 1\n    if cnt_s != cnt_result: return False\n    if not result: return True\n    runs = []\n    current_char, count = result[0], 1\n    for c in result[1:]:\n        if c == current_char:\n            count += 1\n        else:\n            runs.append(count)\n            current_char, count = c, 1\n    runs.append(count)\n    m = len(runs)\n    total = 0\n    if m == 1:\n        return total == 0\n    else:\n        for i in range(m - 1):\n            total += runs[i] * runs[i + 1]\n    return total == n - 1",
+        "tests": [
             {
-                "input": "5\n3\nabc\n5\nedddf\n6\nturtle\n8\npppppppp\n10\ncodeforces",
-                "output": "acb\nddedf\nurtlet\npppppppp\ncodeforces"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(3, 'abc', turtle_and_good_pairs(3, 'abc'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(5, 'edddf', turtle_and_good_pairs(5, 'edddf'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(6, 'turtle', turtle_and_good_pairs(6, 'turtle'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(8, 'pppppppp', turtle_and_good_pairs(8, 'pppppppp'))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_5():\n    assert __judge(10, 'codeforces', turtle_and_good_pairs(10, 'codeforces'))"
             }
         ],
-        "note": "In the first test case, $(1, 3)$ is a good pair in the reordered string. It can be seen that we can't reorder the string so that the number of good pairs is greater than $1$. bac and cab can also be the answer.\n\nIn the second test case, $(1, 2)$, $(1, 4)$, $(1, 5)$, $(2, 4)$, $(2, 5)$, $(3, 5)$ are good pairs in the reordered string. efddd can also be the answer."
+        "metadata": {
+            "problem_id": "2003C",
+            "url": "https://codeforces.com/problemset/problem/2003/C",
+            "title": "Turtle and Good Pairs",
+            "rating": 1200,
+            "tags": [
+                "constructive algorithms",
+                "greedy",
+                "sortings",
+                "strings"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "2023A",
-        "url": "https://codeforces.com/problemset/problem/2023/A",
-        "title": "Concatenation of Arrays",
-        "rating": 1300,
-        "tags": [
-            "constructive algorithms",
-            "greedy",
-            "math",
-            "sortings"
-        ],
-        "div": "Div. 1",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "You are given $n$ arrays $a_1$, $\\ldots$, $a_n$. The length of each array is two. Thus, $a_i = [a_{i, 1}, a_{i, 2}]$. You need to concatenate the arrays into a single array of length $2n$ such that the number of inversions$^{\\dagger}$ in the resulting array is minimized. Note that you do not need to count the actual number of inversions.\n\nMore formally, you need to choose a permutation$^{\\ddagger}$ $p$ of length $n$, so that the array $b = [a_{p_1,1}, a_{p_1,2}, a_{p_2, 1}, a_{p_2, 2}, \\ldots, a_{p_n,1}, a_{p_n,2}]$ contains as few inversions as possible.\n\n$^{\\dagger}$The number of inversions in an array $c$ is the number of pairs of indices $i$ and $j$ such that $i < j$ and $c_i > c_j$.\n\n$^{\\ddagger}$A permutation of length $n$ is an array consisting of $n$ distinct integers from $1$ to $n$ in arbitrary order. For example, $[2,3,1,5,4]$ is a permutation, but $[1,2,2]$ is not a permutation ($2$ appears twice in the array), and $[1,3,4]$ is also not a permutation ($n=3$ but there is $4$ in the array).",
-        "input": "Each test consists of multiple test cases. The first line contains a single integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($1 \\le n \\le 10^5$) — the number of arrays.\n\nEach of the following $n$ lines contains two integers $a_{i,1}$ and $a_{i,2}$ ($1 \\le a_{i,j} \\le 10^9$) — the elements of the $i$-th array.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $10^5$.",
-        "output": "For each test case, output $2n$ integers — the elements of the array you obtained. If there are multiple solutions, output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "concatenation_of_arrays",
+        "requirements": {
+            "signature": "def concatenation_of_arrays(n: int, arrays: list[tuple[int, int]]) -> list[int]",
+            "description": "Concatenate n arrays of length 2 to minimize inversions. Return the concatenated array."
+        },
+        "judge": "def __judge(n: int, arrays: list[tuple[int, int]], result: list[int]) -> bool:\n    if len(result) != 2 * n:\n        return False\n    from collections import Counter\n    arr_counter = Counter(arrays)\n    for i in range(0, 2 * n, 2):\n        pair = (result[i], result[i+1])\n        if pair not in arr_counter or arr_counter[pair] == 0:\n            return False\n        arr_counter[pair] -= 1\n    if any(v != 0 for v in arr_counter.values()):\n        return False\n    def count_inversions(arr: list[int]) -> int:\n        if not arr:\n            return 0\n        vals = sorted(set(arr))\n        rank = {v: i+1 for i, v in enumerate(vals)}\n        size = len(vals)\n        bit = [0] * (size + 1)\n        def bit_add(i: int, delta: int) -> None:\n            while i <= size:\n                bit[i] += delta\n                i += i & -i\n        def bit_sum(i: int) -> int:\n            s = 0\n            while i > 0:\n                s += bit[i]\n                i -= i & -i\n            return s\n        inv = 0\n        seen = 0\n        for x in arr:\n            r = rank[x]\n            inv += seen - bit_sum(r)\n            bit_add(r, 1)\n            seen += 1\n        return inv\n    result_inversions = count_inversions(result)\n    sorted_arrays = sorted(arrays, key=lambda x: x[0] + x[1])\n    optimal = []\n    for arr in sorted_arrays:\n        optimal.extend(arr)\n    optimal_inversions = count_inversions(optimal)\n    return result_inversions == optimal_inversions",
+        "tests": [
             {
-                "input": "4\n2\n1 4\n2 3\n3\n3 2\n4 3\n2 1\n5\n5 10\n2 3\n9 6\n4 1\n8 7\n1\n10 20",
-                "output": "2 3 1 4\n2 1 3 2 4 3\n4 1 2 3 5 10 8 7 9 6\n10 20"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(2, [(1, 4), (2, 3)], concatenation_of_arrays(2, [(1, 4), (2, 3)]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(3, [(3, 2), (4, 3), (2, 1)], concatenation_of_arrays(3, [(3, 2), (4, 3), (2, 1)]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(5, [(5, 10), (2, 3), (9, 6), (4, 1), (8, 7)], concatenation_of_arrays(5, [(5, 10), (2, 3), (9, 6), (4, 1), (8, 7)]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(1, [(10, 20)], concatenation_of_arrays(1, [(10, 20)]))"
             }
         ],
-        "note": "In the first test case, we concatenated the arrays in the order $2, 1$. Let's consider the inversions in the resulting array $b = [2, 3, 1, 4]$:\n\n  * $i = 1$, $j = 3$, since $b_1 = 2 > 1 = b_3$;   * $i = 2$, $j = 3$, since $b_2 = 3 > 1 = b_3$. \n\nThus, the number of inversions is $2$. It can be proven that this is the minimum possible number of inversions.\n\nIn the second test case, we concatenated the arrays in the order $3, 1, 2$. Let's consider the inversions in the resulting array $b = [2, 1, 3, 2, 4, 3]$:\n\n  * $i = 1$, $j = 2$, since $b_1 = 2 > 1 = b_2$;   * $i = 3$, $j = 4$, since $b_3 = 3 > 2 = b_4$;   * $i = 5$, $j = 6$, since $b_5 = 4 > 3 = b_6$. \n\nThus, the number of inversions is $3$. It can be proven that this is the minimum possible number of inversions.\n\nIn the third test case, we concatenated the arrays in the order $4, 2, 1, 5, 3$."
+        "metadata": {
+            "problem_id": "2023A",
+            "url": "https://codeforces.com/problemset/problem/2023/A",
+            "title": "Concatenation of Arrays",
+            "rating": 1300,
+            "tags": [
+                "constructive algorithms",
+                "greedy",
+                "math",
+                "sortings"
+            ],
+            "div": "Div. 1",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "2024C",
-        "url": "https://codeforces.com/problemset/problem/2024/C",
-        "title": "Concatenation of Arrays",
-        "rating": 1300,
-        "tags": [
-            "constructive algorithms",
-            "greedy",
-            "sortings"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "You are given $n$ arrays $a_1$, $\\ldots$, $a_n$. The length of each array is two. Thus, $a_i = [a_{i, 1}, a_{i, 2}]$. You need to concatenate the arrays into a single array of length $2n$ such that the number of inversions$^{\\dagger}$ in the resulting array is minimized. Note that you do not need to count the actual number of inversions.\n\nMore formally, you need to choose a permutation$^{\\ddagger}$ $p$ of length $n$, so that the array $b = [a_{p_1,1}, a_{p_1,2}, a_{p_2, 1}, a_{p_2, 2}, \\ldots, a_{p_n,1}, a_{p_n,2}]$ contains as few inversions as possible.\n\n$^{\\dagger}$The number of inversions in an array $c$ is the number of pairs of indices $i$ and $j$ such that $i < j$ and $c_i > c_j$.\n\n$^{\\ddagger}$A permutation of length $n$ is an array consisting of $n$ distinct integers from $1$ to $n$ in arbitrary order. For example, $[2,3,1,5,4]$ is a permutation, but $[1,2,2]$ is not a permutation ($2$ appears twice in the array), and $[1,3,4]$ is also not a permutation ($n=3$ but there is $4$ in the array).",
-        "input": "Each test consists of multiple test cases. The first line contains a single integer $t$ ($1 \\le t \\le 10^4$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($1 \\le n \\le 10^5$) — the number of arrays.\n\nEach of the following $n$ lines contains two integers $a_{i,1}$ and $a_{i,2}$ ($1 \\le a_{i,j} \\le 10^9$) — the elements of the $i$-th array.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $10^5$.",
-        "output": "For each test case, output $2n$ integers — the elements of the array you obtained. If there are multiple solutions, output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "choose_your_queries",
+        "requirements": {
+            "signature": "def choose_your_queries(n: int, queries: list[tuple[int, int]]) -> list[str]",
+            "description": "Process q queries on array of n zeros. Each query: choose p from {x,y} and d from {-1,1}, add d to a[p]. Keep all elements non-negative. Return list of 'x+', 'x-', 'y+', or 'y-' for each query."
+        },
+        "judge": "def __judge(n: int, queries: list[tuple[int, int]], result: list[str]) -> bool:\n    if len(result) != len(queries):\n        return False\n    a = [0] * n\n    for i, (x, y) in enumerate(queries):\n        choice = result[i]\n        if choice not in ['x+', 'x-', 'y+', 'y-']:\n            return False\n        p = x - 1 if choice[0] == 'x' else y - 1\n        delta = 1 if choice[1] == '+' else -1\n        a[p] += delta\n        if a[p] < 0:\n            return False\n    actual_sum = sum(a)\n    parent = list(range(n))\n    rank = [0] * n\n    for x, y in queries:\n        u = x - 1\n        v = y - 1\n        root_u = u\n        while parent[root_u] != root_u:\n            parent[root_u] = parent[parent[root_u]]\n            root_u = parent[root_u]\n        root_v = v\n        while parent[root_v] != root_v:\n            parent[root_v] = parent[parent[root_v]]\n            root_v = parent[root_v]\n        if root_u != root_v:\n            if rank[root_u] > rank[root_v]:\n                parent[root_v] = root_u\n            else:\n                parent[root_u] = root_v\n                if rank[root_u] == rank[root_v]:\n                    rank[root_v] += 1\n    counts = {}\n    for x, y in queries:\n        u = x - 1\n        v = y - 1\n        root_u = u\n        while parent[root_u] != root_u:\n            root_u = parent[root_u]\n        counts[root_u] = counts.get(root_u, 0) + 1\n    S = 0\n    for cnt in counts.values():\n        if cnt % 2 == 1:\n            S += 1\n    return actual_sum == S",
+        "tests": [
             {
-                "input": "4\n2\n1 4\n2 3\n3\n3 2\n4 3\n2 1\n5\n5 10\n2 3\n9 6\n4 1\n8 7\n1\n10 20",
-                "output": "2 3 1 4\n2 1 3 2 4 3\n4 1 2 3 5 10 8 7 9 6\n10 20"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(3, [(1, 2), (3, 2), (3, 1), (1, 2)], choose_your_queries(3, [(1, 2), (3, 2), (3, 1), (1, 2)]))"
             }
         ],
-        "note": "In the first test case, we concatenated the arrays in the order $2, 1$. Let's consider the inversions in the resulting array $b = [2, 3, 1, 4]$:\n\n  * $i = 1$, $j = 3$, since $b_1 = 2 > 1 = b_3$;   * $i = 2$, $j = 3$, since $b_2 = 3 > 1 = b_3$. \n\nThus, the number of inversions is $2$. It can be proven that this is the minimum possible number of inversions.\n\nIn the second test case, we concatenated the arrays in the order $3, 1, 2$. Let's consider the inversions in the resulting array $b = [2, 1, 3, 2, 4, 3]$:\n\n  * $i = 1$, $j = 2$, since $b_1 = 2 > 1 = b_2$;   * $i = 3$, $j = 4$, since $b_3 = 3 > 2 = b_4$;   * $i = 5$, $j = 6$, since $b_5 = 4 > 3 = b_6$. \n\nThus, the number of inversions is $3$. It can be proven that this is the minimum possible number of inversions.\n\nIn the third test case, we concatenated the arrays in the order $4, 2, 1, 5, 3$."
+        "metadata": {
+            "problem_id": "2025F",
+            "url": "https://codeforces.com/problemset/problem/2025/F",
+            "title": "Choose Your Queries",
+            "rating": 2700,
+            "tags": [
+                "constructive algorithms",
+                "dfs and similar",
+                "dp",
+                "graphs",
+                "greedy",
+                "trees"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 3000,
+            "memory_limit_mb": 512
+        }
     },
     {
-        "problem_id": "2025F",
-        "url": "https://codeforces.com/problemset/problem/2025/F",
-        "title": "Choose Your Queries",
-        "rating": 2700,
-        "tags": [
-            "constructive algorithms",
-            "dfs and similar",
-            "dp",
-            "graphs",
-            "greedy'\n 'trees"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 3000,
-        "memory_limit_mb": 512,
-        "description": "You are given an array $a$, consisting of $n$ integers (numbered from $1$ to $n$). Initially, they are all zeroes.\n\nYou have to process $q$ queries. The $i$-th query consists of two different integers $x_i$ and $y_i$. During the $i$-th query, you have to choose an integer $p$ (which is either $x_i$ or $y_i$) and an integer $d$ (which is either $1$ or $-1$), and assign $a_p = a_p + d$.\n\nAfter each query, every element of $a$ should be a non-negative integer.\n\nProcess all queries in such a way that the sum of all elements of $a$ after the last query is the minimum possible.",
-        "input": "The first line contains two integers $n$ and $q$ ($2 \\le n \\le 3 \\cdot 10^5$; $1 \\le q \\le 3 \\cdot 10^5$) — the number of elements in $a$ and the number of queries, respectively.\n\nThen $q$ lines follow. The $i$-th of these lines contains two integers $x_i$ and $y_i$ ($1 \\le x_i, y_i \\le n$; $x_i \\ne y_i$) — the description of the $i$-th query.",
-        "output": "For each query, print a line containing two characters:\n\n  * the first character should be x if you choose $p=x_i$, or y if you choose $p=y_i$;    * the second character should be + if you choose $d=1$, or - if you choose $d=-1$. \n\nIf there are multiple answers, print any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "perpendicular_segments",
+        "requirements": {
+            "signature": "def perpendicular_segments(X: int, Y: int, K: int) -> tuple[int, int, int, int, int, int, int, int]",
+            "description": "Find two perpendicular line segments AB and CD with integer coordinates in [0,X]×[0,Y], each with length at least K. Return (Ax, Ay, Bx, By, Cx, Cy, Dx, Dy)."
+        },
+        "judge": "def __judge(X: int, Y: int, K: int, result: tuple[int, int, int, int, int, int, int, int]) -> bool:\n    Ax, Ay, Bx, By, Cx, Cy, Dx, Dy = result\n    for coord in [Ax, Bx, Cx, Dx]:\n        if not (0 <= coord <= X):\n            return False\n    for coord in [Ay, By, Cy, Dy]:\n        if not (0 <= coord <= Y):\n            return False\n    len_AB_squared = (Bx - Ax)**2 + (By - Ay)**2\n    len_CD_squared = (Dx - Cx)**2 + (Dy - Cy)**2\n    if len_AB_squared < K*K or len_CD_squared < K*K:\n        return False\n    vec_AB = (Bx - Ax, By - Ay)\n    vec_CD = (Dx - Cx, Dy - Cy)\n    if vec_AB == (0, 0) or vec_CD == (0, 0):\n        return False\n    dot_product = vec_AB[0] * vec_CD[0] + vec_AB[1] * vec_CD[1]\n    return dot_product == 0",
+        "tests": [
             {
-                "input": "3 4\n1 2\n3 2\n3 1\n1 2",
-                "output": "y+\nx+\nx-\ny-"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(1, 1, 1, perpendicular_segments(1, 1, 1))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(3, 4, 1, perpendicular_segments(3, 4, 1))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(4, 3, 3, perpendicular_segments(4, 3, 3))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(3, 4, 4, perpendicular_segments(3, 4, 4))"
             }
         ],
-        "note": null
+        "metadata": {
+            "problem_id": "2026A",
+            "url": "https://codeforces.com/problemset/problem/2026/A",
+            "title": "Perpendicular Segments",
+            "rating": 900,
+            "tags": [
+                "constructive algorithms",
+                "geometry",
+                "greedy",
+                "math"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "2026A",
-        "url": "https://codeforces.com/problemset/problem/2026/A",
-        "title": "Perpendicular Segments",
-        "rating": 900,
-        "tags": [
-            "constructive algorithms",
-            "geometry",
-            "greedy",
-            "math"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "You are given a coordinate plane and three integers $X$, $Y$, and $K$. Find two line segments $AB$ and $CD$ such that\n\n  1. the coordinates of points $A$, $B$, $C$, and $D$ are integers;    2. $0 \\le A_x, B_x, C_x, D_x \\le X$ and $0 \\le A_y, B_y, C_y, D_y \\le Y$;    3. the length of segment $AB$ is at least $K$;    4. the length of segment $CD$ is at least $K$;    5. segments $AB$ and $CD$ are perpendicular: if you draw lines that contain $AB$ and $CD$, they will cross at a right angle. \n\nNote that it's not necessary for segments to intersect. Segments are perpendicular as long as the lines they induce are perpendicular.",
-        "input": "The first line contains a single integer $t$ ($1 \\le t \\le 5000$) — the number of test cases. Next, $t$ cases follow.\n\nThe first and only line of each test case contains three integers $X$, $Y$, and $K$ ($1 \\le X, Y \\le 1000$; $1 \\le K \\le 1414$).\n\nAdditional constraint on the input: the values of $X$, $Y$, and $K$ are chosen in such a way that the answer exists.",
-        "output": "For each test case, print two lines. The first line should contain $4$ integers $A_x$, $A_y$, $B_x$, and $B_y$ — the coordinates of the first segment.\n\nThe second line should also contain $4$ integers $C_x$, $C_y$, $D_x$, and $D_y$ — the coordinates of the second segment.\n\nIf there are multiple answers, print any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "alices_adventures_in_cards",
+        "requirements": {
+            "signature": "def alices_adventures_in_cards(n: int, q: list[int], k: list[int], j: list[int]) -> str",
+            "description": "Alice has card 1, needs card n. Can trade with Queen/King/Jack based on preferences. Return 'NO' if impossible, else 'YES\\nk\\n' followed by k lines of trades 'c x'."
+        },
+        "judge": "def __judge(n: int, q: list[int], k: list[int], j: list[int], result: str) -> bool:\n    lines = result.strip().split('\\n')\n    if not lines:\n        return False\n    first_line = lines[0].upper()\n    prefs = [q, k, j]\n    \n    if first_line == 'NO':\n        if n == 1:\n            return False  # Alice starts at 1 and wants 1, so NO is invalid\n        # Compute if solution exists using AC logic\n        mins = [n] * 3\n        sol = [None] * (n + 2)\n        for i in range(n-1, 0, -1):\n            win = -1\n            for j_idx in range(3):\n                pref_i = prefs[j_idx][i-1]\n                pref_mins = prefs[j_idx][mins[j_idx]-1]\n                if pref_i > pref_mins:\n                    win = j_idx\n                    break\n            if win != -1:\n                sol[i] = win\n                for j_idx in range(3):\n                    pref_i = prefs[j_idx][i-1]\n                    pref_mins = prefs[j_idx][mins[j_idx]-1]\n                    if pref_i < pref_mins:\n                        mins[j_idx] = i\n        return sol[1] is None\n    \n    elif first_line != 'YES':\n        return False\n    \n    if len(lines) < 2:\n        return False\n    try:\n        num_trades = int(lines[1])\n    except:\n        return False\n    if len(lines) != num_trades + 2:\n        return False\n    \n    current_card = 1\n    trades = lines[2:]\n    for trade in trades:\n        parts = trade.strip().split()\n        if len(parts) != 2:\n            return False\n        player, x_str = parts\n        player = player.lower()\n        if player not in ['q', 'k', 'j']:\n            return False\n        try:\n            x = int(x_str)\n        except:\n            return False\n        if x < 1 or x > n or x <= current_card:\n            return False\n        j_idx = -1\n        if player == 'q':\n            j_idx = 0\n        elif player == 'k':\n            j_idx = 1\n        else:\n            j_idx = 2\n        a = current_card\n        b = x\n        if prefs[j_idx][a-1] <= prefs[j_idx][b-1]:\n            return False\n        current_card = x\n    return current_card == n",
+        "tests": [
             {
-                "input": "4\n1 1 1\n3 4 1\n4 3 3\n3 4 4",
-                "output": "0 0 1 0\n0 0 0 1\n2 4 2 2\n0 1 1 1\n0 0 1 3\n1 2 4 1\n0 1 3 4\n0 3 3 0"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(3, [1, 3, 2], [2, 1, 3], [1, 2, 3], alices_adventures_in_cards(3, [1, 3, 2], [2, 1, 3], [1, 2, 3]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(4, [2, 3, 1, 4], [1, 2, 3, 4], [1, 4, 2, 3], alices_adventures_in_cards(4, [2, 3, 1, 4], [1, 2, 3, 4], [1, 4, 2, 3]))"
             }
         ],
-        "note": "The answer for the first test case is shown below:\n\n![](CDN_BASE_URL/fde49f7448aea636de500404fb8804d1) The answer for the second test case:  ![](CDN_BASE_URL/218ed75e7877cea15a02e0b20b635ea4) The answer for the third test case:  ![](CDN_BASE_URL/a78511ad84067550d68b03ae1de99762) The answer for the fourth test case: ![](CDN_BASE_URL/e06aa850f6b8b3b4ee28ceaee5c5b478)"
+        "metadata": {
+            "problem_id": "2028D",
+            "url": "https://codeforces.com/problemset/problem/2028/D",
+            "title": "Alice's Adventures in Cards",
+            "rating": 2000,
+            "tags": [
+                "constructive algorithms",
+                "divide and conquer",
+                "dp",
+                "graphs",
+                "greedy",
+                "implementation",
+                "sortings",
+                "two pointers"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "2028D",
-        "url": "https://codeforces.com/problemset/problem/2028/D",
-        "title": "Alice's Adventures in Cards",
-        "rating": 2000,
-        "tags": [
-            "constructive algorithms",
-            "divide and conquer",
-            "dp",
-            "graphs",
-            "greedy'\n 'implementation",
-            "sortings",
-            "two pointers"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "Alice is playing cards with the Queen of Hearts, King of Hearts, and Jack of Hearts. There are $n$ different types of cards in their card game. Alice currently has a card of type $1$ and needs a card of type $n$ to escape Wonderland. The other players have one of each kind of card.\n\nIn this card game, Alice can trade cards with the three other players. Each player has different preferences for the $n$ types of cards, which can be described by permutations$^{\\text{∗}}$ $q$, $k$, and $j$ for the Queen, King, and Jack, respectively.\n\nA player values card $a$ more than card $b$ if for their permutation $p$, $p_a > p_b$. Then, this player is willing to trade card $b$ to Alice in exchange for card $a$. Alice's preferences are straightforward: she values card $a$ more than card $b$ if $a > b$, and she will also only trade according to these preferences.\n\nDetermine if Alice can trade up from card $1$ to card $n$ subject to these preferences, and if it is possible, give a possible set of trades to do it.\n\n$^{\\text{∗}}$A permutation of length $n$ is an array consisting of $n$ distinct integers from $1$ to $n$ in arbitrary order. For example, $[2,3,1,5,4]$ is a permutation, but $[1,2,2]$ is not a permutation ($2$ appears twice in the array), and $[1,3,4]$ is also not a permutation ($n=3$ but there is $4$ in the array).",
-        "input": "Each test contains multiple test cases. The first line contains the number of test cases $t$ ($1 \\le t \\le 10^4$). The description of the test cases follows.\n\nThe first line of each test case contains an integer $n$ ($2\\le n\\le 2\\cdot 10^5$) — the number of card types.\n\nThe next three lines contain the preferences of the Queen, King, and Jack respectively. Each of these lines contains $n$ integers $p_1, p_2, \\ldots, p_n$ ($1\\le p_i\\le n$) — a permutation corresponding to the player's preferences.\n\nThe sum of $n$ over all test cases does not exceed $2\\cdot 10^5$.",
-        "output": "For each test case, on the first line output a single string \"YES\" or \"NO\" (without the quotes) denoting whether Alice can trade up to card $n$.\n\nIf the first line was \"YES\", then on the next line output $k$ — the number of trades Alice will make. On the next $k$ lines output space separated a character $c\\in \\\\{\\texttt{q}, \\texttt{k}, \\texttt{j}\\\\}$ and integer $x$, denoting that Alice trades with player $c$ to get card $x$. It must be the case that on the $k$'th line, $x = n$. If there are multiple solutions, print any of them.\n\nYou can output this answer in any case (upper or lower). For example, the strings \"yEs\", \"yes\", \"Yes\", and \"YES\" will be recognized as positive responses. The same goes for the character $c$ denoting the player in the trade ($\\texttt{Q}, \\texttt{K}, \\texttt{J}$ will all be accepted alongside their lowercase variants).",
-        "interaction": null,
-        "examples": [
+        "id": "cool_graph",
+        "requirements": {
+            "signature": "def cool_graph(n: int, edges: list[tuple[int, int]]) -> list[tuple[int, int, int]]",
+            "description": "Make graph cool (no edges or tree) using triangle operations. Each operation on vertices (a,b,c) toggles edges (a,b), (b,c), (c,a). Return list of operations."
+        },
+        "judge": "def __judge(n: int, edges: list[tuple[int, int]], operations: list[tuple[int, int, int]]) -> bool:\n    from collections import deque\n    if len(operations) > 2 * max(n, len(edges)):\n        return False\n    adj = [set() for _ in range(n)]\n    for u, v in edges:\n        u0, v0 = u-1, v-1\n        adj[u0].add(v0)\n        adj[v0].add(u0)\n    for a, b, c in operations:\n        if len({a, b, c}) != 3:\n            return False\n        if not all(1 <= x <= n for x in [a, b, c]):\n            return False\n        a0, b0, c0 = a-1, b-1, c-1\n        for u, v in [(a0, b0), (b0, c0), (c0, a0)]:\n            if v in adj[u]:\n                adj[u].remove(v)\n                adj[v].remove(u)\n            else:\n                adj[u].add(v)\n                adj[v].add(u)\n    edge_count = sum(len(lst) for lst in adj) // 2\n    if edge_count not in (0, n-1):\n        return False\n    if edge_count == 0:\n        return True\n    visited = [False]*n\n    q = deque()\n    for i in range(n):\n        if len(adj[i]) > 0:\n            q.append(i)\n            visited[i] = True\n            break\n    count = 0\n    while q:\n        u = q.popleft()\n        count += 1\n        for v in adj[u]:\n            if not visited[v]:\n                visited[v] = True\n                q.append(v)\n    return count == n",
+        "tests": [
             {
-                "input": "2\n3\n1 3 2\n2 1 3\n1 2 3\n4\n2 3 1 4\n1 2 3 4\n1 4 2 3",
-                "output": "YES\n2\nk 2\nq 3\nNO"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(3, [], cool_graph(3, []))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(3, [(1, 2)], cool_graph(3, [(1, 2)]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(3, [(1, 2), (2, 3)], cool_graph(3, [(1, 2), (2, 3)]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(3, [(1, 2), (2, 3), (3, 1)], cool_graph(3, [(1, 2), (2, 3), (3, 1)]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_5():\n    assert __judge(6, [(1, 2), (1, 6), (4, 5), (3, 4), (4, 6), (3, 6)], cool_graph(6, [(1, 2), (1, 6), (4, 5), (3, 4), (4, 6), (3, 6)]))"
             }
         ],
-        "note": "In the first testcase, Alice can trade with the King to get card $2$. She can then trade with the Queen to get card $3$.\n\nIn the second testcase, even though Alice can trade with the Queen to get card $3$, with the King to get card $2$, and then with the Jack to get card $4$, this is not a valid solution since it doesn't respect Alice's preferences. We can show that there is no way for Alice to get to card $4$."
+        "metadata": {
+            "problem_id": "2029D",
+            "url": "https://codeforces.com/problemset/problem/2029/D",
+            "title": "Cool Graph",
+            "rating": 1900,
+            "tags": [
+                "constructive algorithms",
+                "data structures",
+                "dfs and similar",
+                "graphs",
+                "trees"
+            ],
+            "div": "Div. 1 + 2",
+            "time_limit_ms": 3000,
+            "memory_limit_mb": 512
+        }
     },
     {
-        "problem_id": "2029D",
-        "url": "https://codeforces.com/problemset/problem/2029/D",
-        "title": "Cool Graph",
-        "rating": 1900,
-        "tags": [
-            "constructive algorithms",
-            "data structures",
-            "dfs and similar",
-            "graphs'\n 'trees"
-        ],
-        "div": "Div. 1 + 2",
-        "time_limit_ms": 3000,
-        "memory_limit_mb": 512,
-        "description": "You are given an undirected graph with $n$ vertices and $m$ edges.\n\nYou can perform the following operation at most $2\\cdot \\max(n,m)$ times:\n\n  * Choose three distinct vertices $a$, $b$, and $c$, then for each of the edges $(a,b)$, $(b,c)$, and $(c,a)$, do the following:      * If the edge does not exist, add it. On the contrary, if it exists, remove it. \n\nA graph is called cool if and only if one of the following holds:\n\n  * The graph has no edges, or    * The graph is a tree. \n\nYou have to make the graph cool by performing the above operations. Note that you can use at most $2\\cdot \\max(n,m)$ operations.\n\nIt can be shown that there always exists at least one solution.",
-        "input": "Each test contains multiple test cases. The first line of input contains a single integer $t$ ($1\\le t\\le 10^4$) — the number of test cases. The description of test cases follows.\n\nThe first line of each test case contains two integers $n$ and $m$ ($3\\le n\\le 10^5$, $0\\le m\\le \\min\\left(\\frac{n(n-1)}{2},2\\cdot 10^5\\right)$) — the number of vertices and the number of edges.\n\nThen $m$ lines follow, the $i$-th line contains two integers $u_i$ and $v_i$ ($1\\le u_i,v_i\\le n$) — the two nodes that the $i$-th edge connects.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $10^5$, and the sum of $m$ over all test cases does not exceed $2\\cdot 10^5$.\n\nIt is guaranteed that there are no self-loops or multiple-edges in the given graph.",
-        "output": "For each test case, in the first line output an integer $k$ ($0\\le k\\le 2\\cdot \\max(n, m)$) — the number of operations.\n\nThen output $k$ lines, the $i$-th line containing three distinct integers $a$, $b$, and $c$ ($1\\le a,b,c\\le n$) — the three integers you choose in the $i$-th operation.\n\nIf there are multiple solutions, you can output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "common_generator",
+        "requirements": {
+            "signature": "def common_generator(n: int, a: list[int]) -> int",
+            "description": "Find x>=2 that can generate all elements in array a by repeatedly adding divisors. Return x or -1 if impossible."
+        },
+        "judge": "def __judge(n: int, a: list[int], x: int) -> bool:\n    if x < 2:\n        return False\n    if any(y < x for y in a):\n        return False\n    max_v = max(a)\n    spf = [0] * (max_v + 1)\n    for i in range(2, max_v + 1):\n        if spf[i] == 0:\n            spf[i] = i\n            ii = i * i\n            if ii <= max_v:\n                for j in range(ii, max_v + 1, i):\n                    if spf[j] == 0:\n                        spf[j] = i\n    from collections import deque\n    visited = [False] * (max_v + 1)\n    q = deque([x])\n    visited[x] = True\n    def gen_divisors(val):\n        res = [1]\n        v = val\n        while v > 1:\n            p = spf[v]\n            if p == 0:\n                p = v\n            cnt = 0\n            while v % p == 0:\n                v //= p\n                cnt += 1\n            cur = []\n            powp = 1\n            for _ in range(cnt + 1):\n                for r in res:\n                    cur.append(r * powp)\n                powp *= p\n            res = cur\n        for d in res:\n            if d >= 2:\n                yield d\n    while q:\n        v = q.popleft()\n        for d in gen_divisors(v):\n            nv = v + d\n            if nv <= max_v and not visited[nv]:\n                visited[nv] = True\n                q.append(nv)\n    for y in a:\n        if not visited[y]:\n            return False\n    return True",
+        "tests": [
             {
-                "input": "5\n3 0\n3 1\n1 2\n3 2\n1 2\n2 3\n3 3\n1 2\n2 3\n3 1\n6 6\n1 2\n1 6\n4 5\n3 4\n4 6\n3 6",
-                "output": "0\n1\n1 2 3\n0\n1\n1 2 3\n3\n1 3 6\n2 4 5\n3 4 6"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(3, [8, 9, 10], common_generator(3, [8, 9, 10]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(4, [2, 3, 4, 5], common_generator(4, [2, 3, 4, 5]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(2, [147, 154], common_generator(2, [147, 154]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(5, [3, 6, 8, 25, 100000], common_generator(5, [3, 6, 8, 25, 100000]))"
             }
         ],
-        "note": "In the first test case, the graph is already cool because there are no edges.\n\nIn the second test case, after performing the only operation, the graph becomes a tree, so it is cool.\n\nIn the third test case, the graph is already cool because it is a tree.\n\nIn the fourth test case, after performing the only operation, the graph has no edges, so it is cool.\n\nIn the fifth test case:\n\nOperation| Graph before the operation| Graph after the operation   ---|---|---   $1$| ![](CDN_BASE_URL/2ae6076e1f03509c037a09c9076dda44)| ![](CDN_BASE_URL/f67f064593f982711104693ae4686716)   $2$| ![](CDN_BASE_URL/e255209e458ced6bc4506880eff20f51)| ![](CDN_BASE_URL/bd025bd4677e0b4aa572053845638281)   $3$| ![](CDN_BASE_URL/201da19f0948f088eeec88037834610e)| ![](CDN_BASE_URL/7190a38dd77c4ed23d9567462fd4f2f2)      Note that after the first operation, the graph has already become cool, and there are two extra operations. As the graph is still cool after the two extra operations, this is a valid answer."
+        "metadata": {
+            "problem_id": "2029E",
+            "url": "https://codeforces.com/problemset/problem/2029/E",
+            "title": "Common Generator",
+            "rating": 2100,
+            "tags": [
+                "brute force",
+                "math",
+                "number theory"
+            ],
+            "div": "Div. 1 + 2",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 512
+        }
     },
     {
-        "problem_id": "2029E",
-        "url": "https://codeforces.com/problemset/problem/2029/E",
-        "title": "Common Generator",
-        "rating": 2100,
-        "tags": [
-            "brute force",
-            "math",
-            "number theory"
-        ],
-        "div": "Div. 1 + 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 512,
-        "description": "For two integers $x$ and $y$ ($x,y\\ge 2$), we will say that $x$ is a generator of $y$ if and only if $x$ can be transformed to $y$ by performing the following operation some number of times (possibly zero):\n\n  * Choose a divisor $d$ ($d\\ge 2$) of $x$, then increase $x$ by $d$. \n\nFor example,\n\n  * $3$ is a generator of $8$ since we can perform the following operations: $3 \\xrightarrow{d = 3} 6 \\xrightarrow{d = 2} 8$;    * $4$ is a generator of $10$ since we can perform the following operations: $4 \\xrightarrow{d = 4} 8 \\xrightarrow{d = 2} 10$;    * $5$ is not a generator of $6$ since we cannot transform $5$ into $6$ with the operation above. \n\nNow, Kevin gives you an array $a$ consisting of $n$ pairwise distinct integers ($a_i\\ge 2$).\n\nYou have to find an integer $x\\ge 2$ such that for each $1\\le i\\le n$, $x$ is a generator of $a_i$, or determine that such an integer does not exist.",
-        "input": "Each test contains multiple test cases. The first line of the input contains a single integer $t$ ($1\\le t\\le 10^4$) — the number of test cases. The description of test cases follows.\n\nThe first line of each test case contains a single integer $n$ ($1\\le n\\le 10^5$) — the length of the array $a$.\n\nThe second line contains $n$ integers $a_1,a_2,\\ldots,a_n$ ($2\\le a_i\\le 4\\cdot 10^5$) — the elements in the array $a$. It is guaranteed that the elements are pairwise distinct.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $10^5$.",
-        "output": "For each test case, output a single integer $x$ — the integer you found. Print $-1$ if there does not exist a valid $x$.\n\nIf there are multiple answers, you may output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "minimise_oneness",
+        "requirements": {
+            "signature": "def minimise_oneness(n: int) -> str",
+            "description": "Construct binary string of length n minimizing |f(t)-g(t)| where f(t) is count of all-0 subsequences, g(t) is count of subsequences with at least one 1."
+        },
+        "judge": "def __judge(n: int, result: str) -> bool:\n    if len(result) != n:\n        return False\n    if not all(c in '01' for c in result):\n        return False\n    count0 = result.count('0')\n    count1 = result.count('1')\n    f_val = (1 << count0) - 1\n    g_val = (1 << n) - 1 - f_val\n    oneness = abs(f_val - g_val)\n    return oneness == 1",
+        "tests": [
             {
-                "input": "4\n3\n8 9 10\n4\n2 3 4 5\n2\n147 154\n5\n3 6 8 25 100000",
-                "output": "2\n-1\n7\n3"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(1, minimise_oneness(1))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(2, minimise_oneness(2))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(3, minimise_oneness(3))"
             }
         ],
-        "note": "In the first test case, for $x=2$:\n\n  * $2$ is a generator of $8$, since we can perform the following operations: $2 \\xrightarrow{d = 2} 4 \\xrightarrow{d = 4} 8$;    * $2$ is a generator of $9$, since we can perform the following operations: $2 \\xrightarrow{d = 2} 4 \\xrightarrow{d = 2} 6 \\xrightarrow{d = 3} 9$.    * $2$ is a generator of $10$, since we can perform the following operations: $2 \\xrightarrow{d = 2} 4 \\xrightarrow{d = 2} 6 \\xrightarrow{d = 2} 8 \\xrightarrow{d = 2} 10$. \n\nIn the second test case, it can be proven that it is impossible to find a common generator of the four integers."
+        "metadata": {
+            "problem_id": "2030B",
+            "url": "https://codeforces.com/problemset/problem/2030/B",
+            "title": "Minimise Oneness",
+            "rating": 800,
+            "tags": [
+                "combinatorics",
+                "constructive algorithms",
+                "games",
+                "math"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 1500,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "2030B",
-        "url": "https://codeforces.com/problemset/problem/2030/B",
-        "title": "Minimise Oneness",
-        "rating": 800,
-        "tags": [
-            "combinatorics",
-            "constructive algorithms",
-            "games",
-            "math"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 1500,
-        "memory_limit_mb": 256,
-        "description": "For an arbitrary binary string $t$$^{\\text{∗}}$, let $f(t)$ be the number of non-empty subsequences$^{\\text{†}}$ of $t$ that contain only $\\mathtt{0}$, and let $g(t)$ be the number of non-empty subsequences of $t$ that contain at least one $\\mathtt{1}$.\n\nNote that for $f(t)$ and for $g(t)$, each subsequence is counted as many times as it appears in $t$. E.g., $f(\\mathtt{000}) = 7, g(\\mathtt{100}) = 4$.\n\nWe define the oneness of the binary string $t$ to be $|f(t)-g(t)|$, where for an arbitrary integer $z$, $|z|$ represents the absolute value of $z$.\n\nYou are given a positive integer $n$. Find a binary string $s$ of length $n$ such that its oneness is as small as possible. If there are multiple strings, you can print any of them.\n\n$^{\\text{∗}}$A binary string is a string that only consists of characters $\\texttt{0}$ and $\\texttt{1}$.\n\n$^{\\text{†}}$A sequence $a$ is a subsequence of a sequence $b$ if $a$ can be obtained from $b$ by the deletion of several (possibly, zero or all) elements. For example, subsequences of $\\mathtt{1011101}$ are $\\mathtt{0}$, $\\mathtt{1}$, $\\mathtt{11111}$, $\\mathtt{0111}$, but not $\\mathtt{000}$ nor $\\mathtt{11100}$.",
-        "input": "The first line contains an integer $t$ ($1 \\leq t \\leq 10^4$) — the number of test cases.\n\nThe only line of each test case contains an integer $n$ ($1 \\leq n \\leq 2\\cdot10^5$) — the length of $s$.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2\\cdot10^5$.",
-        "output": "For each test case, output $s$ on a new line. If multiple answers exist, output any.",
-        "interaction": null,
-        "examples": [
+        "id": "medians_2032",
+        "requirements": {
+            "signature": "def medians_2032(n: int, k: int) -> str",
+            "description": "Split array [1,2,...,n] into odd-length subarrays where median of medians equals k. Return '-1' if impossible, else 'm\\nborders' where borders are left indices."
+        },
+        "judge": "def __judge(n: int, k: int, result: str) -> bool:\n    if result.strip() == '-1': return (n >1) and (k ==1 or k == n)\n    lines = result.strip().split('\\n')\n    if len(lines)!=2: return False\n    try:\n        m = int(lines[0])\n        if m % 2 == 0: return False\n        p = list(map(int, lines[1].split()))\n        if len(p)!=m: return False\n        if p[0]!=1: return False\n        for i in range(1, m):\n            if p[i]<=p[i-1]: return False\n        if p[-1]>n: return False\n    except: return False\n    starts = p\n    ends = []\n    for i in range(m-1): ends.append(p[i+1]-1)\n    ends.append(n)\n    for i in range(m):\n        s = starts[i]\n        e = ends[i]\n        if s>e or e>n: return False\n        if (e - s +1) %2 ==0: return False\n    medians = []\n    for i in range(m):\n        s = starts[i]\n        e = ends[i]\n        mid = (s + e) //2\n        medians.append(mid)\n    medians.sort()\n    return medians[len(medians)//2] ==k",
+        "tests": [
             {
-                "input": "3\n1\n2\n3",
-                "output": "0\n01\n010"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(1, 1, medians_2032(1, 1))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(3, 2, medians_2032(3, 2))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(3, 3, medians_2032(3, 3))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(15, 8, medians_2032(15, 8))"
             }
         ],
-        "note": "In the first test case, for the example output, $f(t)=1$ because there is one subsequence that contains only $\\mathtt{0}$ ($\\mathtt{0}$), and $g(t)=0$ because there are no subsequences that contain at least one $1$. The oneness is $|1-0|=1$. The output $\\mathtt{1}$ is correct as well because its oneness is $|0-1|=1$.\n\nFor the example output of the second test case, $f(t)=1$ because there is one non-empty subsequence that contains only $\\mathtt{0}$, and $g(t)=2$ because there are two non-empty subsequences that contain at least one $\\mathtt{1}$ ($\\mathtt{01}$ and $\\mathtt{1}$). The oneness is thus $|1-2|=1$. It can be shown that $1$ is the minimum possible value of its oneness over all possible binary strings of size $2$."
+        "metadata": {
+            "problem_id": "2032B",
+            "url": "https://codeforces.com/problemset/problem/2032/B",
+            "title": "Medians",
+            "rating": 1100,
+            "tags": [
+                "constructive algorithms",
+                "greedy",
+                "implementation",
+                "math"
+            ],
+            "div": "Div. 2",
+            "time_limit_ms": 1000,
+            "memory_limit_mb": 256
+        }
     },
     {
-        "problem_id": "2032B",
-        "url": "https://codeforces.com/problemset/problem/2032/B",
-        "title": "Medians",
-        "rating": 1100,
-        "tags": [
-            "constructive algorithms",
-            "greedy",
-            "implementation",
-            "math"
-        ],
-        "div": "Div. 2",
-        "time_limit_ms": 1000,
-        "memory_limit_mb": 256,
-        "description": "You are given an array $a = [1, 2, \\ldots, n]$, where $n$ is odd, and an integer $k$.\n\nYour task is to choose an odd positive integer $m$ and to split $a$ into $m$ subarrays$^{\\dagger}$ $b_1, b_2, \\ldots, b_m$ such that:\n\n  * Each element of the array $a$ belongs to exactly one subarray.    * For all $1 \\le i \\le m$, $|b_i|$ is odd, i.e., the length of each subarray is odd.    * $\\operatorname{median}([\\operatorname{median}(b_1), \\operatorname{median}(b_2), \\ldots, \\operatorname{median}(b_m)]) = k$, i.e., the median$^{\\ddagger}$ of the array of medians of all subarrays must equal $k$. $\\operatorname{median}(c)$ denotes the median of the array $c$. \n\n$^{\\dagger}$A subarray of the array $a$ of length $n$ is the array $[a_l, a_{l + 1}, \\ldots, a_r]$ for some integers $1 \\le l \\le r \\le n$.\n\n$^{\\ddagger}$A median of the array of odd length is the middle element after the array is sorted in non-decreasing order. For example: $\\operatorname{median}([1,2,5,4,3]) = 3$, $\\operatorname{median}([3,2,1]) = 2$, $\\operatorname{median}([2,1,2,1,2,2,2]) = 2$.",
-        "input": "Each test consists of multiple test cases. The first line contains a single integer $t$ ($1 \\le t \\le 5000$) — the number of test cases. The description of the test cases follows.\n\nThe first line of each test case contains two integers $n$ and $k$ ($1 \\le k \\le n < 2 \\cdot 10^5$, $n$ is odd) — the length of array $a$ and the desired median of the array of medians of all subarrays.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.",
-        "output": "For each test case:\n\n  * If there is no suitable partition, output $-1$ in a single line.    * Otherwise, in the first line, output an odd integer $m$ ($1 \\le m \\le n$), and in the second line, output $m$ distinct integers $p_1, p_2 , p_3 , \\ldots, p_m$ ($1 = p_1 < p_2 < p_3 < \\ldots < p_m \\le n$) — denoting the left borders of each subarray. \n\nIn detail, for a valid answer $[p_1, p_2, \\ldots, p_m]$:\n\n  * $b_1 = \\left[ a_{p_1}, a_{p_1 + 1}, \\ldots, a_{p_2 - 1} \\right]$    * $b_2 = \\left[ a_{p_2}, a_{p_2 + 1}, \\ldots, a_{p_3 - 1} \\right]$    * $\\ldots$    * $b_m = \\left[ a_{p_m}, a_{p_m + 1}, \\ldots, a_n \\right]$. \n\nIf there are multiple solutions, you can output any of them.",
-        "interaction": null,
-        "examples": [
+        "id": "alya_and_permutation",
+        "requirements": {
+            "signature": "def alya_and_permutation(n: int) -> tuple[int, list[int]]",
+            "description": "Construct permutation of [1,2,...,n] maximizing k after alternating AND/OR operations. Return (max_k, permutation)."
+        },
+        "judge": "def __judge(n: int, result: tuple[int, list[int]]) -> bool:\n    max_k, perm = result\n    if len(perm) != n: return False\n    if sorted(perm) != list(range(1, n + 1)): return False\n    k_calculated = 0\n    for i in range(n):\n        if i % 2 == 0: k_calculated &= perm[i]\n        else: k_calculated |= perm[i]\n    if k_calculated != max_k: return False\n    if n % 2 == 1: theoretical = n\n    else:\n        po2 = 1\n        while po2 * 2 <= n: po2 *= 2\n        theoretical = 2 * po2 - 1\n    return max_k == theoretical",
+        "tests": [
             {
-                "input": "4\n1 1\n3 2\n3 3\n15 8",
-                "output": "1\n1\n3\n1 2 3\n-1\n5\n1 4 7 10 13"
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(5, alya_and_permutation(5))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(6, alya_and_permutation(6))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(7, alya_and_permutation(7))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert __judge(8, alya_and_permutation(8))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_5():\n    assert __judge(9, alya_and_permutation(9))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_6():\n    assert __judge(10, alya_and_permutation(10))"
             }
         ],
-        "note": "In the first test case, the given partition has $m = 1$ and $b_1 = [1]$. It is obvious that $\\operatorname{median}([\\operatorname{median}([1])]) = \\operatorname{median}([1]) = 1$.\n\nIn the second test case, the given partition has $m = 3$ and:\n\n  * $b_1 = [1]$    * $b_2 = [2]$    * $b_3 = [3]$ \n\nTherefore, $\\operatorname{median}([\\operatorname{median}([1]), \\operatorname{median}([2]), \\operatorname{median}([3])]) = \\operatorname{median}([1, 2, 3]) = 2$.\n\nIn the third test case, there is no valid partition for $k = 3$.\n\nIn the fourth test case, the given partition has $m = 5$ and:\n\n  * $b_1 = [1, 2, 3]$    * $b_2 = [4, 5, 6]$    * $b_3 = [7, 8, 9]$    * $b_4 = [10, 11, 12]$    * $b_5 = [13, 14, 15]$ \n\nTherefore, $\\operatorname{median}([\\operatorname{median}([1, 2, 3]), \\operatorname{median}([4, 5, 6]), \\operatorname{median}([7, 8, 9]), \\operatorname{median}([10, 11, 12]), \\operatorname{median}([13, 14, 15])]) = \\operatorname{median}([2, 5, 8, 11, 14]) = 8$."
-    },
-    {
-        "problem_id": "2035C",
-        "url": "https://codeforces.com/problemset/problem/2035/C",
-        "title": "Alya and Permutation",
-        "rating": 1400,
-        "tags": [
-            "bitmasks",
-            "constructive algorithms",
-            "math"
-        ],
-        "div": "Div. 1 + 2",
-        "time_limit_ms": 2000,
-        "memory_limit_mb": 256,
-        "description": "Alya has been given a hard problem. Unfortunately, she is too busy running for student council. Please solve this problem for her.\n\nGiven an integer $n$, construct a permutation $p$ of integers $1, 2, \\ldots, n$ that maximizes the value of $k$ (which is initially $0$) after the following process.\n\nPerform $n$ operations, on the $i$-th operation ($i=1, 2, \\dots, n$),\n\n  * If $i$ is odd, $k=k\\,\\&\\,p_i$, where $\\&$ denotes the [bitwise AND operation](https://en.wikipedia.org/wiki/Bitwise_operation#AND).    * If $i$ is even, $k=k\\,|\\,p_i$, where $|$ denotes the [bitwise OR operation](https://en.wikipedia.org/wiki/Bitwise_operation#OR).",
-        "input": "The first line contains a single integer $t$ ($1\\le t\\le 500$) — the number of test cases.\n\nThe only line of each test case contains a single integer $n$ ($5\\le n\\le 2 \\cdot 10^5$) — the length of the permutation.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^5$.",
-        "output": "For each test case, output the maximum value of $k$ in the first line and output the permutation $p_1, p_2,\\ldots, p_n$ in the second line.\n\nIf there are multiple such permutations, output any.",
-        "interaction": null,
-        "examples": [
-            {
-                "input": "6\n5\n6\n7\n8\n9\n10",
-                "output": "5\n2 1 3 4 5 \n7\n1 2 4 6 5 3 \n7\n2 4 5 1 3 6 7 \n15\n2 4 5 1 3 6 7 8 \n9\n2 4 5 6 7 1 3 8 9 \n15\n1 2 3 4 5 6 8 10 9 7"
-            }
-        ],
-        "note": "For the first test case, the value of $k$ is determined as follows:\n\n$k = 0$ initially.\n\n  * On the $1$st operation, $1$ is odd, so Alya sets $k$ to be $k\\&p_1 = 0\\&2 = 0$.   * On the $2$nd operation, $2$ is even, so Alya sets $k$ to be $k|p_2 = 0|1 = 1$.   * On the $3$rd operation, $3$ is odd, so Alya sets $k$ to be $k\\&p_3 = 1\\&3 = 1$.   * On the $4$th operation, $4$ is even, so Alya sets $k$ to be $k|p_4 = 1|4 = 5$.   * On the $5$th operation, $5$ is odd, so Alya sets $k$ to be $k\\&p_5 = 5\\&5 = 5$.\n\nThe final value of $k$ is $5$. It can be shown that the final value of $k$ is at most $5$ for all permutations of length $5$. Another valid output is $[2, 3, 1, 4, 5]$.\n\nFor the second test case, the final value of $k$ is $7$. It can be shown that the final value of $k$ is at most $7$ for all permutations of length $6$. Other valid outputs include $[2, 4, 1, 6, 3, 5]$ and $[5, 2, 6, 1, 3, 4]$."
+        "metadata": {
+            "problem_id": "2035C",
+            "url": "https://codeforces.com/problemset/problem/2035/C",
+            "title": "Alya and Permutation",
+            "rating": 1400,
+            "tags": [
+                "bitmasks",
+                "constructive algorithms",
+                "math"
+            ],
+            "div": "Div. 1 + 2",
+            "time_limit_ms": 2000,
+            "memory_limit_mb": 256
+        }
     }
 ]
