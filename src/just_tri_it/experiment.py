@@ -129,7 +129,7 @@ def main():
     
     args = parse_args()
     
-    model = AI302(args.model, 1.0)
+    model = AI302(args.model, 1.0, max_batch=NUM_LEFT_SAMPLES)
     # model = XMCP(args.model, 1.0)
 
     model = setup_cache(model, args)

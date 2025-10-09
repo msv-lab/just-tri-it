@@ -300,13 +300,13 @@ Rewrite this problem so that it instead requires implementing the set-valued inv
 
 {fiber_sig.pretty_print()}
 
-Given the desired output value `{fiber_sig.params[0].name}` (corresponding to the original function's return value), the new function should return a comprehensive list of values for the parameter `{req.signature.params[inverse_index].name}` such that if the original function were called with any of these values (and the other parameters unchanged), it would produce `{fiber_sig.params[0].name}` as the result.
+Given the desired output value `{fiber_sig.params[0].name}` (corresponding to the original function's return value), the new function should return a exhaustive list of values for the parameter `{req.signature.params[inverse_index].name}` such that if the original function were called with any of these values (and the other parameters unchanged), it would produce `{fiber_sig.params[0].name}` as the result.
 
 Important points to follow:
 1. Preserve all constraints, domain assumptions, and rules from the original problem.
 2. Clearly explain that the output must include all possible values.
 3. Specify explicitly that if no such values exist, the function should return an empty list.
-4. Update any example test cases so they show returning a comprehensive lists of solutions.
+4. Update any example test cases so they show returning a exhaustive lists of solutions.
 
 Enclose the rewritten problem description inside `<answer>` and `</answer>` tags.
 
