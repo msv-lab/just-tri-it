@@ -269,6 +269,36 @@ Original Problem:
 
 
 @dataclass
+class AnswerEnumeration(Transformation):
+
+    def transform(self, model, req: Requirements) -> Requirements:
+        sig = req.signature
+        enum_sig = Signature(f"{sig.name}_answer_enum", sig.params, f"list[{sig.return_type}]")
+        PROMPT = f"""
+You are given a programming problem that requires implementing the function:
+
+{sig.pretty_print()}
+
+Your task is to rewrite this problem so that it instead requires implementing the function:
+
+{enum_sig.pretty_print()}
+
+The new function must exhaustively enumerate all valid outputs for a given input according to the original problem description. If only one output is valid, then the function must return a list consisting of this one element.
+
+Important points to follow:
+1. Preserve all the original problem's rules, edge cases, and constraints.
+2. Update any example test cases so they show returning a exhaustive lists of answers.
+
+Enclose the rewritten problem statement inside `<answer>` and `</answer>` tags.
+
+Original Problem:
+{req.description}
+        """
+        enum_desc = gen_and_extract_answer_with_retry(model, PROMPT, 3)
+        return Requirements(enum_sig, enum_desc)
+
+
+@dataclass
 class PartialSetValuedInverse(Transformation):
     inverse_index: int
 
@@ -331,66 +361,66 @@ class Triangulation:
 
 
 def make_syntactic(arity):
-    args = [Var(f"x_{i}") for i in range(arity)]
-    f = Func(Side.LEFT)
-    g = Func(Side.RIGHT)
+    args = [Var(f"i_{i}") for i in range(arity)]
+    p = Func(Side.LEFT)
+    q = Func(Side.RIGHT)
     
     return Triangulation(
         "syntactic",
         Identity(),
         Identity(),
-        ForAll(args, Side.LEFT, Equals([f(args), g(args)]))
+        ForAll(args, Side.LEFT, Equals([p(args), q(args)]))
     )
 
 
 def make_trivial_semantic(arity):
-    args = [Var(f"x_{i}") for i in range(arity)]
-    f = Func(Side.LEFT)
-    g = Func(Side.RIGHT)
+    args = [Var(f"i_{i}") for i in range(arity)]
+    p = Func(Side.LEFT)
+    q = Func(Side.RIGHT)
     
     return Triangulation(
         "off-by-one",
         Identity(),
         TrivialSemantic(),
-        ForAll(args, Side.LEFT, Equals([OffByOne([f(args)]), g(args)]))
+        ForAll(args, Side.LEFT, Equals([OffByOne([p(args)]), q(args)]))
     )
 
 
 def make_postcondition(arity):
-    args = [Var(f"x_{i}") for i in range(arity)]
-    f = Func(Side.LEFT)
-    g = Func(Side.RIGHT)
+    args = [Var(f"i_{i}") for i in range(arity)]
+    p = Func(Side.LEFT)
+    q = Func(Side.RIGHT)
     
     return Triangulation(
         "post",
         Identity(),
         Postcondition(),
-        ForAll(args, Side.LEFT, Tolerate([g(args + [f(args)])]))
+        ForAll(args, Side.LEFT, Tolerate([q(args + [p(args)])]))
     )
 
 
 def make_partial_fwd_inv(arity, inverse_index):
-    args = [Var(f"x_{i}") for i in range(arity)]
-    inv_arg = Var(f"x_{inverse_index}")
+    args = [Var(f"i_{i}") for i in range(arity)]
+    inv_arg = Var(f"i_{inverse_index}")
     remaining_args = args[:inverse_index] + args[inverse_index + 1:]
-    f = Func(Side.LEFT)
-    g = Func(Side.RIGHT)
+    p = Func(Side.LEFT)
+    q = Func(Side.RIGHT)
     
     return Triangulation(
         "fwd-inv",
         Identity(),
         PartialInverse(inverse_index),
-        ForAll(args, Side.LEFT, Equals([inv_arg, g([Tolerate([f(args)])] + remaining_args)]))
+        ForAll(args, Side.LEFT, Equals([inv_arg, q([Tolerate([p(args)])] + remaining_args)]))
     )
 
 
 def make_partial_fwd_sinv(arity, inverse_index):
-    args = [Var(f"x_{i}") for i in range(arity)]
-    inv_arg = Var(f"x_{inverse_index}")
-    arg_prime = Var(f"x_prime")
+    args = [Var(f"i_{i}") for i in range(arity)]
+    inv_arg = Var(f"i_{inverse_index}")
+    arg_prime = Var(f"i_prime")
     remaining_args = args[:inverse_index] + args[inverse_index + 1:]
-    f = Func(Side.LEFT)
-    g = Func(Side.RIGHT)
+    p = Func(Side.LEFT)
+    q = Func(Side.RIGHT)
 
     ReplaceInv = Func(lambda a, v: a[:inverse_index] + [v] + a[inverse_index+1:], "replace_inv")
 
@@ -399,6 +429,27 @@ def make_partial_fwd_sinv(arity, inverse_index):
         Identity(),
         PartialSetValuedInverse(inverse_index),
         ForAll(args, Side.LEFT,
-               And(Member([inv_arg, g([Tolerate([f(args)])] + remaining_args)]),
-                   ForAll(arg_prime, g([Tolerate([f(args)])] + remaining_args),
-                          Equals([f(args), f(ReplaceInv([args, arg_prime]))])))))
+               And(Member([inv_arg, q([Tolerate([p(args)])] + remaining_args)]),
+                   ForAll(arg_prime, q([Tolerate([p(args)])] + remaining_args),
+                          Equals([p(args), p(ReplaceInv([args, arg_prime]))])))))
+
+
+def make_partial_enum_sinv(arity, inverse_index):
+    left_args = [Var(f"i_{i}") for i in range(arity)]
+    inv_arg = Var(f"i_{inverse_index}")
+    out = Var(f"o")
+    right_args = [out] + left_args[:inverse_index] + left_args[inverse_index + 1:]
+    
+    p = Func(Side.LEFT)
+    q = Func(Side.RIGHT)
+
+    return Triangulation(
+        "enum-sinv",
+        AnswerEnumeration(),
+        PartialSetValuedInverse(inverse_index),
+        And(ForAll(left_args, Side.LEFT,
+                   ForAll(out, Tolerate([p(left_args)]),
+                          Member([inv_arg, q(right_args)]))),
+            ForAll(right_args, Side.RIGHT,
+                   ForAll(inv_arg, Tolerate([q(right_args)]),
+                          Member([out, p(left_args)])))))

@@ -329,8 +329,14 @@ def _member_func(x, y):
         return True
     if isinstance(y, SpecialValue):
         y = [y]
+    if not isinstance(y, list):
+        return Demonic()
+    if isinstance(x, Undefined) and \
+       SpecialValue.in_list(y) and \
+       isinstance(SpecialValue.strongest(y), Undefined):
+        return True
     if SpecialValue.in_list([x] + y):
-       return SpecialValue.strongest([x] + y)
+        return SpecialValue.strongest([x] + y)
 
     for item in y:
         if isinstance(x, float) and isinstance(item, float):
