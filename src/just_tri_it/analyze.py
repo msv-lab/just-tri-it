@@ -220,7 +220,7 @@ def prob_correct_under_agreement(db) -> Dict[str, float]:
 
 def mixer_data_split(db):
     ordered_selectors = [
-        "FOR_FIB", "FOR_INV", "MajorityVote", "Plurality",
+        "FWD_FIB", "FWD_SINV", "MajorityVote", "Plurality",
         "Postcondition", "Syntactic", "OffByOne",
         "CodeT_IO", "CodeT_Assert"
     ]
@@ -300,9 +300,9 @@ def cal_class_size_info(db):
             if method not in seen_methods:
                 seen_methods.add(method)
                 for (program, witnesses) in selector_data["raw_data"]["agreement"]:
-                    if method == "tri_for-fib":
+                    if method == "tri_fwd-sinv":
                         tri_f_win.append(program)
-                    if method == "tri_for-inv":
+                    if method == "tri_fwd-inv":
                         tri_i_win.append(program)
                     if program in correct_samples:
                         if method not in interval_data:
@@ -323,10 +323,10 @@ def cal_class_size_info(db):
         if len(correct_samples_wo_dup) and not false_split:
             if len(max_program_wrong) > 0 and len(tri_f_win_wrong) == 0 and len(tri_f_win) > 0:
                 print(len(max_program_wrong), len(tri_f_win_wrong))
-                print("1 good for for-fib", obj["task_id"])
+                print("1 good for fwd-sinv", obj["task_id"])
             if len(max_program_wrong) > 0 and len(tri_i_win_wrong) == 0 and len(tri_i_win) > 0:
                 print(len(max_program_wrong), len(tri_i_win_wrong))
-                print("1 good for for-inv", obj["task_id"])
+                print("1 good for fwd-inv", obj["task_id"])
 
         max_program_cor = [p_program for p_program in max_program if p_program in correct_samples]
         tri_i_win_cor = [p_program for p_program in tri_i_win if p_program in correct_samples]
@@ -334,9 +334,9 @@ def cal_class_size_info(db):
         # we have more correct choices
         if len(correct_samples_wo_dup) and not false_split:
             if len(max_program_cor) < len(tri_f_win_cor):
-                print("2 good for for-fib", obj["task_id"])
+                print("2 good for fwd-sinv", obj["task_id"])
             if len(max_program_cor) < len(tri_i_win_cor):
-                print("2 good for for-inv", obj["task_id"])
+                print("2 good for fwd-inv", obj["task_id"])
 
         if not false_split and len(correct_samples_wo_dup) and len(max_program_cor) != 0 and len(max_program_wrong) != 0:
             print("potential example:", obj["task_id"])

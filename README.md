@@ -49,8 +49,8 @@ List of configurations:
 - `Syntactic`
 - `OffByOne`
 - `Postcondition`
-- `FOR_INV`
-- `FOR_FIB`
+- `FWD_INV`
+- `FWD_SINV`
 
 ### Experiments
 

@@ -5,8 +5,8 @@ from just_tri_it.selection import MaxWitness, Ransac
 from just_tri_it.triangulation import (
     Triangulator,
     choose_parameter_to_invert,
-    make_partial_for_fib,
-    make_partial_for_inv,
+    make_partial_fwd_sinv,
+    make_partial_fwd_inv,
     make_syntactic,
     make_postcondition,
     make_trivial_semantic
@@ -70,19 +70,19 @@ def init_selectors(executor: Executor, code_generator: Generator, model: Model):
                                               NUM_LEFT_SAMPLES,
                                               NUM_RIGHT_SAMPLES))),
 
-        "FOR_INV": (lambda t:
+        "FWD_INV": (lambda t:
                     Ransac(Triangulator(executor,
                                         code_generator,
-                                        make_partial_for_inv(len(t.requirements.signature.params),
+                                        make_partial_fwd_inv(len(t.requirements.signature.params),
                                                              choose_parameter_to_invert(model, t.requirements)),
                                         NUM_LEFT_SAMPLES,
                                         NUM_RIGHT_SAMPLES))),
         
-        "FOR_FIB": (lambda t:
-                    Ransac(Triangulator(executor,
-                                        code_generator,
-                                        make_partial_for_fib(len(t.requirements.signature.params),
-                                                             choose_parameter_to_invert(model, t.requirements)),
-                                        NUM_LEFT_SAMPLES,
-                                        NUM_RIGHT_SAMPLES)))
+        "FWD_SINV": (lambda t:
+                     Ransac(Triangulator(executor,
+                                         code_generator,
+                                         make_partial_fwd_sinv(len(t.requirements.signature.params),
+                                                               choose_parameter_to_invert(model, t.requirements)),
+                                         NUM_LEFT_SAMPLES,
+                                         NUM_RIGHT_SAMPLES)))
     }

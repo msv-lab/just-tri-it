@@ -269,27 +269,27 @@ Original Problem:
 
 
 @dataclass
-class PartialFiber(Transformation):
+class PartialSetValuedInverse(Transformation):
     inverse_index: int
 
     def __init__(self, inverse_index):
         self.inverse_index = inverse_index
 
-    def _fiber_signature(self,
+    def _sinv_signature(self,
                          model: Model,
                          sig: NamedReturnSignature,
                          inverse_index: int) -> Signature:
         new_return_type = "list[" + sig.params[inverse_index].type + "]"
         new_params = [Parameter(sig.return_name, sig.return_type)]
         new_params.extend(p for i, p in enumerate(sig.params) if i != inverse_index)
-        new_func_name = "fiber_" + sig.name + "_wrt_" + sig.params[inverse_index].name
+        new_func_name = "sinv_" + sig.name + "_wrt_" + sig.params[inverse_index].name
         new_sig = Signature(new_func_name, new_params, new_return_type)
         return new_sig
         
-    def _fiber_description(self,
+    def _sinv_description(self,
                            model: Model,
                            req: Requirements,
-                           fiber_sig: Signature,
+                           sinv_sig: Signature,
                            inverse_index: int):
         PROMPT = f"""
 You are given a programming problem that requires implementing the function:
@@ -298,9 +298,9 @@ You are given a programming problem that requires implementing the function:
 
 Rewrite this problem so that it instead requires implementing the set-valued inverted function:
 
-{fiber_sig.pretty_print()}
+{sinv_sig.pretty_print()}
 
-Given the desired output value `{fiber_sig.params[0].name}` (corresponding to the original function's return value), the new function should return a exhaustive list of values for the parameter `{req.signature.params[inverse_index].name}` such that if the original function were called with any of these values (and the other parameters unchanged), it would produce `{fiber_sig.params[0].name}` as the result.
+Given the desired output value `{sinv_sig.params[0].name}` (corresponding to the original function's return value), the new function should return a exhaustive list of values for the parameter `{req.signature.params[inverse_index].name}` such that if the original function were called with any of these values (and the other parameters unchanged), it would produce `{sinv_sig.params[0].name}` as the result.
 
 Important points to follow:
 1. Preserve all constraints, domain assumptions, and rules from the original problem.
@@ -317,9 +317,9 @@ Original Problem:
         
     def transform(self, model, req: Requirements) -> Requirements:
         named_sig = NamedReturnSignature.infer_name(model, req)
-        fiber_sig = self._fiber_signature(model, named_sig, self.inverse_index)
-        fiber_desc = self._fiber_description(model, req, fiber_sig, self.inverse_index)
-        return Requirements(fiber_sig, fiber_desc)
+        sinv_sig = self._sinv_signature(model, named_sig, self.inverse_index)
+        sinv_desc = self._sinv_description(model, req, sinv_sig, self.inverse_index)
+        return Requirements(sinv_sig, sinv_desc)
 
 
 @dataclass
@@ -369,7 +369,7 @@ def make_postcondition(arity):
     )
 
 
-def make_partial_for_inv(arity, inverse_index):
+def make_partial_fwd_inv(arity, inverse_index):
     args = [Var(f"x_{i}") for i in range(arity)]
     inv_arg = Var(f"x_{inverse_index}")
     remaining_args = args[:inverse_index] + args[inverse_index + 1:]
@@ -377,14 +377,14 @@ def make_partial_for_inv(arity, inverse_index):
     g = Func(Side.RIGHT)
     
     return Triangulation(
-        "for-inv",
+        "fwd-inv",
         Identity(),
         PartialInverse(inverse_index),
         ForAll(args, Side.LEFT, Equals([inv_arg, g([Tolerate([f(args)])] + remaining_args)]))
     )
 
 
-def make_partial_for_fib(arity, inverse_index):
+def make_partial_fwd_sinv(arity, inverse_index):
     args = [Var(f"x_{i}") for i in range(arity)]
     inv_arg = Var(f"x_{inverse_index}")
     remaining_args = args[:inverse_index] + args[inverse_index + 1:]
@@ -393,11 +393,10 @@ def make_partial_for_fib(arity, inverse_index):
 
     ReplaceInv = Func(lambda v: args[:inverse_index] + [v] + args[inverse_index+1:], "replace_inv")
 
-    # question 1: unsure about this tolerance
     return Triangulation(
-        "for-fib",
+        "fwd-sinv",
         Identity(),
-        PartialFiber(inverse_index),
+        PartialSetValuedInverse(inverse_index),
         ForAll(args, Side.LEFT,
                And(Member([inv_arg, g([Tolerate([f(args)])] + remaining_args)]),
                    SetEquals([Tolerate([MapUnpack(f,

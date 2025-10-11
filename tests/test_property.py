@@ -6,8 +6,8 @@ from just_tri_it.property_checker import EvaluatorChecker
 from just_tri_it.executor import PersistentWorkerExecutor
 from just_tri_it.program import Program
 from just_tri_it.triangulation import (
-    make_partial_for_inv,
-    make_partial_for_fib,
+    make_partial_fwd_inv,
+    make_partial_fwd_sinv,
     make_syntactic,
     make_trivial_semantic
 )
@@ -22,9 +22,9 @@ def checker():
     executor.shutdown()
 
 
-FWD_INV_0 = make_partial_for_inv(2, 0).hyperproperty
+FWD_INV_0 = make_partial_fwd_inv(2, 0).hyperproperty
 
-FWD_SINV_0 = make_partial_for_fib(2, 0).hyperproperty
+FWD_SINV_0 = make_partial_fwd_sinv(2, 0).hyperproperty
 
 EQUIV = make_syntactic(2).hyperproperty
 
