@@ -10,7 +10,7 @@ from just_tri_it.code_generator import Generator
 from just_tri_it.selection import Agreement, AgreementOutcome
 from just_tri_it.input_generator import generate_inputs
 from just_tri_it.logic import (
-    Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, MapUnpack, Member, Tolerate
+    Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, Tolerate
 )
 from just_tri_it.program import Requirements, NamedReturnSignature, Signature, Parameter
 from just_tri_it.utils import (
@@ -18,7 +18,7 @@ from just_tri_it.utils import (
     ExperimentFailure,
     RawData, extract_answer
 )
-from just_tri_it.property_checker import EvaluatorChecker
+from just_tri_it.property_checker import Interpreter
 
 
 class Triangulator(Agreement):
@@ -28,7 +28,7 @@ class Triangulator(Agreement):
                  triangulation: 'Triangulation',
                  num_left_programs: int,
                  num_right_programs: int):
-        self.checker = EvaluatorChecker(executor)
+        self.checker = Interpreter(executor)
         self.code_generator = code_generator
         self.triangulation = triangulation
         self.num_left_programs = num_left_programs
@@ -387,11 +387,12 @@ def make_partial_fwd_inv(arity, inverse_index):
 def make_partial_fwd_sinv(arity, inverse_index):
     args = [Var(f"x_{i}") for i in range(arity)]
     inv_arg = Var(f"x_{inverse_index}")
+    arg_prime = Var(f"x_prime")
     remaining_args = args[:inverse_index] + args[inverse_index + 1:]
     f = Func(Side.LEFT)
     g = Func(Side.RIGHT)
 
-    ReplaceInv = Func(lambda v: args[:inverse_index] + [v] + args[inverse_index+1:], "replace_inv")
+    ReplaceInv = Func(lambda a, v: a[:inverse_index] + [v] + a[inverse_index+1:], "replace_inv")
 
     return Triangulation(
         "fwd-sinv",
@@ -399,7 +400,5 @@ def make_partial_fwd_sinv(arity, inverse_index):
         PartialSetValuedInverse(inverse_index),
         ForAll(args, Side.LEFT,
                And(Member([inv_arg, g([Tolerate([f(args)])] + remaining_args)]),
-                   SetEquals([Tolerate([MapUnpack(f,
-                                        Map(ReplaceInv, g([Tolerate([f(args)])] + remaining_args)))]),
-                              [Tolerate([f(args)])]])))
-    )
+                   ForAll(arg_prime, g([Tolerate([f(args)])] + remaining_args),
+                          Equals([f(args), f(ReplaceInv([args, arg_prime]))])))))

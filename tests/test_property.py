@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from just_tri_it.logic import Side
-from just_tri_it.property_checker import EvaluatorChecker
+from just_tri_it.property_checker import Interpreter
 from just_tri_it.executor import PersistentWorkerExecutor
 from just_tri_it.program import Program
 from just_tri_it.triangulation import (
@@ -18,7 +18,7 @@ import pytest
 @pytest.fixture()
 def checker():
     executor = PersistentWorkerExecutor()
-    yield EvaluatorChecker(executor)
+    yield Interpreter(executor)
     executor.shutdown()
 
 

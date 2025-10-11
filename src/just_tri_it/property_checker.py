@@ -8,7 +8,7 @@ from just_tri_it.executor import Executor
 from just_tri_it.utils import ExperimentFailure
 from just_tri_it.logic import (
     Side,
-    Term, Var, Map, MapUnpack,
+    Term, Var, Map,
     Formula, App, Not, And, Or, Implies, Iff, ForAll,
     Func, Equals, SetEquals, OffByOne, Member, Tolerate,
     SpecialValue, Angelic, Demonic, Undefined
@@ -25,7 +25,7 @@ class Checker(ABC):
         pass
 
 
-EVALUATOR_CHECKER_CALL_BUDGET_PER_INPUT = 500
+INTERPRETER_CHECKER_CALL_BUDGET_PER_INPUT = 500
 
 
 class CallBudgetExceeded(Exception):
@@ -33,7 +33,7 @@ class CallBudgetExceeded(Exception):
     pass
 
 
-class EvaluatorChecker(Checker):
+class Interpreter(Checker):
 
     def __init__(self, executor: Executor):
         self.executor = executor
@@ -98,24 +98,30 @@ class EvaluatorChecker(Checker):
                 raise ValueError("unexpected operand type")
             case ForAll(ele, domain, body):
                 num_angelic = 0
-                for inp in inputs[domain]:
+                if isinstance(domain, Side):
+                    computed_domain = inputs[domain]
+                else:
+                    computed_domain = self._eval_term(env, programs, domain)
+                    if not isinstance(computed_domain, list):
+                        computed_domain = [Demonic()]
+                for inp in computed_domain:
                     new_env = env.copy()
                     if isinstance(ele, Var):
-                        new_env[ele.name] = inp[0]
+                        new_env[ele.name] = inp
                     else:
                         for index, var in enumerate(ele):
                             new_env[var.name] = inp[index]
                     result = self._is_formula_true(new_env, inputs, programs, body)
                     if isinstance(result, SpecialValue):
                         if SpecialValue.as_bool(result) is False:
-                            print(f"\n{formula} err on {inp}", file=sys.stderr, flush=True)
+                            print(f"\n{formula} err on {new_env}", file=sys.stderr, flush=True)
                             return False
                         else:
                             num_angelic += 1
                     elif result is False:
-                        print(f"\n{formula} failed on {inp}", file=sys.stderr, flush=True)
+                        print(f"\n{formula} failed on {new_env}", file=sys.stderr, flush=True)
                         return False
-                if (num_angelic / len(inputs[domain])) >= 0.34:
+                if (num_angelic / len(computed_domain)) >= 0.34:
                     print(f"\n{formula} failed due excessive angelic values", file=sys.stderr, flush=True)
                     return False
                 return True
@@ -126,7 +132,8 @@ class EvaluatorChecker(Checker):
         if isinstance(term, (str, int, bool, float, tuple)) or term is None:
             return term
         if isinstance(term, list):
-            return self._eval_list(env, programs, term)
+            result = self._eval_list(env, programs, term)
+            return result
         match term:
             case Var(name):
                 return env[name]
@@ -139,13 +146,6 @@ class EvaluatorChecker(Checker):
                 if not isinstance(computed_args, list):
                     computed_args = [Demonic()]
                 return [self._eval_term(env, programs, func([a])) for a in computed_args]
-            case MapUnpack(func, args):
-                computed_args = self._eval_term(env, programs, args)
-                if isinstance(computed_args, SpecialValue):
-                    computed_args = [computed_args]
-                if not isinstance(computed_args, list):
-                    computed_args = [Demonic()]
-                return [self._eval_term(env, programs, func(a)) for a in computed_args]
             case App(func, args):
                 return self._eval_app(env, programs, func, args)
             case _:
@@ -158,7 +158,7 @@ class EvaluatorChecker(Checker):
               formula: Formula):
         max_num_inputs = max(len(inputs[Side.LEFT]), len(inputs[Side.RIGHT]))
         
-        self.available_call_budget = EVALUATOR_CHECKER_CALL_BUDGET_PER_INPUT * max_num_inputs
+        self.available_call_budget = INTERPRETER_CHECKER_CALL_BUDGET_PER_INPUT * max_num_inputs
 
         try:
             result = self._is_formula_true({}, inputs, programs, formula)

@@ -113,16 +113,7 @@ class Map:
         return f"map({str(self.func)}, {recursive_str(self.args)})"
 
 
-@dataclass
-class MapUnpack:
-    func: Func
-    args: 'Term'
-
-    def __str__(self):
-        return f"map*({str(self.func)}, {recursive_str(self.args)})"
-    
-
-Term = Union[Var, App, Map, MapUnpack, int, bool, float, str, list]
+Term = Union[Var, App, Map, int, bool, float, str, list]
 
 
 @dataclass
@@ -139,7 +130,6 @@ class Iff:
     left: 'Formula'
     right: 'Formula'
 
-
     def __str__(self):
         return f"({self.left} ↔ {self.right})"
 
@@ -147,7 +137,7 @@ class Iff:
 @dataclass
 class ForAll:
     vars: Var | list[Var]
-    domain: Side
+    domain: Side | Term
     body: 'Formula'
 
     def __str__(self):
@@ -155,7 +145,11 @@ class ForAll:
             vars_str = ", ".join(str(v) for v in self.vars)
         else:
             vars_str = str(self.vars)
-        return f"∀{vars_str} ∈ {self.domain.value}_inputs: {self.body}"    
+        if isinstance(self.domain, Side):
+            domain_str = f"{self.domain.value}_inputs"
+        else:
+            domain_str = str(self.domain)
+        return f"∀{vars_str} ∈ {domain_str}: {self.body}"    
 
 
 Formula = Union[
