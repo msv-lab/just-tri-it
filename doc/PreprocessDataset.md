@@ -46,3 +46,9 @@ To run the sanity check, execute
     uv run construct_judges --sanity-check --dataset datasets/test.json
     
 It will check the ability of the test suite to classify the correct solution as correct, and the incorrect as incorrect.
+
+# CodeElo
+
+Command to generate problem descriptions:
+
+    jq -r 'map(select(.problem_id=="1991C"))[0] | .description + "\n\n# Input:\n" + .input + "\n\n# Output:\n" + .output + "\n\n# Example input:\n" + .examples[0].input + "\n\n# Example output:\n" + .examples[0].output + "\n\n# Notes:\n" + .note' datasets/codeelo_inexact_raw.json
