@@ -165,7 +165,7 @@ def fs_to_json(root_dir: str, json_path: str) -> None:
             raise ValueError(f"Item {id_}: missing required files: {', '.join(os.path.basename(m) for m in missing)}")
 
         # Read required content
-        signature = read_text(sig_path)
+        signature = read_text(sig_path).strip()
         description = read_text(desc_path)
         judge = read_text(judge_path)
         tests = read_json(tests_path)
