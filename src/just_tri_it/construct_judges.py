@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 import json
 
-from just_tri_it.logic import check, Side
+from just_tri_it.logic import Side
 from just_tri_it.executor import SubprocessExecutor, PersistentWorkerExecutor
 from just_tri_it.program import Program
 from just_tri_it.triangulation import make_postcondition
@@ -28,6 +28,11 @@ def parse_args():
         required=True,
         help="Left program."
     )
+    parser.add_argument(
+        "--task",
+        type=str,
+        help="Identifier of task to run (all by default)."
+    )
     return parser.parse_args()
 
 
@@ -40,6 +45,8 @@ def main():
         executor = PersistentWorkerExecutor()
 
     dataset = load_dataset(Path(args.dataset))
+    if args.task:
+        dataset = [t for t in dataset if t.id == args.task]
 
     for task in dataset:
         print()
