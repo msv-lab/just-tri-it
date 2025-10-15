@@ -53,7 +53,7 @@ def main():
         print_annotated_hr(f"Task {task.id}")
         
         if "correct_solution" in task.metadata:
-            correct_program = Program.from_function_code(task.metadata["correct_solution"])
+            correct_program = Program(task.requirements.signature, task.metadata["correct_solution"])
             status, results = correct_program.passes(executor, task.tests)
             if status:
                 print("\nCorrect program - OK")
@@ -63,7 +63,7 @@ def main():
             print("\nCorrect program - N/A")
 
         if "incorrect_solution" in task.metadata:
-            incorrect_program = Program.from_function_code(task.metadata["incorrect_solution"])
+            incorrect_program = Program(task.requirements.signature, task.metadata["incorrect_solution"])
             status, results = incorrect_program.passes(executor, task.tests)
             if not status:
                 print("\nIncorrect program - OK")
