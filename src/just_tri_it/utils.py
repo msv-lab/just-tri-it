@@ -116,11 +116,9 @@ def extract_code(content):
 def gen_and_extract_code_with_retry(model, prompt, num_retry=3):
     ind_model = Independent(model)
     ans = None
-    tried_samples = []
     for attempt in range(num_retry):
         try:
             sample = next(ind_model.sample(prompt, num_retry))
-            tried_samples.append(sample)
             ans = extract_code(sample)
             break
         except Exception as e:
@@ -152,11 +150,9 @@ def extract_answer(s):
 def gen_and_extract_answer_with_retry(model, prompt, num_retry=3):
     ind_model = Independent(model)
     ans = None
-    tried_samples = []
     for attempt in range(num_retry):
         try:
             sample = next(ind_model.sample(prompt, num_retry))
-            tried_samples.append(sample)
             ans = extract_answer(sample)
             break
         except Exception as e:

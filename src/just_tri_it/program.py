@@ -1,3 +1,4 @@
+import copy
 from dataclasses import dataclass
 import ast
 import hashlib
@@ -69,7 +70,7 @@ Problem:
         for node in tree.body:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 return Signature.from_function_ast(node)
-        raise ValueError("No function definition found in code")        
+        raise ValueError("No function definition found in code")
 
 
 @dataclass
@@ -79,10 +80,10 @@ class TestFunction(ContentAddressable):
     target_signature: Signature
 
     def get_content(self) -> str:
-        return "# signature: " + self.target_signature.pretty_print() + "\n"\
-            + "# test name: " + self.test_function_name + "\n"\
+        return "# signature: " + self.target_signature.pretty_print() + "\n" \
+            + "# test name: " + self.test_function_name + "\n" \
             + self.test_function_code
-    
+
     @staticmethod
     def from_code(code: str, target_signature: Signature) -> 'TestFunction':
         tree = ast.parse(code)
@@ -102,7 +103,7 @@ class InputOutput(ContentAddressable):
     output: Any
 
     def get_content(self) -> str:
-        return "inputs: " + repr(self.inputs) + "\n"\
+        return "inputs: " + repr(self.inputs) + "\n" \
             + "output: " + repr(self.output)
 
 
@@ -112,7 +113,7 @@ type Test = TestFunction | InputOutput
 @dataclass
 class Pass:
     pass
-    
+
 
 @dataclass
 class Fail:
@@ -140,8 +141,8 @@ class NamedReturnSignature(Signature):
     def infer_name(model: Model, req: Requirements) -> 'NamedReturnSignature':
         PROMPT = f"""
 For the problem below, name its return value descriptively
-using Python's snake_case naming convention. Enclose the
-name in <answer> tags.
+using Python's snake_case naming convention. Output the name
+enclosed in `<answer>` and `</answer>` tags.
         
 Problem:
 {req.description}
@@ -156,7 +157,7 @@ Problem:
     @staticmethod
     def _make_name_unique(name: str, params: List[Parameter]) -> str:
         param_names = list(map(lambda p: p.name, params))
-        
+
         if name not in param_names:
             return name
 
@@ -171,10 +172,10 @@ Problem:
             candidate = f"{name}_{counter}"
             if candidate not in param_names:
                 return candidate
-            counter += 1    
+            counter += 1
 
 
-@dataclass    
+@dataclass
 class Program(ContentAddressable):
     signature: Signature
     code: str
@@ -203,7 +204,7 @@ class Program(ContentAddressable):
                 case Pass() as result:
                     outcomes.append(type(result).__name__)
                 case _ as result:
-                    outcomes.append(type(result).__name__)                    
+                    outcomes.append(type(result).__name__)
                     never_fails = False
         return never_fails, outcomes
 
@@ -212,4 +213,53 @@ class Program(ContentAddressable):
         """The code must be the function and nothing else. The
         function must have a complete type annotation"""
         return Program(Signature.from_function_code(code), code)
-    
+
+
+def time_checker(executor, time_predicate, unchecked_input: list):
+    from just_tri_it.executor import Success, EXECUTION_TIMEOUT_SECONDS
+    unchecked_input.append(EXECUTION_TIMEOUT_SECONDS)
+    execution_outcome = executor.run(time_predicate, unchecked_input)
+    ans = False  # ans = True means it takes < max_sec
+    match execution_outcome:
+        case Success(v):
+            if v is False:
+                ans = True
+        case _:
+            pass
+    return ans
+
+
+def gen_time_predicate(model, p_list: list['Program']) -> list['Program']:
+    prompt = """You are an expert Python programmer. Your task is to
+generate a Python function ‘{sig}’ that performs a **lightweight heuristic
+static analysis** to estimate whether the following code would likely exceed
+a specified time limit when executed on a given input.
+
+**Code to be checked**:
+```
+{code}
+```
+
+**Requirements:**
+1.  **Heuristic Analysis Only:** The function must **NOT** execute the code.
+2.  **Core Objective:** Return `True` if the analysis suggests that running
+this code would *likely* take more than `max_seconds`. Otherwise, return `False`.
+3.  **Implementation Constraints:** Implementing only the function, without using
+`if __name__ == "__main__":` or any code outside the function. Do not print anything,
+and just return a boolean value. 
+
+**Output Format:**
+Please wrap your final code in a markdown code block.
+```python
+# Your implementation here
+```
+    """
+    predicate_lst = []
+    for p in p_list:
+        new_sig = copy.deepcopy(p.signature)
+        new_sig.name = "will_likely_timeout"
+        new_sig.return_type = "bool"
+        new_sig.params.append(Parameter("max_seconds", "int"))
+        predicate_lst.append(Program(new_sig, gen_and_extract_code_with_retry(model, prompt.format(
+            code=p.code, sig=new_sig.pretty_print()))))
+    return predicate_lst

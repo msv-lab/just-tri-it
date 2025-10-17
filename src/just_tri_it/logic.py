@@ -5,11 +5,15 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Union, Set, Dict, List, Callable, Any
 from copy import deepcopy
+from just_tri_it.utils import ExperimentFailure
 
 
 class Side(Enum):
     LEFT = "left"
     RIGHT = "right"
+
+
+SIDE_MAPPING = {Side.LEFT: "left_pre", Side.RIGHT: "right_pre"}
 
 
 def recursive_str(obj):

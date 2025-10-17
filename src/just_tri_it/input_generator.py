@@ -47,7 +47,7 @@ def fix_and_filter_bad_inputs(input_list: List[Any], sig: Signature):
                 continue
         else:
             if len(unchecked_input) != len(sig.params):
-                if len(param_list) == 1:
+                if len(sig.params) == 1:
                     unchecked_input = [unchecked_input]
                 else:
                     continue

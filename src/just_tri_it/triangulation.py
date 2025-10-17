@@ -12,7 +12,7 @@ from just_tri_it.input_generator import generate_inputs
 from just_tri_it.logic import (
     Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, Tolerate
 )
-from just_tri_it.program import Requirements, NamedReturnSignature, Signature, Parameter
+from just_tri_it.program import Requirements, NamedReturnSignature, Signature, Parameter, gen_time_predicate
 from just_tri_it.utils import (
     gen_and_extract_answer_with_retry,
     ExperimentFailure,
@@ -46,19 +46,21 @@ class Triangulator(Agreement):
         left_inputs = generate_inputs(model, transformed_left)
         left_programs = self.code_generator.generate(model, transformed_left, self.num_left_programs)
         left_programs = list(islice(left_programs, self.num_left_programs))
+        left_predicates = gen_time_predicate(model, left_programs)
 
         transformed_right = self.triangulation.right_trans.transform(model, req)
         right_inputs = generate_inputs(model, transformed_right)        
         right_programs = self.code_generator.generate(model, transformed_right, self.num_right_programs)
         right_programs = list(islice(right_programs, self.num_right_programs))
+        right_predicates = gen_time_predicate(model, right_programs)
 
         programs_and_witnesses = []
 
-        for p in left_programs:
+        for p, p_pre in zip(left_programs, left_predicates):
             p_witnesses = []
-            for q in right_programs:
-                if self.checker.check({ Side.LEFT: left_inputs, Side.RIGHT: right_inputs },
-                                      { Side.LEFT: p, Side.RIGHT: q },
+            for q, q_pre in zip(right_programs, right_predicates):
+                if self.checker.check({Side.LEFT: left_inputs, Side.RIGHT: right_inputs},
+                                      {Side.LEFT: p, Side.RIGHT: q, "left_pre": p_pre, "right_pre": q_pre},
                                       self.triangulation.hyperproperty):
                     p_witnesses.append(q)
             if len(p_witnesses) > 0:

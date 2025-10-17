@@ -1,17 +1,17 @@
 import sys
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import Dict, Any
 from functools import partial
 
 from just_tri_it.executor import Success, Error
 from just_tri_it.executor import Executor
-from just_tri_it.utils import ExperimentFailure
+from just_tri_it.program import time_checker
 from just_tri_it.logic import (
     Side,
     Term, Var, Map,
     Formula, App, Not, And, Or, Implies, Iff, ForAll,
     Func, Equals, SetEquals, OffByOne, Member, Tolerate,
-    SpecialValue, Angelic, Demonic, Undefined
+    SpecialValue, Angelic, Demonic, Undefined, SIDE_MAPPING
 )
 
 
@@ -51,25 +51,29 @@ class Interpreter(Checker):
                 return SpecialValue.strongest(special)
             if self.available_call_budget <= 0:
                 raise CallBudgetExceeded()
-            execution_outcome = self.executor.run(programs[func.semantics], computed_args)
-            self.available_call_budget -= 1
-            match execution_outcome:
-                case Success(v):
-                    return v
-                case Error(error_type, error_msg) \
-                     if error_type == "ValueError" and error_msg == "Invalid input":
-                    return Undefined()
-                case _:
-                    return Demonic()
+            if time_checker(self.executor, programs[SIDE_MAPPING[func.semantics]], computed_args):
+                execution_outcome = self.executor.run(programs[func.semantics], computed_args)
+                self.available_call_budget -= 1
+                match execution_outcome:
+                    case Success(v):
+                        return v
+                    case Error(error_type, error_msg) \
+                        if error_type == "ValueError" and error_msg == "Invalid input":
+                        return Undefined()
+                    case _:
+                        return Demonic()
+            else:
+                print(f"{func.semantics} is predicted to timeout", file=sys.stderr, flush=True)
+                return Demonic()  # another way of timeout
         else:
             result = func.semantics(*computed_args)
             return result
 
     def _is_formula_true(self,
-                        env: Dict[str, Any],
-                        inputs: Dict[Side, Any],
-                        programs: Dict[Side, 'Program'],
-                        formula: Formula):
+                         env: Dict[str, Any],
+                         inputs: Dict[Side, Any],
+                         programs: Dict[Side, 'Program'],
+                         formula: Formula):
         match formula:
             case App(func, args):
                 return self._eval_app(env, programs, func, args)
@@ -150,14 +154,13 @@ class Interpreter(Checker):
                 return self._eval_app(env, programs, func, args)
             case _:
                 raise NotImplementedError(f"This term type has not been implemented yet: {term}")
-    
 
     def check(self,
               inputs: Dict[Side, Any],
               programs: Dict[Side, 'Program'],
               formula: Formula):
         max_num_inputs = max(len(inputs[Side.LEFT]), len(inputs[Side.RIGHT]))
-        
+
         self.available_call_budget = INTERPRETER_CHECKER_CALL_BUDGET_PER_INPUT * max_num_inputs
 
         try:
