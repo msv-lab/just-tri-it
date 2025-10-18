@@ -337,6 +337,7 @@ class PersistentWorkerExecutor(Executor):
 
     @cache_content_addressable
     def run(self, p: Program, inputs, add_lcb_imports=True) -> ExecutionOutcome:
+        # print(p.get_content())
         assert isinstance(inputs, list)
         args = deepcopy(inputs)
         if add_lcb_imports:
