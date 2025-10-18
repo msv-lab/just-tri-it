@@ -400,42 +400,42 @@
   {
     "id": "different_string",
     "requirements": {
-      "signature": "def different_string(s: str) -> str",
+      "signature": "def different_string(t: int, strings: list[str]) -> list[Union[str, tuple[str, str]]]",
       "description": "You are given a string $s$ consisting of lowercase English letters.\n\nRearrange the characters of $s$ to form a new string $r$ that is not equal to $s$, or report that it's impossible.\n\n# Input:\nThe first line contains a single integer $t$ ($1 \\leq t \\leq 1000$) — the number of test cases.\n\nThe only line of each test case contains a string $s$ of length at most $10$ consisting of lowercase English letters.\n\n# Output:\nFor each test case, if no such string $r$ exists as described in the statement, output \"NO\" (without quotes).\n\nOtherwise, output \"YES\" (without quotes). Then, output one line — the string $r$, consisting of letters of string $s$.\n\nYou can output \"YES\" and \"NO\" in any case (for example, strings \"yEs\", \"yes\", and \"Yes\" will be recognized as a positive response).\n\nIf multiple answers are possible, you can output any of them.\n\n# Example input:\n8\ncodeforces\naaaaa\nxxxxy\nco\nd\nnutdealer\nmwistht\nhhhhhhhhhh\n\n# Example output:\nYES\nforcodesec\nNO\nYES\nxxyxx\nYES\noc\nNO\nYES\nundertale\nYES\nthtsiwm\nNO\n\n# Notes:\nIn the first test case, another possible answer is $\\texttt{forcescode}$.\n\nIn the second test case, all rearrangements of $\\texttt{aaaaa}$ are equal to $\\texttt{aaaaa}$.\n"
     },
-    "judge": "def __judge(s: str, result: str) -> bool:\n    lines = result.strip().split('\\n')\n    if len(lines) == 1 and lines[0].upper() == 'NO':\n        # Check if all characters in s are the same\n        return len(set(s)) == 1\n    if len(lines) != 2:\n        return False\n    if lines[0].upper() != 'YES':\n        return False\n    r = lines[1]\n    # Check if r is a valid rearrangement of s and r != s\n    return sorted(s) == sorted(r) and s != r",
+    "judge": "def __judge(t:int, strings: list[str], results: list[Union[str, tuple[str, str]]]) -> bool:\n    for (s, result) in zip(strings, results):\n        if result == 'NO':\n            # Check if all characters in s are the same\n            if not(len(set(s)) == 1):\n                return False\n            continue\n        if not isinstance(result, tuple):\n            return False\n        if result[0].upper() != 'YES':\n            return False\n        r = result[1]\n        # Check if r is a valid rearrangement of s and r != s\n        if not(sorted(s) == sorted(r) and s != r):\n            return False\n    return True\n",
     "tests": [
       {
         "type": "TestFunction",
-        "code": "def test_1():\n    assert __judge('codeforces', different_string('codeforces'))"
+        "code": "def test_1():\n    assert __judge(1, ['codeforces'], different_string(1, ['codeforces']))"
       },
       {
         "type": "TestFunction",
-        "code": "def test_2():\n    assert __judge('aaaaa', different_string('aaaaa'))"
+        "code": "def test_2():\n    assert __judge(1, ['aaaaa'], different_string(1, ['aaaaa']))"
       },
       {
         "type": "TestFunction",
-        "code": "def test_3():\n    assert __judge('xxxxy', different_string('xxxxy'))"
+        "code": "def test_3():\n    assert __judge(1, ['xxxxy'], different_string(1, ['xxxxy']))"
       },
       {
         "type": "TestFunction",
-        "code": "def test_4():\n    assert __judge('co', different_string('co'))"
+        "code": "def test_4():\n    assert __judge(1, ['co'], different_string(1, ['co']))"
       },
       {
         "type": "TestFunction",
-        "code": "def test_5():\n    assert __judge('d', different_string('d'))"
+        "code": "def test_5():\n    assert __judge(1, ['d'], different_string(1, ['d']))"
       },
       {
         "type": "TestFunction",
-        "code": "def test_6():\n    assert __judge('nutdealer', different_string('nutdealer'))"
+        "code": "def test_6():\n    assert __judge(1, ['nutdealer'], different_string(1, ['nutdealer']))"
       },
       {
         "type": "TestFunction",
-        "code": "def test_7():\n    assert __judge('mwistht', different_string('mwistht'))"
+        "code": "def test_7():\n    assert __judge(1, ['mwistht'], different_string(1, ['mwistht']))"
       },
       {
         "type": "TestFunction",
-        "code": "def test_8():\n    assert __judge('hhhhhhhhhh', different_string('hhhhhhhhhh'))"
+        "code": "def test_8():\n    assert __judge(1, ['hhhhhhhhhh'], different_string(1, ['hhhhhhhhhh']))"
       }
     ],
     "metadata": {
@@ -450,8 +450,8 @@
       "div": "Div. 4",
       "time_limit_ms": 1000,
       "memory_limit_mb": 256,
-      "correct_solution": "# submission: 343167949\n# status: accepted\n\nsets = int(input())\nfor i in range(sets):\n\n\tn = input()\n\tStr = n[0]\n\t\n\tfor i in range(len(n)):\n\t\tif n[i] != Str:\n\t\t\tprint('YES')\n\t\t\tprint(n[:i-1] + n[i] + n[i-1] + n[i+1:])\n\t\t\tbreak\n\telse:\n\t\tprint('NO')\n",
-      "incorrect_solution": "# submission: 343128586\n\n#  Test: #2, time: 203 ms., memory: 2900 KB, exit code: 0, checker exit code: 1, verdict: WRONG_ANSWER\n# Input\n# 1000\n# a\n# b\n# c\n# d\n# e\n# aa\n# ab\n# ac\n# ad\n# ae\n# ba\n# bb\n# bc\n# bd\n# be\n# ca\n# cb\n# cc\n# cd\n# ce\n# da\n# db\n# dc\n# dd\n# de\n# ea\n# eb\n# ec\n# ed\n# ee\n# aaa\n# aab\n# aac\n# aad\n# aae\n# aba\n# abb\n# abc\n# abd\n# abe\n# aca\n# acb\n# acc\n# acd\n# ace\n# ada\n# adb\n# adc\n# add\n# ade\n# aea\n# aeb\n# aec\n# aed\n# aee\n# baa\n# bab\n# bac\n# bad\n# bae\n# bba\n# bbb\n# bbc\n# bbd\n# bbe\n# bca\n# bcb\n# bcc\n# bcd\n# bce\n# bda\n# bdb\n# bdc\n# bdd\n# bde\n# bea\n# beb\n# bec\n# bed\n# bee\n# caa\n# cab\n# cac\n# cad\n# cae\n# cba\n# cbb\n# cbc\n# cbd\n# cbe\n# cca\n# ccb\n# ccc\n# ccd\n# cce\n# cda\n# cdb\n# cdc\n# cdd\n# cde\n# cea\n# ceb\n# cec\n# ced\n# cee\n# daa\n# dab\n# dac\n# ...\n# Output\n# NO\n# NO\n# NO\n# NO\n# NO\n# NO\n# YES\n# ba\n# YES\n# ca\n# YES\n# da\n# YES\n# ea\n# YES\n# ab\n# NO\n# YES\n# cb\n# YES\n# db\n# YES\n# eb\n# YES\n# ac\n# YES\n# bc\n# NO\n# YES\n# dc\n# YES\n# ec\n# YES\n# ad\n# YES\n# bd\n# YES\n# cd\n# NO\n# YES\n# ed\n# YES\n# ae\n# YES\n# be\n# YES\n# ce\n# YES\n# de\n# NO\n# NO\n# YES\n# baa\n# YES\n# caa\n# YES\n# daa\n# YES\n# eaa\n# YES\n# aba\n# YES\n# bba\n# YES\n# cba\n# YES\n# dba\n# YES\n# eba\n# YES\n# aca\n# YES\n# bca\n# YES\n# cca\n# YES\n# dca\n# YES\n# eca\n# YES\n# ada\n# YES\n# bda\n# YES\n# cda\n# YES\n# dda\n# YES\n# eda\n# YES\n# aea\n# YES\n# bea\n# YES\n# cea\n# YES\n# dea\n# YES\n# eea\n# YES\n# aab\n# YES\n# bab\n# YES\n# cab\n# YES\n# dab\n# YES\n# ea...\n# Answer\n# NO\n# NO\n# NO\n# NO\n# NO\n# NO\n# YES\n# ba\n# YES\n# ca\n# YES\n# da\n# YES\n# ea\n# YES\n# ab\n# NO\n# YES\n# cb\n# YES\n# db\n# YES\n# eb\n# YES\n# ac\n# YES\n# bc\n# NO\n# YES\n# dc\n# YES\n# ec\n# YES\n# ad\n# YES\n# bd\n# YES\n# cd\n# NO\n# YES\n# ed\n# YES\n# ae\n# YES\n# be\n# YES\n# ce\n# YES\n# de\n# NO\n# NO\n# YES\n# baa\n# YES\n# caa\n# YES\n# daa\n# YES\n# eaa\n# YES\n# baa\n# YES\n# bab\n# YES\n# bac\n# YES\n# bad\n# YES\n# bae\n# YES\n# caa\n# YES\n# cab\n# YES\n# cac\n# YES\n# cad\n# YES\n# cae\n# YES\n# daa\n# YES\n# dab\n# YES\n# dac\n# YES\n# dad\n# YES\n# dae\n# YES\n# eaa\n# YES\n# eab\n# YES\n# eac\n# YES\n# ead\n# YES\n# eae\n# YES\n# aba\n# YES\n# abb\n# YES\n# abc\n# YES\n# abd\n# YES\n# ab...\n# Checker Log\n# wrong answer t is equal to s (test case 36)\n\n\n\nfor _ in range(int(input())):\n    a=input()\n    if len(set(a))>1:\n        print('YES')\n        print((a[::-1]))\n    else:\n        print('NO')\n"
+      "correct_solution": "# submission: 343167949\n# status: accepted\n\ndef different_string(t: int, strings: list[str]) -> list[Union[str, tuple[str, str]]]:\n    results = []\n    for n in strings:\n        Str = n[0]\n\n        for i in range(len(n)):\n            if n[i] != Str:\n                results.append(('YES', n[:i-1] + n[i] + n[i-1] + n[i+1:]))\n                break\n        else:\n            results.append('NO')\n    return results\n",
+      "incorrect_solution": "# submission: 343128586\n\n#  Test: #2, time: 203 ms., memory: 2900 KB, exit code: 0, checker exit code: 1, verdict: WRONG_ANSWER\n# Input\n# 1000\n# a\n# b\n# c\n# d\n# e\n# aa\n# ab\n# ac\n# ad\n# ae\n# ba\n# bb\n# bc\n# bd\n# be\n# ca\n# cb\n# cc\n# cd\n# ce\n# da\n# db\n# dc\n# dd\n# de\n# ea\n# eb\n# ec\n# ed\n# ee\n# aaa\n# aab\n# aac\n# aad\n# aae\n# aba\n# abb\n# abc\n# abd\n# abe\n# aca\n# acb\n# acc\n# acd\n# ace\n# ada\n# adb\n# adc\n# add\n# ade\n# aea\n# aeb\n# aec\n# aed\n# aee\n# baa\n# bab\n# bac\n# bad\n# bae\n# bba\n# bbb\n# bbc\n# bbd\n# bbe\n# bca\n# bcb\n# bcc\n# bcd\n# bce\n# bda\n# bdb\n# bdc\n# bdd\n# bde\n# bea\n# beb\n# bec\n# bed\n# bee\n# caa\n# cab\n# cac\n# cad\n# cae\n# cba\n# cbb\n# cbc\n# cbd\n# cbe\n# cca\n# ccb\n# ccc\n# ccd\n# cce\n# cda\n# cdb\n# cdc\n# cdd\n# cde\n# cea\n# ceb\n# cec\n# ced\n# cee\n# daa\n# dab\n# dac\n# ...\n# Output\n# NO\n# NO\n# NO\n# NO\n# NO\n# NO\n# YES\n# ba\n# YES\n# ca\n# YES\n# da\n# YES\n# ea\n# YES\n# ab\n# NO\n# YES\n# cb\n# YES\n# db\n# YES\n# eb\n# YES\n# ac\n# YES\n# bc\n# NO\n# YES\n# dc\n# YES\n# ec\n# YES\n# ad\n# YES\n# bd\n# YES\n# cd\n# NO\n# YES\n# ed\n# YES\n# ae\n# YES\n# be\n# YES\n# ce\n# YES\n# de\n# NO\n# NO\n# YES\n# baa\n# YES\n# caa\n# YES\n# daa\n# YES\n# eaa\n# YES\n# aba\n# YES\n# bba\n# YES\n# cba\n# YES\n# dba\n# YES\n# eba\n# YES\n# aca\n# YES\n# bca\n# YES\n# cca\n# YES\n# dca\n# YES\n# eca\n# YES\n# ada\n# YES\n# bda\n# YES\n# cda\n# YES\n# dda\n# YES\n# eda\n# YES\n# aea\n# YES\n# bea\n# YES\n# cea\n# YES\n# dea\n# YES\n# eea\n# YES\n# aab\n# YES\n# bab\n# YES\n# cab\n# YES\n# dab\n# YES\n# ea...\n# Answer\n# NO\n# NO\n# NO\n# NO\n# NO\n# NO\n# YES\n# ba\n# YES\n# ca\n# YES\n# da\n# YES\n# ea\n# YES\n# ab\n# NO\n# YES\n# cb\n# YES\n# db\n# YES\n# eb\n# YES\n# ac\n# YES\n# bc\n# NO\n# YES\n# dc\n# YES\n# ec\n# YES\n# ad\n# YES\n# bd\n# YES\n# cd\n# NO\n# YES\n# ed\n# YES\n# ae\n# YES\n# be\n# YES\n# ce\n# YES\n# de\n# NO\n# NO\n# YES\n# baa\n# YES\n# caa\n# YES\n# daa\n# YES\n# eaa\n# YES\n# baa\n# YES\n# bab\n# YES\n# bac\n# YES\n# bad\n# YES\n# bae\n# YES\n# caa\n# YES\n# cab\n# YES\n# cac\n# YES\n# cad\n# YES\n# cae\n# YES\n# daa\n# YES\n# dab\n# YES\n# dac\n# YES\n# dad\n# YES\n# dae\n# YES\n# eaa\n# YES\n# eab\n# YES\n# eac\n# YES\n# ead\n# YES\n# eae\n# YES\n# aba\n# YES\n# abb\n# YES\n# abc\n# YES\n# abd\n# YES\n# ab...\n# Checker Log\n# wrong answer t is equal to s (test case 36)\n\ndef different_string(t: int, strings: list[str]) -> list[Union[str, tuple[str, str]]]:\n    results = []\n    for a in strings:\n        if len(set(a))>1:\n            results.append(('YES', a[::-1]))\n        else:\n            results.append('NO')\n    return results\n"
     }
   },
   {
