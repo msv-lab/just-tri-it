@@ -819,42 +819,42 @@
   {
     "id": "manhattan_permutations",
     "requirements": {
-      "signature": "def manhattan_permutations(n: int, k: int) -> str",
+      "signature": "def manhattan_permutations(t: int, test_cases: list[tuple[int,int]]) -> list[tuple[str,list[int]]]",
       "description": "Let's call the Manhattan value of a permutation$^{\\dagger}$ $p$ the value of the expression $|p_1 - 1| + |p_2 - 2| + \\ldots + |p_n - n|$.\n\nFor example, for the permutation $[1, 2, 3]$, the Manhattan value is $|1 - 1| + |2 - 2| + |3 - 3| = 0$, and for the permutation $[3, 1, 2]$, the Manhattan value is $|3 - 1| + |1 - 2| + |2 - 3| = 2 + 1 + 1 = 4$.\n\nYou are given integers $n$ and $k$. Find a permutation $p$ of length $n$ such that its Manhattan value is equal to $k$, or determine that no such permutation exists.\n\n$^{\\dagger}$A permutation of length $n$ is an array consisting of $n$ distinct integers from $1$ to $n$ in arbitrary order. For example, $[2,3,1,5,4]$ is a permutation, but $[1,2,2]$ is not a permutation ($2$ appears twice in the array), and $[1,3,4]$ is also not a permutation ($n=3$ but there is $4$ in the array).\n\n# Input:\nEach test consists of multiple test cases. The first line contains a single integer $t$ ($1 \\leq t \\leq 10^{4}$) — the number of test cases. The description of the test cases follows.\n\nThe only line of each test case contains two integers $n$ and $k$ ($1 \\le n \\le 2 \\cdot 10^{5}, 0 \\le k \\le 10^{12}$) — the length of the permutation and the required Manhattan value.\n\nIt is guaranteed that the sum of $n$ over all test cases does not exceed $2 \\cdot 10^{5}$.\n\n# Output:\nFor each test case, if there is no suitable permutation, output \"No\". Otherwise, in the first line, output \"Yes\", and in the second line, output $n$ distinct integers $p_1, p_2, \\ldots, p_n$ ($1 \\le p_i \\le n$) — a suitable permutation.\n\nIf there are multiple solutions, output any of them.\n\nYou can output the answer in any case (for example, the strings \"yEs\", \"yes\", \"Yes\", and \"YES\" will be recognized as a positive answer).\n\n# Example input:\n8\n3 4\n4 5\n7 0\n1 1000000000000\n8 14\n112 777\n5 12\n5 2\n\n# Example output:\nYes\n3 1 2\nNo\nYes\n1 2 3 4 5 6 7\nNo\nYes\n8 2 3 4 5 6 1 7\nNo\nYes\n5 4 3 1 2\nYes\n2 1 3 4 5\n\n# Notes:\nIn the first test case, the permutation $[3, 1, 2]$ is suitable, its Manhattan value is $|3 - 1| + |1 - 2| + |2 - 3| = 2 + 1 + 1 = 4$.\n\nIn the second test case, it can be proven that there is no permutation of length $4$ with a Manhattan value of $5$.\n\nIn the third test case, the permutation $[1,2,3,4,5,6,7]$ is suitable, its Manhattan value is $|1-1|+|2-2|+|3-3|+|4-4|+|5-5|+|6-6|+|7-7|=0$.\n"
     },
-    "judge": "def __judge(n: int, k: int, result: str) -> bool:\n    lines = result.strip().split('\\n')\n    if lines[0].upper() == 'NO':\n        max_val = (n * n) // 2\n        return k > max_val or k % 2 != 0\n    if lines[0].upper() != 'YES' or len(lines) != 2:\n        return False\n    try:\n        perm = list(map(int, lines[1].split()))\n    except:\n        return False\n    if len(perm) != n:\n        return False\n    if sorted(perm) != list(range(1, n + 1)):\n        return False\n    manhattan = sum(abs(perm[i] - (i + 1)) for i in range(n))\n    return manhattan == k",
+    "judge": "def __judge(t: int, test_cases: list[tuple[int,int]], results: list[tuple[str,list[int]]]) -> bool:\n    for (n, k), result in zip(test_cases, results):\n        if isinstance(result, str) and result.upper() == 'NO':\n            max_val = (n * n) // 2\n            if not (k > max_val or k % 2 != 0):\n                return False\n            continue\n        if isinstance(result, str) or result[0].upper() != 'YES':\n            return False\n        perm = result[1]\n        if len(perm) != n:\n            return False\n        if sorted(perm) != list(range(1, n + 1)):\n            return False\n        manhattan = sum(abs(perm[i] - (i + 1)) for i in range(n))\n        if not( manhattan == k):\n            return False\n    return True\n",
     "tests": [
       {
         "type": "TestFunction",
-        "code": "def test_1():\n    assert __judge(3, 4, manhattan_permutations(3, 4))"
+        "code": "def test_1():\n    assert __judge(1, [(3, 4)], manhattan_permutations(1, [(3, 4)]))"
       },
       {
         "type": "TestFunction",
-        "code": "def test_2():\n    assert __judge(4, 5, manhattan_permutations(4, 5))"
+        "code": "def test_2():\n    assert __judge(1, [(4, 5)], manhattan_permutations(1, [(4, 5)]))"
       },
       {
         "type": "TestFunction",
-        "code": "def test_3():\n    assert __judge(7, 0, manhattan_permutations(7, 0))"
+        "code": "def test_3():\n    assert __judge(1, [(7, 0)], manhattan_permutations(1, [(7, 0)]))"
       },
       {
         "type": "TestFunction",
-        "code": "def test_4():\n    assert __judge(1, 1000000000000, manhattan_permutations(1, 1000000000000))"
+        "code": "def test_4():\n    assert __judge(1, [(1, 1000000000000)], manhattan_permutations(1, [(1, 1000000000000)]))"
       },
       {
         "type": "TestFunction",
-        "code": "def test_5():\n    assert __judge(8, 14, manhattan_permutations(8, 14))"
+        "code": "def test_5():\n    assert __judge(1, [(8, 14)], manhattan_permutations(1, [(8, 14)]))"
       },
       {
         "type": "TestFunction",
-        "code": "def test_6():\n    assert __judge(112, 777, manhattan_permutations(112, 777))"
+        "code": "def test_6():\n    assert __judge(1, [(112, 777)], manhattan_permutations(1, [(112, 777)]))"
       },
       {
         "type": "TestFunction",
-        "code": "def test_7():\n    assert __judge(5, 12, manhattan_permutations(5, 12))"
+        "code": "def test_7():\n    assert __judge(1, [(5, 12)], manhattan_permutations(1, [(5, 12)]))"
       },
       {
         "type": "TestFunction",
-        "code": "def test_8():\n    assert __judge(5, 2, manhattan_permutations(5, 2))"
+        "code": "def test_8():\n    assert __judge(1, [(5, 2)], manhattan_permutations(1, [(5, 2)]))"
       }
     ],
     "metadata": {
@@ -872,8 +872,8 @@
       "div": "Div. 2",
       "time_limit_ms": 2000,
       "memory_limit_mb": 256,
-      "correct_solution": "# submission: 337258409\n# status: accepted\n\nt=int(input())\nfor _ in range(t):\n    n,k=map(int,input().split())\n    a=[i for i in range(1,n+1)]\n    if k%2==1:\n        print(\"NO\")\n        continue\n    \n\n    i=1\n    j=n\n    temp=0\n    while temp<k and i<=j:\n        if temp==k:\n            break\n        if temp+2*(j-i)<=k:\n            a[i-1],a[j-1]=a[j-1],a[i-1]\n            temp+=(2*(j-i))\n            i+=1\n            j-=1\n            \n        else:\n            j-=1\n    if temp==k:\n        print(\"YES\")\n        print(*a)\n    else:\n        print(\"NO\")\n",
-      "incorrect_solution": "# submission: 341754597\n\n#  Test: #1, time: 77 ms., memory: 28 KB, exit code: 0, checker exit code: 1, verdict: WRONG_ANSWER\n# Input\n# 8\n# 3 4\n# 4 5\n# 7 0\n# 1 1000000000000\n# 8 14\n# 112 777\n# 5 12\n# 5 2\n# Output\n# Yes\n# 3 2 1\n# No\n# Yes\n# 1 2 3 4 5 6 7\n# No\n# Yes\n# 8 2 3 4 5 6 7 1\n# No\n# Yes\n# 5 3 2 1 4\n# Yes\n# 2 1 3 4 5\n# Answer\n# Yes\n# 3 2 1 \n# No\n# Yes\n# 1 2 3 4 5 6 7 \n# No\n# Yes\n# 8 2 3 4 5 6 7 1 \n# No\n# Yes\n# 5 4 3 2 1 \n# Yes\n# 2 1 3 4 5 \n# Checker Log\n# wrong answer Manhattan value isn't equal to k (test case 7)\n\n\n\nfor t in range(int(input())):\n    \n    line = input().split(\" \")\n    \n    size = int(line[0])\n    target = int(line[1])\n    \n    maxsum = 0\n    \n    for i in range(size):\n        maxsum += abs( size-i*2-1 )\n    \n    if target % 2 or target > maxsum:\n        print(\"No\")\n        continue\n    \n    else:\n        print(\"Yes\")\n    \n    array = []\n    \n    target = target>>1\n    \n    remaining = size\n    \n    while 1:\n        \n        currentmove = min(target,remaining-1)\n        target -= currentmove\n        \n        if target != 0:\n            array.append(remaining)\n            remaining -= 1\n        else:\n            subarray = [ (i+1) for i in range(remaining) ]\n            temp = subarray[0]\n            subarray[0] = subarray[currentmove]\n            subarray[currentmove] = temp\n            \n            array += subarray\n            break\n    \n    array = list( map( str, array) )\n    array = \" \".join(array)\n    \n    print(array)\n"
+      "correct_solution": "# submission: 337258409\n# status: accepted\n\ndef manhattan_permutations(t: int, test_cases: list[tuple[int,int]]) -> list[tuple[str,list[int]]]:\n    results = []\n    for test in test_cases:\n        n,k=test\n        a=[i for i in range(1,n+1)]\n        if k%2==1:\n            results.append(\"NO\")\n            continue\n        i=1\n        j=n\n        temp=0\n        while temp<k and i<=j:\n            if temp==k:\n                break\n            if temp+2*(j-i)<=k:\n                a[i-1],a[j-1]=a[j-1],a[i-1]\n                temp+=(2*(j-i))\n                i+=1\n                j-=1\n\n            else:\n                j-=1\n        if temp==k:\n            results.append((\"YES\", a))\n        else:\n            results.append(\"NO\")\n    return results\n",
+      "incorrect_solution": "# submission: 341754597\n\n#  Test: #1, time: 77 ms., memory: 28 KB, exit code: 0, checker exit code: 1, verdict: WRONG_ANSWER\n# Input\n# 8\n# 3 4\n# 4 5\n# 7 0\n# 1 1000000000000\n# 8 14\n# 112 777\n# 5 12\n# 5 2\n# Output\n# Yes\n# 3 2 1\n# No\n# Yes\n# 1 2 3 4 5 6 7\n# No\n# Yes\n# 8 2 3 4 5 6 7 1\n# No\n# Yes\n# 5 3 2 1 4\n# Yes\n# 2 1 3 4 5\n# Answer\n# Yes\n# 3 2 1 \n# No\n# Yes\n# 1 2 3 4 5 6 7 \n# No\n# Yes\n# 8 2 3 4 5 6 7 1 \n# No\n# Yes\n# 5 4 3 2 1 \n# Yes\n# 2 1 3 4 5 \n# Checker Log\n# wrong answer Manhattan value isn't equal to k (test case 7)\n\n\n\ndef manhattan_permutations(t: int, test_cases: list[tuple[int,int]]) -> list[tuple[str,list[int]]]:\n    results = []\n    for test in test_cases:\n\n        size, target = test\n        maxsum = 0\n\n        for i in range(size):\n            maxsum += abs( size-i*2-1 )\n\n        if target % 2 or target > maxsum:\n            results.append(\"No\")\n            continue\n\n        array = []\n\n        target = target>>1\n\n        remaining = size\n\n        while 1:\n\n            currentmove = min(target,remaining-1)\n            target -= currentmove\n\n            if target != 0:\n                array.append(remaining)\n                remaining -= 1\n            else:\n                subarray = [ (i+1) for i in range(remaining) ]\n                temp = subarray[0]\n                subarray[0] = subarray[currentmove]\n                subarray[currentmove] = temp\n\n                array += subarray\n                break\n\n        results.append((\"Yes\", array))\n\n    return results\n"
     }
   },
   {
