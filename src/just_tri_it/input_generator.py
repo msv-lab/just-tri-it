@@ -1,3 +1,4 @@
+import copy
 import sys
 import random
 from typing import List, Any
@@ -56,7 +57,45 @@ def fix_and_filter_bad_inputs(input_list: List[Any], sig: Signature):
     return filtered_input
 
 
-def generate_inputs(model, req: Requirements) -> List[Any]:
+def range_checker(executor, model, req, input_list):
+    checker_sig = copy.deepcopy(req.signature)
+    checker_sig.name = "is_valid_input"
+    checker_sig.return_type = "bool"
+    PROMPT = f""" Given a problem description, please write a simple function named
+'is_valid_input' with the signature below that checks two key points:
+1. Whether the problem's data is self-consistent - for example, if it mentions that three elements will be provided, then exactly three elements should follow.
+2. Whether the problem's data falls within the required range specified by the problem.
+Put the complete code inside a Markdown code block:
+```python
+```
+
+# **Function Signature**:
+{checker_sig.pretty_print()}
+
+# **Problem Description**:
+{req.description}
+
+    """
+    response = next(model.sample(PROMPT))
+    valid_checker = Program(checker_sig, extract_code(response))
+    filtered_input = []
+    for unchecked_input in input_list:
+        fined_input = unchecked_input
+        if not isinstance(fined_input, list):
+            fined_input = [fined_input]
+        elif len(fined_input) != len(req.signature.params) and len(req.signature.params) == 1:
+            fined_input = [fined_input]
+        check_outcome = executor.run(valid_checker, fined_input)
+        match check_outcome:
+            case Success(outcome):
+                if outcome:
+                    filtered_input.append(fined_input)
+            case _:
+                pass
+    return filtered_input
+
+
+def generate_inputs(model, req: Requirements, gen_large=False, executor=None) -> List[Any]:
     # Define three different types of prompts
     PROMPT_SMALL = f"""Given a problem description and the function
 signature, generate a comprehensive set of small-scale test cases to
@@ -111,14 +150,17 @@ Markdown code block:
 {req.description}
     """
 
-    def sample_and_extract_with_retry(prompt, used_model, num_retry=3):
+    def sample_and_extract_with_retry(prompt, used_model, num_retry=5):
         inputs = []
         for attempt in range(num_retry):
             try:
                 response = next(ind_model.sample(prompt, num_retry))
                 blocks = extract_all_code(response)
                 inputs = [eval(block.strip()) for block in blocks]
-                inputs = [i for i in inputs if not value_is_too_large(i, 10000, 20)]
+                if not gen_large:
+                    inputs = [i for i in inputs if not value_is_too_large(i, 10000, 20)]
+                if gen_large:
+                    inputs = range_checker(executor, model, req, inputs)
                 break
             except Exception as e:
                 if attempt == num_retry - 1:

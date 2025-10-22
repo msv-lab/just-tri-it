@@ -174,6 +174,131 @@ def check_type(data, type_str):
             if len(data) != 2:
                 return False
             return all(isinstance(item, int) for item in data)
+        case "list[tuple[int, list[int], list[int], list[int]]]":
+            if not isinstance(data, list):
+                return False
+            for item in data:
+                if not isinstance(item, tuple):
+                    return False
+                if len(item) != 4:
+                    return False
+                if not isinstance(item[0], int):
+                    return False
+                for i in range(1, 4):
+                    if not isinstance(item[i], list):
+                        return False
+                    if not all(isinstance(x, int) for x in item[i]):
+                        return False
+            return True
+        case "list[tuple[int, list[tuple[int, int]]]]":
+            if not isinstance(data, list):
+                return False
+            for item in data:
+                if not isinstance(item, tuple):
+                    return False
+                if len(item) != 2:
+                    return False
+                if not isinstance(item[0], int):
+                    return False
+                if not isinstance(item[1], list):
+                    return False
+                for sub_item in item[1]:
+                    if not isinstance(sub_item, tuple):
+                        return False
+                    if len(sub_item) != 2:
+                        return False
+                    if not all(isinstance(x, int) for x in sub_item):
+                        return False
+            return True
+        case "list[tuple[int, int, list[tuple[int, int]]]]":
+            if not isinstance(data, list):
+                return False
+            for item in data:
+                if not isinstance(item, tuple):
+                    return False
+                if len(item) != 3:
+                    return False
+                if not all(isinstance(x, int) for x in item[:2]):
+                    return False
+                if not isinstance(item[2], list):
+                    return False
+                for sub_item in item[2]:
+                    if not isinstance(sub_item, tuple):
+                        return False
+                    if len(sub_item) != 2:
+                        return False
+                    if not all(isinstance(x, int) for x in sub_item):
+                        return False
+            return True
+        case "list[tuple[int, list[int]]]":
+            if not isinstance(data, list):
+                return False
+            for item in data:
+                if not isinstance(item, tuple):
+                    return False
+                if len(item) != 2:
+                    return False
+                if not isinstance(item[0], int):
+                    return False
+                if not isinstance(item[1], list):
+                    return False
+                if not all(isinstance(x, int) for x in item[1]):
+                    return False
+            return True
+        case "list[tuple[int, int, str]]":
+            if not isinstance(data, list):
+                return False
+            for item in data:
+                if not isinstance(item, tuple):
+                    return False
+                if len(item) != 3:
+                    return False
+                if not isinstance(item[0], int):
+                    return False
+                if not isinstance(item[1], int):
+                    return False
+                if not isinstance(item[2], str):
+                    return False
+            return True
+        case "list[tuple[int, int, int, int, str]]":
+            if not isinstance(data, list):
+                return False
+            for item in data:
+                if not isinstance(item, tuple):
+                    return False
+                if len(item) != 5:
+                    return False
+                if not all(isinstance(x, int) for x in item[:4]):
+                    return False
+                if not isinstance(item[4], str):
+                    return False
+            return True
+        case "list[tuple[int, str]]":
+            if not isinstance(data, list):
+                return False
+            for item in data:
+                if not isinstance(item, tuple):
+                    return False
+                if len(item) != 2:
+                    return False
+                if not isinstance(item[0], int):
+                    return False
+                if not isinstance(item[1], str):
+                    return False
+            return True
+        case "list[tuple[str, str]]":
+            if not isinstance(data, list):
+                return False
+            for item in data:
+                if not isinstance(item, tuple):
+                    return False
+                if len(item) != 2:
+                    return False
+                if not isinstance(item[0], str):
+                    return False
+                if not isinstance(item[1], str):
+                    return False
+            return True
         case _:
             raise ValueError(f"unsupported type: {type_str}")
 
