@@ -11,6 +11,8 @@ from just_tri_it.triangulation import (
     make_syntactic,
     make_trivial_semantic
 )
+from just_tri_it.inversion import ParameterInversion
+
 
 import pytest
 
@@ -22,9 +24,9 @@ def checker():
     executor.shutdown()
 
 
-FWD_INV_0 = make_partial_fwd_inv(2, 0).hyperproperty
+FWD_INV_0 = make_partial_fwd_inv(2, ParameterInversion(0)).hyperproperty
 
-FWD_SINV_0 = make_partial_fwd_sinv(2, 0).hyperproperty
+FWD_SINV_0 = make_partial_fwd_sinv(2, ParameterInversion(0)).hyperproperty
 
 EQUIV = make_syntactic(2).hyperproperty
 

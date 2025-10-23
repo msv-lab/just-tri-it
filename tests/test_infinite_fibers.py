@@ -8,6 +8,8 @@ from just_tri_it.program import Program
 from just_tri_it.triangulation import (
     make_partial_fwd_sinv,
 )
+from just_tri_it.inversion import ParameterInversion
+
 
 import pytest
 
@@ -19,7 +21,7 @@ def checker():
     executor.shutdown()
 
 
-FWD_SINV = make_partial_fwd_sinv(1, 0).hyperproperty
+FWD_SINV = make_partial_fwd_sinv(1, ParameterInversion(0)).hyperproperty
 
 
 def check(checker, p, q, inputs, prop):

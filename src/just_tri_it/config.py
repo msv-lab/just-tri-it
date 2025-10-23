@@ -2,9 +2,9 @@ from just_tri_it.executor import Executor
 from just_tri_it.plurality import Plurality
 from just_tri_it.test_agreement import TestAgreement
 from just_tri_it.selection import MaxWitness, Ransac
+from just_tri_it.inversion import choose_inversion_scheme
 from just_tri_it.triangulation import (
     Triangulator,
-    choose_parameter_to_invert,
     make_partial_fwd_sinv,
     make_partial_fwd_inv,
     make_syntactic,
@@ -74,7 +74,7 @@ def init_selectors(executor: Executor, code_generator: Generator, model: Model):
                     Ransac(Triangulator(executor,
                                         code_generator,
                                         make_partial_fwd_inv(len(t.requirements.signature.params),
-                                                             choose_parameter_to_invert(model, t.requirements)),
+                                                             choose_inversion_scheme(model, t.requirements)),
                                         NUM_LEFT_SAMPLES,
                                         NUM_RIGHT_SAMPLES))),
         
@@ -82,7 +82,7 @@ def init_selectors(executor: Executor, code_generator: Generator, model: Model):
                      Ransac(Triangulator(executor,
                                          code_generator,
                                          make_partial_fwd_sinv(len(t.requirements.signature.params),
-                                                               choose_parameter_to_invert(model, t.requirements)),
+                                                               choose_inversion_scheme(model, t.requirements)),
                                          NUM_LEFT_SAMPLES,
                                          NUM_RIGHT_SAMPLES,
                                          gen_left_time_predicates=True)))

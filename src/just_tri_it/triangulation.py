@@ -6,6 +6,7 @@ from typing import Tuple
 from functools import partial
 
 from just_tri_it.executor import Executor
+from just_tri_it.inversion import ParameterInversion, ListSuffixInversion
 from just_tri_it.cached_llm import Model, Independent
 from just_tri_it.code_generator import Generator
 from just_tri_it.selection import Agreement, AgreementOutcome
@@ -156,47 +157,6 @@ class TrivialSemantic(Transformation):
                 # troublesome to support more complex types
                 raise ExperimentFailure()
         return Requirements(req.signature, req.description + "\n" + add_sentence)
-
-
-def choose_parameter_to_invert(model: Model, req: Requirements) -> int:
-    if len(req.signature.params) == 1:
-        return 0
-    else:
-        PROMPT = f"""
-The problem below is solved using a function with the signature:
-
-{req.signature.pretty_print()}
-
-Choose a single input parameter of the function to be replaced by
-its output, thereby formulating an inverse problem. Determine which
-parameter, when inverted, would yield the most natural or well-posed
-inverse formulation. Exclude parameters whose values can be readily
-deduced from other inputs.
-
-Output only the full name of this parameter (not its type) enclosed
-within `<answer>` and `</answer>` tags.
-
-Problem:
-{req.description}
-        """
-        ind_model = Independent(model)
-        return_param = None
-        tried_samples = []
-        for attempt in range(3):
-            try:
-                sample = next(ind_model.sample(PROMPT, 3))
-                tried_samples.append(sample)
-                valid_name = extract_answer(sample)
-                valid_name = valid_name.strip() if valid_name else None
-                if valid_name:
-                    return_param = [p.name for p in req.signature.params].index(valid_name)
-                    break
-                else:
-                    continue
-            except Exception as e:
-                if attempt == 2:
-                    raise ExperimentFailure(f"retry failed with {type(e).__name__}: {e}")
-        return return_param
 
 
 @dataclass
@@ -417,45 +377,48 @@ def make_postcondition(arity):
     )
 
 
-def make_partial_fwd_inv(arity, inverse_index):
+def make_partial_fwd_inv(arity, inversion_scheme):
+    assert isinstance(inversion_scheme, ParameterInversion)
     args = [Var(f"i_{i}") for i in range(arity)]
-    inv_arg = Var(f"i_{inverse_index}")
-    remaining_args = args[:inverse_index] + args[inverse_index + 1:]
+    inv_arg = Var(f"i_{inversion_scheme.index}")
+    remaining_args = args[:inversion_scheme.index] + args[inversion_scheme.index + 1:]
     p = Func(Side.LEFT)
     q = Func(Side.RIGHT)
     
     return Triangulation(
         "fwd-inv",
         Identity(),
-        PartialInverse(inverse_index),
+        PartialInverse(inversion_scheme.index),
         ForAll(args, Side.LEFT, Equals([inv_arg, q([TolerateInvalid([p(args)])] + remaining_args)]))
     )
 
 
-def make_partial_fwd_sinv(arity, inverse_index):
+def make_partial_fwd_sinv(arity, inversion_scheme):
+    assert isinstance(inversion_scheme, ParameterInversion)
     args = [Var(f"i_{i}") for i in range(arity)]
-    inv_arg = Var(f"i_{inverse_index}")
+    inv_arg = Var(f"i_{inversion_scheme.index}")
     arg_prime = Var(f"i_prime")
-    remaining_args = args[:inverse_index] + args[inverse_index + 1:]
-    args_with_prime = args[:inverse_index] + [arg_prime] + args[inverse_index+1:]
+    remaining_args = args[:inversion_scheme.index] + args[inversion_scheme.index + 1:]
+    args_with_prime = args[:inversion_scheme.index] + [arg_prime] + args[inversion_scheme.index+1:]
     p = Func(Side.LEFT)
     q = Func(Side.RIGHT)
 
     return Triangulation(
         "fwd-sinv",
         Identity(),
-        PartialSetValuedInverse(inverse_index),
+        PartialSetValuedInverse(inversion_scheme.index),
         ForAll(args, Side.LEFT,
                And(Member([inv_arg, FullOrPartial([q([TolerateInvalid([p(args)])] + remaining_args)])]),
                    ForAll(arg_prime, FullOrPartial([q([TolerateInvalid([p(args)])] + remaining_args)]),
                           Equals([p(args), TimeoutGuard(p)(args_with_prime)])))))
 
 
-def make_partial_enum_sinv(arity, inverse_index):
+def make_partial_enum_sinv(arity, inversion_scheme):
+    assert isinstance(inversion_scheme, ParameterInversion)   
     left_args = [Var(f"i_{i}") for i in range(arity)]
-    inv_arg = Var(f"i_{inverse_index}")
+    inv_arg = Var(f"i_{inversion_scheme.index}")
     out = Var(f"o")
-    right_args = [out] + left_args[:inverse_index] + left_args[inverse_index + 1:]
+    right_args = [out] + left_args[:inversion_scheme.index] + left_args[inversion_scheme.index + 1:]
     
     p = Func(Side.LEFT)
     q = Func(Side.RIGHT)
@@ -463,7 +426,7 @@ def make_partial_enum_sinv(arity, inverse_index):
     return Triangulation(
         "enum-sinv",
         AnswerEnumeration(),
-        PartialSetValuedInverse(inverse_index),
+        PartialSetValuedInverse(inversion_scheme.index),
         And(ForAll(left_args, Side.LEFT,
                    ForAll(out, TolerateInvalid([p(left_args)]),
                           Member([inv_arg, TimeoutGuard(q)(right_args)]))),

@@ -8,6 +8,7 @@ from just_tri_it.program import Program
 from just_tri_it.triangulation import (
     make_partial_enum_sinv
 )
+from just_tri_it.inversion import ParameterInversion
 
 import pytest
 
@@ -19,7 +20,7 @@ def checker():
     executor.shutdown()
 
 
-ENUM_SINV_0 = make_partial_enum_sinv(1, 0).hyperproperty
+ENUM_SINV_0 = make_partial_enum_sinv(1, ParameterInversion(0)).hyperproperty
 
 
 INPUTS = [
