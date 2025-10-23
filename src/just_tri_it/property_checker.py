@@ -10,8 +10,8 @@ from just_tri_it.logic import (
     Side,
     Term, Var, Map,
     Formula, App, Not, And, Or, Implies, Iff, ForAll,
-    Func, Equals, SetEquals, OffByOne, Member, Tolerate,
-    SpecialValue, Angelic, Demonic, Undefined, SIDE_MAPPING
+    Func, Equals, SetEquals, OffByOne, Member, TolerateInvalid,
+    SpecialValue, Angelic, Demonic, Undefined
 )
 
 

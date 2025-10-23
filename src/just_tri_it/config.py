@@ -84,5 +84,6 @@ def init_selectors(executor: Executor, code_generator: Generator, model: Model):
                                          make_partial_fwd_sinv(len(t.requirements.signature.params),
                                                                choose_parameter_to_invert(model, t.requirements)),
                                          NUM_LEFT_SAMPLES,
-                                         NUM_RIGHT_SAMPLES)))
+                                         NUM_RIGHT_SAMPLES,
+                                         gen_left_time_predicates=True)))
     }

@@ -13,9 +13,6 @@ class Side(Enum):
     RIGHT = "right"
 
 
-SIDE_MAPPING = {Side.LEFT: "left_pre", Side.RIGHT: "right_pre"}
-
-
 def recursive_str(obj):
     """Recursively converts any object into a single concatenated string."""
     if isinstance(obj, dict):
@@ -354,7 +351,7 @@ def _member_func(x, y):
 Member = Func(_member_func, "∈")
 
 
-def _tolerate(origin):
+def _tolerate_invalid(origin):
     """
     this function only transforms Undefined to Angelic
     """
@@ -369,4 +366,4 @@ def _tolerate(origin):
     return transformed
 
 
-Tolerate = Func(_tolerate, "tolerate")
+TolerateInvalid = Func(_tolerate_invalid, "tolerate_invalid")

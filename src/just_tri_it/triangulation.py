@@ -11,7 +11,7 @@ from just_tri_it.code_generator import Generator
 from just_tri_it.selection import Agreement, AgreementOutcome
 from just_tri_it.input_generator import generate_inputs
 from just_tri_it.logic import (
-    Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, Tolerate
+    Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, TolerateInvalid
 )
 from just_tri_it.program import Requirements, NamedReturnSignature, Signature, Parameter
 from just_tri_it.utils import (
@@ -28,12 +28,16 @@ class Triangulator(Agreement):
                  code_generator: Generator,
                  triangulation: 'Triangulation',
                  num_left_programs: int,
-                 num_right_programs: int):
+                 num_right_programs: int,
+                 gen_left_time_predicates: bool = False,
+                 gen_right_time_predicates: bool = False):
         self.checker = Interpreter(executor)
         self.code_generator = code_generator
         self.triangulation = triangulation
         self.num_left_programs = num_left_programs
         self.num_right_programs = num_right_programs
+        self.gen_left_time_predicates = gen_left_time_predicates
+        self.gen_right_time_predicates = gen_right_time_predicates
 
     def compute_witnesses(self, model: Model, req: Requirements) -> Tuple[AgreementOutcome, RawData]:
         """Schema:
@@ -52,13 +56,15 @@ class Triangulator(Agreement):
         left_inputs = generate_inputs(model, transformed_left)
         left_programs = self.code_generator.generate(model, transformed_left, self.num_left_programs)
         left_programs = list(islice(left_programs, self.num_left_programs))
-        left_programs = list(map(partial(gen_time_predicate, model, transformed_left), left_programs))
+        if self.gen_left_time_predicates:
+            left_programs = list(map(partial(gen_time_predicate, model, transformed_left), left_programs))
 
         transformed_right = self.triangulation.right_trans.transform(model, req)
         right_inputs = generate_inputs(model, transformed_right)        
         right_programs = self.code_generator.generate(model, transformed_right, self.num_right_programs)
         right_programs = list(islice(right_programs, self.num_right_programs))
-        right_programs = list(map(partial(gen_time_predicate, model, transformed_right), right_programs))
+        if self.gen_right_time_predicates:
+            right_programs = list(map(partial(gen_time_predicate, model, transformed_right), right_programs))
 
         programs_and_witnesses = []
 
@@ -405,7 +411,7 @@ def make_postcondition(arity):
         "post",
         Identity(),
         Postcondition(),
-        ForAll(args, Side.LEFT, Tolerate([q(args + [p(args)])]))
+        ForAll(args, Side.LEFT, TolerateInvalid([q(args + [p(args)])]))
     )
 
 
@@ -420,7 +426,7 @@ def make_partial_fwd_inv(arity, inverse_index):
         "fwd-inv",
         Identity(),
         PartialInverse(inverse_index),
-        ForAll(args, Side.LEFT, Equals([inv_arg, q([Tolerate([p(args)])] + remaining_args)]))
+        ForAll(args, Side.LEFT, Equals([inv_arg, q([TolerateInvalid([p(args)])] + remaining_args)]))
     )
 
 
@@ -439,8 +445,8 @@ def make_partial_fwd_sinv(arity, inverse_index):
         Identity(),
         PartialSetValuedInverse(inverse_index),
         ForAll(args, Side.LEFT,
-               And(Member([inv_arg, q([Tolerate([p(args)])] + remaining_args)]),
-                   ForAll(arg_prime, q([Tolerate([p(args)])] + remaining_args),
+               And(Member([inv_arg, q([TolerateInvalid([p(args)])] + remaining_args)]),
+                   ForAll(arg_prime, q([TolerateInvalid([p(args)])] + remaining_args),
                           Equals([p(args), p(ReplaceInv([args, arg_prime]))])))))
 
 
@@ -458,8 +464,8 @@ def make_partial_enum_sinv(arity, inverse_index):
         AnswerEnumeration(),
         PartialSetValuedInverse(inverse_index),
         And(ForAll(left_args, Side.LEFT,
-                   ForAll(out, Tolerate([p(left_args)]),
+                   ForAll(out, TolerateInvalid([p(left_args)]),
                           Member([inv_arg, q(right_args)]))),
             ForAll(right_args, Side.RIGHT,
-                   ForAll(inv_arg, Tolerate([q(right_args)]),
+                   ForAll(inv_arg, TolerateInvalid([q(right_args)]),
                           Member([out, p(left_args)])))))
