@@ -89,15 +89,33 @@ class Func:
         else:
             return self.display
 
+    def display_id(self):
+        return self.display
+
+
+@dataclass
+class FuncWithTimeoutGuard:
+    inner: Func
+
+    def __call__(self, args: List['Term']) -> 'App':
+        return App(func=self, args=args)    
+
+    def __str__(self):
+        return f"{self.inner}_with_timeout_guard"
+
+    def display_id(self):
+        return f"{self.inner.display_id()}%"
+    
+
 @dataclass
 class App:
-    func: Func
+    func: Func | FuncWithTimeoutGuard
     args: 'Term'
 
     def __str__(self):
         if isinstance(self.args, list):
-            if len(self.func.display) <= 2 and len(self.args) == 2:
-                return f"({recursive_str(self.args[0])} {self.func.display} {recursive_str(self.args[1])})"
+            if len(self.func.display_id()) <= 2 and len(self.args) == 2:
+                return f"({recursive_str(self.args[0])} {self.func.display_id()} {recursive_str(self.args[1])})"
             else:
                 args_str = ", ".join(map(recursive_str, self.args))
                 return f"{self.func}({args_str})"
@@ -107,7 +125,7 @@ class App:
 
 @dataclass
 class Map:
-    func: Func
+    func: Func | FuncWithTimeoutGuard
     args: 'Term'
 
     def __str__(self):
@@ -367,3 +385,8 @@ def _tolerate_invalid(origin):
 
 
 TolerateInvalid = Func(_tolerate_invalid, "tolerate_invalid")
+
+
+def TimeoutGuard(f: Func):
+    assert isinstance(f, Func)
+    return FuncWithTimeoutGuard(f)

@@ -11,7 +11,7 @@ from just_tri_it.code_generator import Generator
 from just_tri_it.selection import Agreement, AgreementOutcome
 from just_tri_it.input_generator import generate_inputs
 from just_tri_it.logic import (
-    Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, TolerateInvalid
+    Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, TolerateInvalid, TimeoutGuard
 )
 from just_tri_it.program import Requirements, NamedReturnSignature, Signature, Parameter
 from just_tri_it.utils import (
@@ -435,10 +435,9 @@ def make_partial_fwd_sinv(arity, inverse_index):
     inv_arg = Var(f"i_{inverse_index}")
     arg_prime = Var(f"i_prime")
     remaining_args = args[:inverse_index] + args[inverse_index + 1:]
+    args_with_prime = args[:inverse_index] + [arg_prime] + args[inverse_index+1:]
     p = Func(Side.LEFT)
     q = Func(Side.RIGHT)
-
-    ReplaceInv = Func(lambda a, v: a[:inverse_index] + [v] + a[inverse_index+1:], "replace_inv")
 
     return Triangulation(
         "fwd-sinv",
@@ -447,7 +446,7 @@ def make_partial_fwd_sinv(arity, inverse_index):
         ForAll(args, Side.LEFT,
                And(Member([inv_arg, q([TolerateInvalid([p(args)])] + remaining_args)]),
                    ForAll(arg_prime, q([TolerateInvalid([p(args)])] + remaining_args),
-                          Equals([p(args), p(ReplaceInv([args, arg_prime]))])))))
+                          Equals([p(args), TimeoutGuard(p)(args_with_prime)])))))
 
 
 def make_partial_enum_sinv(arity, inverse_index):
@@ -465,7 +464,7 @@ def make_partial_enum_sinv(arity, inverse_index):
         PartialSetValuedInverse(inverse_index),
         And(ForAll(left_args, Side.LEFT,
                    ForAll(out, TolerateInvalid([p(left_args)]),
-                          Member([inv_arg, q(right_args)]))),
+                          Member([inv_arg, TimeoutGuard(q)(right_args)]))),
             ForAll(right_args, Side.RIGHT,
                    ForAll(inv_arg, TolerateInvalid([q(right_args)]),
-                          Member([out, p(left_args)])))))
+                          Member([out, TimeoutGuard(p)(left_args)])))))

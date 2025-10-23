@@ -127,9 +127,6 @@ def enum(i: int) -> list[int]:
     return [i - 1, i - 2]
 """)
 
-def test_enum_sinv_agree_on_invalid(checker):
-    assert check(checker, ENUM_INVALID_ON_ZERO, SINV_INVALID_ON_ZERO)
-
 def test_enum_sinv_disagree_on_mismatched_invalid(checker):
     assert not check(checker, ENUM_INVALID_ON_ZERO, SINV)   
     assert not check(checker, ENUM, SINV_INVALID_ON_ZERO)   

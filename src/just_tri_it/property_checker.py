@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any
 from functools import partial
 import copy
+import random
 
 from just_tri_it.executor import Success, Error, Timeout
 from just_tri_it.executor import Executor, EXECUTION_TIMEOUT_SECONDS
@@ -11,7 +12,8 @@ from just_tri_it.logic import (
     Term, Var, Map,
     Formula, App, Not, And, Or, Implies, Iff, ForAll,
     Func, Equals, SetEquals, OffByOne, Member, TolerateInvalid,
-    SpecialValue, Angelic, Demonic, Undefined
+    SpecialValue, Angelic, Demonic, Undefined,
+    FuncWithTimeoutGuard
 )
 
 
@@ -27,6 +29,8 @@ class Checker(ABC):
 
 INTERPRETER_CHECKER_CALL_BUDGET_PER_INPUT = 500
 
+INTERPRETER_CHECKER_MAX_FORALL_DOMAIN = 50
+
 
 class CallBudgetExceeded(Exception):
     "Raised when make too many program calls"
@@ -38,7 +42,7 @@ class Interpreter(Checker):
     def __init__(self, executor: Executor):
         self.executor = executor
 
-    def _predicated_to_exceed_timeout(self, program, unchecked_input: list):
+    def _predicted_to_exceed_timeout(self, program, unchecked_input: list):
         i = copy.deepcopy(unchecked_input)
         i.append(EXECUTION_TIMEOUT_SECONDS)
         execution_outcome = self.executor.run(program.time_predicate, i)
@@ -53,7 +57,9 @@ class Interpreter(Checker):
     def _eval_list(self, env, programs, terms):
         return list(map(partial(self._eval_term, env, programs), terms))
 
-    def _eval_app(self, env, programs, func, args):
+    def _eval_app(self, env, programs, func, args, timeout_guard=False):
+        if isinstance(func, FuncWithTimeoutGuard):
+            return self._eval_app(env, programs, func.inner, args, timeout_guard=True)
         computed_args = self._eval_term(env, programs, args)
         if not isinstance(computed_args, list):
             computed_args = [Demonic()]
@@ -63,6 +69,9 @@ class Interpreter(Checker):
                 return SpecialValue.strongest(special)
             if self.available_call_budget <= 0:
                 raise CallBudgetExceeded()
+            if timeout_guard and programs[func.semantics].time_predicate is not None:
+                if self._predicted_to_exceed_timeout(programs[func.semantics], computed_args):
+                    return Angelic() # this is because fibers can contain values outside of the problem range
             execution_outcome = self.executor.run(programs[func.semantics], computed_args)
             self.available_call_budget -= 1
             match execution_outcome:
@@ -114,10 +123,17 @@ class Interpreter(Checker):
                     computed_domain = inputs[domain]
                 else:
                     computed_domain = self._eval_term(env, programs, domain)
+                    if isinstance(computed_domain, Angelic):
+                        return True
+                    if isinstance(computed_domain, Demonic) or isinstance(computed_domain, Undefined):
+                        return False
                     if not isinstance(computed_domain, list):
                         computed_domain = [Demonic()]
                 if len(computed_domain) == 0:
                     return True # not sure about it, but alternatives seem worse
+                if len(computed_domain) > INTERPRETER_CHECKER_MAX_FORALL_DOMAIN:
+                    random.seed(42) # each sample should be independent
+                    computed_domain = list(random.sample(computed_domain, INTERPRETER_CHECKER_MAX_FORALL_DOMAIN))
                 for inp in computed_domain:
                     new_env = env.copy()
                     if isinstance(ele, Var):
