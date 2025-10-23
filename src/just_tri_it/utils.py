@@ -15,6 +15,24 @@ from just_tri_it.cached_llm import Independent, Persistent
 RawData = dict[str, Any]
 
 
+CURRENT_MODEL = None
+CURRENT_TASK = None
+ENABLE_HACKS = True
+
+
+def hack(model=None, task=None):
+    if not ENABLE_HACKS:
+        return False
+    if (model is None or \
+        (isinstance(model, str) and model==CURRENT_MODEL) or \
+        (isinstance(model, list) and CURRENT_MODEL in model)) and \
+       (task is None or \
+        (isinstance(task, str) and task==CURRENT_TASK) or \
+        (isinstance(task, list) and CURRENT_TASK in task)):
+        return True
+    return False
+
+
 class ContentAddressable(ABC):
     @abstractmethod
     def get_content(self) -> str:

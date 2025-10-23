@@ -19,6 +19,7 @@ from just_tri_it.utils import (
     print_legend,
     init_random
 )
+import just_tri_it.utils
 from just_tri_it.config import init_selectors, NUM_LEFT_SAMPLES
 from just_tri_it.code_generator import Vanilla
 from just_tri_it.selection import Selected, Abstained
@@ -46,6 +47,11 @@ def parse_args():
     )
     parser.add_argument(
         "--task",
+        type=str,
+        help="task ID to run (all by default)."
+    )
+    parser.add_argument(
+        "--only",
         type=str,
         help="task ID to run (all by default)."
     )
@@ -128,8 +134,14 @@ def main():
     init_random()
     
     args = parse_args()
+
+    model = {
+        "gpt-4o": AI302("gpt-4o", 1.0, max_batch=NUM_LEFT_SAMPLES),
+        "deepseek-v3": AI302("deepseek-v3.1", 1.0, alias="deepseek-v3"),
+        "gemini-2.5-flash": AI302("gemini-2.5-flash", 1.0)
+    }[args.model]
+    just_tri_it.utils.CURRENT_MODEL = args.model
     
-    model = AI302(args.model, 1.0, max_batch=NUM_LEFT_SAMPLES)
     # model = XMCP(args.model, 1.0)
 
     model = setup_cache(model, args)
@@ -160,6 +172,9 @@ def main():
         dataset = [list(load_dataset(file_path))[0]]
     else:
         dataset = load_dataset(Path(args.dataset))
+
+    if args.only:
+        dataset = [task for task in dataset if task.id == args.only]
 
     execute_experiment(model, executor, dataset, database, data_dir)
 
@@ -194,6 +209,7 @@ def execute_experiment(model, executor, dataset, db, data_dir):
     for index, task in enumerate(dataset):
         if task.id in map(lambda o: o["task_id"], db.objects):
             continue
+        just_tri_it.utils.CURRENT_TASK = task.id
 
         obj = {
             "task_id": task.id,

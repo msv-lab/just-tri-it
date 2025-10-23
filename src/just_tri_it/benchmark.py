@@ -7,6 +7,7 @@ from just_tri_it.dataset import load_dataset
 from just_tri_it.code_generator import Vanilla
 from just_tri_it.selection import Selected, Abstained
 from just_tri_it.utils import print_annotated_hr, add_cache_options, setup_cache, print_legend, init_random
+import just_tri_it.utils
 from just_tri_it.config import init_selectors
 from just_tri_it.program import Program
 
@@ -53,6 +54,7 @@ def evaluate_selector(model, executor, selector, dataset):
     for task in dataset:
         print()
         print_annotated_hr(f"Task {task.id}")
+        just_tri_it.utils.CURRENT_TASK = task.id
         if callable(selector):
             s = selector(task)
         else:
@@ -67,13 +69,19 @@ def evaluate_selector(model, executor, selector, dataset):
             case Abstained():
                 print("\nABSTAINED")
 
-def main():
+def main():    
     init_random()
     
     args = parse_args()
     
-    model = AI302(args.model, 1.0, max_batch=50)
+    model = {
+        "gpt-4o": AI302("gpt-4o", 1.0, max_batch=50),
+        "deepseek-v3": AI302("deepseek-v3.1", 1.0, alias="deepseek-v3"),
+        "gemini-2.5-flash": AI302("gemini-2.5-flash", 1.0)
+    }[args.model]
     # model = XMCP(args.model, 1.0)
+
+    just_tri_it.utils.CURRENT_MODEL=args.model
 
     model = setup_cache(model, args)
     if args.test_venv:

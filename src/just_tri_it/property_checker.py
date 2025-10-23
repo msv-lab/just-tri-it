@@ -16,6 +16,7 @@ from just_tri_it.logic import (
     FuncWithTimeoutGuard,
     FullAnswer, PartialAnswer
 )
+from just_tri_it.utils import hack
 
 
 class Checker(ABC):

@@ -64,7 +64,7 @@ Then, to collect experimental results and save (append) into `data_dir`, execute
 
     uv run experiment  --dataset datasets/lcb_part6.json --model gpt-4o --data data_dir
 
-Optionally, you can specify the list of tasks to run via the option `--task-list datasets/lcb_top30.txt`.
+You can specify a specific task to run via the option `--only atcoder_abc387_b`.
 
 Then, to compute measures and generate plots, execute
 
