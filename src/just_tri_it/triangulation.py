@@ -11,7 +11,7 @@ from just_tri_it.code_generator import Generator
 from just_tri_it.selection import Agreement, AgreementOutcome
 from just_tri_it.input_generator import generate_inputs
 from just_tri_it.logic import (
-    Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, TolerateInvalid, TimeoutGuard
+    Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, TolerateInvalid, TimeoutGuard, FullOrPartial
 )
 from just_tri_it.program import Requirements, NamedReturnSignature, Signature, Parameter
 from just_tri_it.utils import (
@@ -325,7 +325,7 @@ class PartialSetValuedInverse(Transformation):
                          model: Model,
                          sig: NamedReturnSignature,
                          inverse_index: int) -> Signature:
-        new_return_type = "list[" + sig.params[inverse_index].type + "]"
+        new_return_type = "tuple[bool,list[" + sig.params[inverse_index].type + "]]"
         new_params = [Parameter(sig.return_name, sig.return_type)]
         new_params.extend(p for i, p in enumerate(sig.params) if i != inverse_index)
         new_func_name = "sinv_" + sig.name + "_wrt_" + sig.params[inverse_index].name
@@ -346,13 +346,15 @@ Rewrite this problem so that it instead requires implementing the set-valued inv
 
 {sinv_sig.pretty_print()}
 
-Given the desired output value `{sinv_sig.params[0].name}` (corresponding to the original function's return value), the new function should return a exhaustive list of values for the parameter `{req.signature.params[inverse_index].name}` such that if the original function were called with any of these values (and the other parameters unchanged), it would produce `{sinv_sig.params[0].name}` as the result.
+Given the desired output value `{sinv_sig.params[0].name}` (corresponding to the original function's return value), the new function should return a list of values for the parameter `{req.signature.params[inverse_index].name}` such that if the original function were called with any of these values (and the other parameters unchanged), it would produce `{sinv_sig.params[0].name}` as the result.
+
+The function should return a tuple: (is_exhaustive_list, list_of_values). When it is feasible to enumerate all such values, return the complete list and set is_exhaustive_list to True. If a complete enumeration is impossible (e.g., the set is infinite or prohibitively large), return a representative subset and set is_exhaustive_list to False.
 
 Important points to follow:
 1. Preserve all constraints, domain assumptions, and rules from the original problem.
 2. Clearly explain that the output must include all possible values.
 3. Specify explicitly that if no such values exist, the function should return an empty list.
-4. Update any example test cases so they show returning a exhaustive lists of solutions.
+4. Update any example test cases so they show returning a full or a partial answer.
 
 Enclose the rewritten problem description inside `<answer>` and `</answer>` tags.
 
@@ -444,8 +446,8 @@ def make_partial_fwd_sinv(arity, inverse_index):
         Identity(),
         PartialSetValuedInverse(inverse_index),
         ForAll(args, Side.LEFT,
-               And(Member([inv_arg, q([TolerateInvalid([p(args)])] + remaining_args)]),
-                   ForAll(arg_prime, q([TolerateInvalid([p(args)])] + remaining_args),
+               And(Member([inv_arg, FullOrPartial([q([TolerateInvalid([p(args)])] + remaining_args)])]),
+                   ForAll(arg_prime, FullOrPartial([q([TolerateInvalid([p(args)])] + remaining_args)]),
                           Equals([p(args), TimeoutGuard(p)(args_with_prime)])))))
 
 

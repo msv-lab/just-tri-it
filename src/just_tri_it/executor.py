@@ -95,8 +95,6 @@ class Executor(ABC):
         pass
 
     def run_test(self, p: Program, t: Test, add_lcb_imports=True) -> TestOutcome:
-        if add_lcb_imports:
-            p = p.add_imports(LIVECODEBENCH_IMPORTS)
         match t:
             case InputOutput(inputs, expected):
                 execution_outcome = self.run(p, inputs)

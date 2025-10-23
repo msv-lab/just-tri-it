@@ -13,7 +13,8 @@ from just_tri_it.logic import (
     Formula, App, Not, And, Or, Implies, Iff, ForAll,
     Func, Equals, SetEquals, OffByOne, Member, TolerateInvalid,
     SpecialValue, Angelic, Demonic, Undefined,
-    FuncWithTimeoutGuard
+    FuncWithTimeoutGuard,
+    FullAnswer, PartialAnswer
 )
 
 
@@ -123,6 +124,8 @@ class Interpreter(Checker):
                     computed_domain = inputs[domain]
                 else:
                     computed_domain = self._eval_term(env, programs, domain)
+                    if isinstance(computed_domain, FullAnswer) or isinstance(computed_domain, PartialAnswer):
+                        computed_domain = computed_domain.values
                     if isinstance(computed_domain, Angelic):
                         return True
                     if isinstance(computed_domain, Demonic) or isinstance(computed_domain, Undefined):
@@ -144,12 +147,12 @@ class Interpreter(Checker):
                     result = self._is_formula_true(new_env, inputs, programs, body)
                     if isinstance(result, SpecialValue):
                         if SpecialValue.as_bool(result) is False:
-                            print(f"\n{formula} err on {new_env}", file=sys.stderr, flush=True)
+                            print(f"\n{formula} failed with {result} on {new_env}, left program: {programs[Side.LEFT].display_id()}, right program: {programs[Side.RIGHT].display_id()}", file=sys.stderr, flush=True)
                             return False
                         else:
                             num_angelic += 1
                     elif result is False:
-                        print(f"\n{formula} failed on {new_env}", file=sys.stderr, flush=True)
+                        print(f"\n{formula} failed on {new_env}, left program: {programs[Side.LEFT].display_id()}, right program: {programs[Side.RIGHT].display_id()}", file=sys.stderr, flush=True)
                         return False
                 if (num_angelic / len(computed_domain)) >= 0.34:
                     print(f"\n{formula} failed due excessive angelic values", file=sys.stderr, flush=True)

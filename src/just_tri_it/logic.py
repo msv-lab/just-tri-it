@@ -3,14 +3,26 @@ import math
 import numbers
 from dataclasses import dataclass
 from enum import Enum
-from typing import Union, Set, Dict, List, Callable, Any
+from typing import Union, Set, Dict, List, Callable, Any, TypeVar, Generic
 from copy import deepcopy
+
 from just_tri_it.utils import ExperimentFailure
 
 
 class Side(Enum):
     LEFT = "left"
     RIGHT = "right"
+
+
+T = TypeVar('T')
+
+@dataclass(frozen=True)
+class FullAnswer(Generic[T]):
+    values: List[T]
+
+@dataclass(frozen=True)
+class PartialAnswer(Generic[T]):
+    values: List[T]
 
 
 def recursive_str(obj):
@@ -222,14 +234,15 @@ class SpecialValue:
         raise ValueError("no special value found")
 
 
+@dataclass
 class Angelic(SpecialValue):
     pass
 
-
+@dataclass
 class Demonic(SpecialValue):
     pass
 
-
+@dataclass
 class Undefined(SpecialValue):
     pass
 
@@ -344,6 +357,28 @@ SetEquals = Func(_set_equals_func, "=")
 
 def _member_func(x, y):
     """Check membership, using math.isclose for floats."""
+    def in_list(x, y):
+        for item in y:
+            if isinstance(x, float) and isinstance(item, float):
+                if math.isclose(x, item):
+                    return True
+            elif x == item:
+                return True
+        return False    
+
+    if isinstance(y, FullAnswer) and not isinstance(x, SpecialValue):
+        return in_list(x, y.values)
+
+    if isinstance(y, PartialAnswer) and not isinstance(x, SpecialValue):
+        if in_list(x, y.values):
+            return True
+        else:
+            return Angelic()
+
+    if (isinstance(y, PartialAnswer) or isinstance(y, FullAnswer)) and \
+       isinstance(x, Angelic):
+        return True
+   
     if isinstance(x, Undefined) and isinstance(y, Undefined):
         return True
     if isinstance(y, SpecialValue):
@@ -357,13 +392,7 @@ def _member_func(x, y):
     if SpecialValue.in_list([x] + y):
         return SpecialValue.strongest([x] + y)
 
-    for item in y:
-        if isinstance(x, float) and isinstance(item, float):
-            if math.isclose(x, item):
-                return True
-        elif x == item:
-            return True
-    return False
+    return in_list(x, y)
 
 
 Member = Func(_member_func, "∈")
@@ -390,3 +419,27 @@ TolerateInvalid = Func(_tolerate_invalid, "tolerate_invalid")
 def TimeoutGuard(f: Func):
     assert isinstance(f, Func)
     return FuncWithTimeoutGuard(f)
+
+
+def _full_or_partial(origin):
+    """
+    this function only transforms Undefined to Angelic
+    """
+    if isinstance(origin, list):
+        return FullAnswer(origin)
+
+    if isinstance(origin, SpecialValue):
+        return origin
+        
+    if isinstance(origin, tuple) and \
+       len(origin) == 2 and \
+       isinstance(origin[0], bool) and \
+       isinstance(origin[1], list):
+        if origin[0]:
+            return FullAnswer(origin[1])
+        else:
+            return PartialAnswer(origin[1])
+    return Demonic()
+
+
+FullOrPartial = Func(_full_or_partial, "full_or_partial")
