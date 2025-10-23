@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from itertools import islice
 from typing import Tuple
+from functools import partial
 
 from just_tri_it.executor import Executor
 from just_tri_it.cached_llm import Model, Independent
@@ -12,7 +13,7 @@ from just_tri_it.input_generator import generate_inputs
 from just_tri_it.logic import (
     Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, Tolerate
 )
-from just_tri_it.program import Requirements, NamedReturnSignature, Signature, Parameter, gen_time_predicate
+from just_tri_it.program import Requirements, NamedReturnSignature, Signature, Parameter
 from just_tri_it.utils import (
     gen_and_extract_answer_with_retry,
     ExperimentFailure,
@@ -39,28 +40,33 @@ class Triangulator(Agreement):
         {
             "method": "tri_<triangulation>",
             "left_programs": ...,
-            "right_programs": ...
+            "left_time_predicates": ...,
+            "right_programs": ...,
+            "right_time_predicates": ...
         }
         """
+        def gen_time_predicate(model, req, program):
+            return program.gen_time_predicate(model, req)
+        
         transformed_left = self.triangulation.left_trans.transform(model, req)
         left_inputs = generate_inputs(model, transformed_left)
         left_programs = self.code_generator.generate(model, transformed_left, self.num_left_programs)
         left_programs = list(islice(left_programs, self.num_left_programs))
-        left_predicates = gen_time_predicate(model, left_programs)
+        left_programs = list(map(partial(gen_time_predicate, model, transformed_left), left_programs))
 
         transformed_right = self.triangulation.right_trans.transform(model, req)
         right_inputs = generate_inputs(model, transformed_right)        
         right_programs = self.code_generator.generate(model, transformed_right, self.num_right_programs)
         right_programs = list(islice(right_programs, self.num_right_programs))
-        right_predicates = gen_time_predicate(model, right_programs)
+        right_programs = list(map(partial(gen_time_predicate, model, transformed_right), right_programs))
 
         programs_and_witnesses = []
 
-        for p, p_pre in zip(left_programs, left_predicates):
+        for p in left_programs:
             p_witnesses = []
-            for q, q_pre in zip(right_programs, right_predicates):
+            for q in right_programs:
                 if self.checker.check({Side.LEFT: left_inputs, Side.RIGHT: right_inputs},
-                                      {Side.LEFT: p, Side.RIGHT: q, "left_pre": p_pre, "right_pre": q_pre},
+                                      {Side.LEFT: p, Side.RIGHT: q },
                                       self.triangulation.hyperproperty):
                     p_witnesses.append(q)
             if len(p_witnesses) > 0:
@@ -69,7 +75,9 @@ class Triangulator(Agreement):
         raw_data = {
             "method": "tri_" + self.triangulation.name,
             "left_programs": left_programs,
-            "right_programs": right_programs
+            "left_time_predicates": list(map(lambda p: p.time_predicate, left_programs)),
+            "right_programs": right_programs,
+            "right_time_predicates": list(map(lambda p: p.time_predicate, right_programs))
         }
 
         return (programs_and_witnesses, raw_data)

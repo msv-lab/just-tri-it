@@ -2,7 +2,7 @@ import copy
 from dataclasses import dataclass
 import ast
 import hashlib
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Optional
 
 from just_tri_it.cached_llm import Model
 from just_tri_it.utils import (
@@ -179,10 +179,14 @@ Problem:
 class Program(ContentAddressable):
     signature: Signature
     code: str
+    time_predicate: Optional['Program'] = None
 
     def get_content(self) -> str:
         return "# signature: " + self.signature.pretty_print() + "\n" + self.code
 
+    def display_id(self) -> str:
+        return self.hash_id()[:7]
+    
     def add_imports(self, imports) -> 'Program':
         return Program(self.signature, imports + "\n" + self.code)
 
@@ -214,52 +218,46 @@ class Program(ContentAddressable):
         function must have a complete type annotation"""
         return Program(Signature.from_function_code(code), code)
 
+    def gen_time_predicate(self, model, req) -> 'Program':
+        new_sig = copy.deepcopy(self.signature)
+        new_sig.name = "certainly_exceeds_time_limit"
+        new_sig.return_type = "bool"
+        new_sig.params.append(Parameter("max_seconds", "int"))
+        
+        PROMPT = f"""Your task is to generate a Python predicate with the signature
+        
+{new_sig}
 
-def time_checker(executor, time_predicate, unchecked_input: list):
-    from just_tri_it.executor import Success, EXECUTION_TIMEOUT_SECONDS
-    unchecked_input.append(EXECUTION_TIMEOUT_SECONDS)
-    execution_outcome = executor.run(time_predicate, unchecked_input)
-    ans = False  # ans = True means it takes < max_sec
-    match execution_outcome:
-        case Success(v):
-            if v is False:
-                ans = True
-        case _:
-            pass
-    return ans
-
-
-def gen_time_predicate(model, p_list: list['Program']) -> list['Program']:
-    prompt = """You are an expert Python programmer. Your task is to
-generate a Python function ‘{sig}’ that performs a **lightweight heuristic
-static analysis** to estimate whether the following code would likely exceed
-a specified time limit when executed on a given input.
-
-**Code to be checked**:
-```
-{code}
-```
+that conservatively estimates whether executing the following solution
+to the given problem on the given input will exceed `max_seconds` seconds.
 
 **Requirements:**
-1.  **Heuristic Analysis Only:** The function must **NOT** execute the code.
-2.  **Core Objective:** Return `True` if the analysis suggests that running
-this code would *likely* take more than `max_seconds`. Otherwise, return `False`.
-3.  **Implementation Constraints:** Implementing only the function, without using
-`if __name__ == "__main__":` or any code outside the function. Do not print anything,
-and just return a boolean value. 
 
-**Output Format:**
+1.  Heuristic analysis only: the predicate must not execute the code,
+and must be at most of a linear complexity.
+
+2. Conservative analysis: return `True` if the analysis determines that
+running this code on this input will certainly take more than `max_seconds`
+seconds on consumer-grade hardware. Otherwise, return `False`.
+
+3. Implement only the function, without using `if __name__ ==
+"__main__":` or any code outside the function.
+
 Please wrap your final code in a markdown code block.
 ```python
 # Your implementation here
 ```
+
+**Solution to be checked**:
+```
+{self.code}
+```
+        
+**Problem description**:
+```
+{req}
+```
     """
-    predicate_lst = []
-    for p in p_list:
-        new_sig = copy.deepcopy(p.signature)
-        new_sig.name = "will_likely_timeout"
-        new_sig.return_type = "bool"
-        new_sig.params.append(Parameter("max_seconds", "int"))
-        predicate_lst.append(Program(new_sig, gen_and_extract_code_with_retry(model, prompt.format(
-            code=p.code, sig=new_sig.pretty_print()))))
-    return predicate_lst
+        predicate_code = gen_and_extract_code_with_retry(model, PROMPT)
+        time_predicate = Program(new_sig, predicate_code)
+        return Program(self.signature, self.code, time_predicate)

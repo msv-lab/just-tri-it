@@ -2,10 +2,10 @@ import sys
 from abc import ABC, abstractmethod
 from typing import Dict, Any
 from functools import partial
+import copy
 
-from just_tri_it.executor import Success, Error
-from just_tri_it.executor import Executor
-from just_tri_it.program import time_checker
+from just_tri_it.executor import Success, Error, Timeout
+from just_tri_it.executor import Executor, EXECUTION_TIMEOUT_SECONDS
 from just_tri_it.logic import (
     Side,
     Term, Var, Map,
@@ -38,6 +38,18 @@ class Interpreter(Checker):
     def __init__(self, executor: Executor):
         self.executor = executor
 
+    def _predicated_to_exceed_timeout(self, program, unchecked_input: list):
+        i = copy.deepcopy(unchecked_input)
+        i.append(EXECUTION_TIMEOUT_SECONDS)
+        execution_outcome = self.executor.run(program.time_predicate, i)
+        match execution_outcome:
+            case Success(v):
+                if v is True:
+                    return True
+            case _:
+                pass
+        return False
+
     def _eval_list(self, env, programs, terms):
         return list(map(partial(self._eval_term, env, programs), terms))
 
@@ -51,20 +63,16 @@ class Interpreter(Checker):
                 return SpecialValue.strongest(special)
             if self.available_call_budget <= 0:
                 raise CallBudgetExceeded()
-            if time_checker(self.executor, programs[SIDE_MAPPING[func.semantics]], computed_args):
-                execution_outcome = self.executor.run(programs[func.semantics], computed_args)
-                self.available_call_budget -= 1
-                match execution_outcome:
-                    case Success(v):
-                        return v
-                    case Error(error_type, error_msg) \
-                        if error_type == "ValueError" and error_msg == "Invalid input":
-                        return Undefined()
-                    case _:
-                        return Demonic()
-            else:
-                print(f"{func.semantics} is predicted to timeout", file=sys.stderr, flush=True)
-                return Demonic()  # another way of timeout
+            execution_outcome = self.executor.run(programs[func.semantics], computed_args)
+            self.available_call_budget -= 1
+            match execution_outcome:
+                case Success(v):
+                    return v
+                case Error(error_type, error_msg) \
+                    if error_type == "ValueError" and error_msg == "Invalid input":
+                    return Undefined()
+                case _:
+                    return Demonic()
         else:
             result = func.semantics(*computed_args)
             return result
@@ -108,6 +116,8 @@ class Interpreter(Checker):
                     computed_domain = self._eval_term(env, programs, domain)
                     if not isinstance(computed_domain, list):
                         computed_domain = [Demonic()]
+                if len(computed_domain) == 0:
+                    return True # not sure about it, but alternatives seem worse
                 for inp in computed_domain:
                     new_env = env.copy()
                     if isinstance(ele, Var):
