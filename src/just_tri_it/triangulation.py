@@ -229,9 +229,15 @@ Original Problem:
                 inversion_index = index
             case ListSuffixInversion(index, suffix_length):
                 fwd_sig = list_split_signature(index, req.signature)
-                fwd_sig_note = f"""\
-where the input {req.signature.params[index].name} is split into {fwd_sig.params[index].name} + {fwd_sig.params[index+1].name}, so that len({fwd_sig.params[index+1].name}) is {suffix_length} or less if there is not enough elements in {req.signature.params[index].name}.
-                """
+                match suffix_length:
+                    case 1:
+                        fwd_sig_note = f"""\
+where the input {req.signature.params[index].name} is split into {fwd_sig.params[index].name} + {fwd_sig.params[index+1].name}, so that {fwd_sig.params[index+1].name} has exactly one element if {req.signature.params[index].name} is not empty. Otherwise {fwd_sig.params[index+1].name} is empty if and only if {req.signature.params[index].name} is empty.
+                        """
+                    case _:
+                        fwd_sig_note = f"""\
+where the input {req.signature.params[index].name} is split into {fwd_sig.params[index].name} + {fwd_sig.params[index+1].name}, so that len({fwd_sig.params[index+1].name}) is {suffix_length} when {req.signature.params[index].name} has at least {suffix_length} elements, otherwise {fwd_sig.params[index+1].name} contains the entire {req.signature.params[index].name}.
+                        """
                 inversion_index = index + 1
         inv_desc = self._inverse_description(model,
                                              req.description,
@@ -308,37 +314,46 @@ Original Problem:
 class PartialSetValuedInverse(Transformation):
     inverse_index: int
 
-    def __init__(self, inverse_index):
-        self.inverse_index = inverse_index
+    def __init__(self, inversion_scheme):
+        self.inversion_scheme = inversion_scheme
 
     def _sinv_signature(self,
-                         model: Model,
-                         sig: NamedReturnSignature,
-                         inverse_index: int) -> Signature:
-        new_return_type = "tuple[bool,list[" + sig.params[inverse_index].type + "]]"
-        new_params = [Parameter(sig.return_name, sig.return_type)]
-        new_params.extend(p for i, p in enumerate(sig.params) if i != inverse_index)
-        new_func_name = "sinv_" + sig.name + "_wrt_" + sig.params[inverse_index].name
-        new_sig = Signature(new_func_name, new_params, new_return_type)
-        return new_sig
+                        sig: NamedReturnSignature,
+                        inversion_scheme) -> Signature:
+        match inversion_scheme:
+            case ParameterInversion(index):
+                new_return_type = "tuple[bool,list[" + sig.params[index].type + "]]"
+                new_params = [Parameter(sig.return_name, sig.return_type)]
+                new_params.extend(p for i, p in enumerate(sig.params) if i != index)
+                new_func_name = "sinv_" + sig.name + "_wrt_" + sig.params[index].name
+                new_sig = Signature(new_func_name, new_params, new_return_type)
+                return new_sig
+            case ListSuffixInversion(index, suffix_length):
+                lss = list_split_signature(index, sig)
+                return self._sinv_signature(lss, ParameterInversion(index+1))
+        
         
     def _sinv_description(self,
-                           model: Model,
-                           req: Requirements,
-                           sinv_sig: Signature,
-                           inverse_index: int):
+                          model: Model,
+                          description: str,
+                          fwd_sig: Signature,
+                          fwd_sig_note: str,
+                          sinv_sig: Signature,
+                          inverse_index: int):
         PROMPT = f"""
 You are given a programming problem that requires implementing the function:
 
-{req.signature.pretty_print()}
+{fwd_sig.pretty_print()}
+
+{fwd_sig_note}
 
 Rewrite this problem so that it instead requires implementing the set-valued inverted function:
 
 {sinv_sig.pretty_print()}
 
-Given the desired output value `{sinv_sig.params[0].name}` (corresponding to the original function's return value), the new function should return a list of values for the parameter `{req.signature.params[inverse_index].name}` such that if the original function were called with any of these values (and the other parameters unchanged), it would produce `{sinv_sig.params[0].name}` as the result.
+Given the desired output value `{sinv_sig.params[0].name}` (corresponding to the original function's return value), the new function should return a list of values for the parameter `{fwd_sig.params[inverse_index].name}` such that if the original function were called with any of these values (and the other parameters unchanged), it would produce `{sinv_sig.params[0].name}` as the result.
 
-The function should return a tuple: (is_exhaustive_list, list_of_values). When it is feasible to enumerate all such values, return the complete list and set is_exhaustive_list to True. If a complete enumeration is impossible (e.g., the set is infinite or prohibitively large), return a representative subset and set is_exhaustive_list to False.
+The function should return a tuple: (is_exhaustive_list, list_of_values). When it is feasible to enumerate all such values, return the complete list and set is_exhaustive_list to True. If a complete enumeration is impossible (e.g., the set is infinite or prohibitively large), return a representative subset and set is_exhaustive_list to False. When no such values exist (the list is empty), mark it as exhaustive.
 
 Important points to follow:
 1. Preserve all constraints, domain assumptions, and rules from the original problem.
@@ -349,14 +364,36 @@ Important points to follow:
 Enclose the rewritten problem description inside `<answer>` and `</answer>` tags.
 
 Original Problem:
-{req.description}
+{description}
         """
         return gen_and_extract_answer_with_retry(model, PROMPT, 3)
         
     def transform(self, model, req: Requirements) -> Requirements:
         named_sig = NamedReturnSignature.infer_name(model, req)
-        sinv_sig = self._sinv_signature(model, named_sig, self.inverse_index)
-        sinv_desc = self._sinv_description(model, req, sinv_sig, self.inverse_index)
+        sinv_sig = self._sinv_signature(named_sig, self.inversion_scheme)
+        match self.inversion_scheme:
+            case ParameterInversion(index):
+                fwd_sig = req.signature
+                fwd_sig_note = ""
+                inversion_index = index
+            case ListSuffixInversion(index, suffix_length):
+                fwd_sig = list_split_signature(index, req.signature)
+                match suffix_length:
+                    case 1:
+                        fwd_sig_note = f"""\
+where the input {req.signature.params[index].name} is split into {fwd_sig.params[index].name} + {fwd_sig.params[index+1].name}, so that {fwd_sig.params[index+1].name} has exactly one element if {req.signature.params[index].name} is not empty. Otherwise {fwd_sig.params[index+1].name} is empty if and only if {req.signature.params[index].name} is empty.
+                        """
+                    case _:
+                        fwd_sig_note = f"""\
+where the input {req.signature.params[index].name} is split into {fwd_sig.params[index].name} + {fwd_sig.params[index+1].name}, so that len({fwd_sig.params[index+1].name}) is {suffix_length} when {req.signature.params[index].name} has at least {suffix_length} elements, otherwise {fwd_sig.params[index+1].name} contains the entire {req.signature.params[index].name}.
+                        """
+                inversion_index = index + 1
+        sinv_desc = self._sinv_description(model,
+                                             req.description,
+                                             fwd_sig,
+                                             fwd_sig_note,
+                                             sinv_sig,
+                                             inversion_index)
         return Requirements(sinv_sig, sinv_desc)
 
 
@@ -433,20 +470,28 @@ def make_partial_fwd_inv(arity, inversion_scheme):
 
 
 def make_partial_fwd_sinv(arity, inversion_scheme):
-    assert isinstance(inversion_scheme, ParameterInversion)
+    match inversion_scheme:
+        case ParameterInversion(index):
+            inversion_index = index
+        case ListSuffixInversion(index, suffix_length):
+            inversion_index = index + 1
+            arity += 1
+    input_adapter = fwd_input_adapter(inversion_scheme)
+    program_adapter = fwd_program_adapter(inversion_scheme)
+
     args = [Var(f"i_{i}") for i in range(arity)]
     inv_arg = Var(f"i_{inversion_scheme.index}")
     arg_prime = Var(f"i_prime")
-    remaining_args = args[:inversion_scheme.index] + args[inversion_scheme.index + 1:]
-    args_with_prime = args[:inversion_scheme.index] + [arg_prime] + args[inversion_scheme.index+1:]
-    p = Func(Side.LEFT)
+    remaining_args = args[:inversion_index] + args[inversion_index + 1:]
+    args_with_prime = args[:inversion_index] + [arg_prime] + args[inversion_index+1:]
+    p = Func((Side.LEFT, program_adapter))
     q = Func(Side.RIGHT)
 
     return Triangulation(
         "fwd-sinv",
         Identity(),
-        PartialSetValuedInverse(inversion_scheme.index),
-        ForAll(args, Side.LEFT,
+        PartialSetValuedInverse(inversion_scheme),
+        ForAll(args, (Side.LEFT, input_adapter),
                And(Member([inv_arg, FullOrPartial([q([TolerateInvalid([p(args)])] + remaining_args)])]),
                    ForAll(arg_prime, FullOrPartial([q([TolerateInvalid([p(args)])] + remaining_args)]),
                           Equals([p(args), TimeoutGuard(p)(args_with_prime)])))))

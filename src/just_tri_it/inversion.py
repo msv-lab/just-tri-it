@@ -73,7 +73,7 @@ def fwd_input_adapter(inversion_scheme):
 
 def choose_inversion_scheme(model: Model, req: Requirements) -> InversionScheme:
     if len(req.signature.params) == 1:
-        if req.signature.params[0].type.startswith('list'):
+        if req.signature.params[0].type.lower().startswith('list'):
             return ListSuffixInversion(0, 1)
         return ParameterInversion(0)
     else:
