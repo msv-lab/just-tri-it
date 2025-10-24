@@ -34,6 +34,9 @@ INTERPRETER_CHECKER_CALL_BUDGET_PER_INPUT = 500
 INTERPRETER_CHECKER_MAX_FORALL_DOMAIN = 50
 
 
+DEBUG = False
+
+
 class CallBudgetExceeded(Exception):
     "Raised when make too many program calls"
     pass
@@ -83,14 +86,22 @@ class Interpreter(Checker):
             self.available_call_budget -= 1
             match execution_outcome:
                 case Success(v):
+                    if (DEBUG):
+                        print(f"\n{program.display_id()}({computed_args}) => {v}", file=sys.stderr, flush=True)
                     return v
                 case Error(error_type, error_msg) \
                     if error_type == "ValueError" and error_msg == "Invalid input":
+                    if (DEBUG):
+                        print(f"\n{program.display_id()}({computed_args}) => Invalid Input", file=sys.stderr, flush=True)
                     return Undefined()
                 case _:
+                    if (DEBUG):
+                        print(f"\n{program.display_id()}({computed_args}) => Demonic()", file=sys.stderr, flush=True)
                     return Demonic()
         else:
             result = func.semantics(*computed_args)
+            if (DEBUG):
+                print(f"\n{func}({computed_args}) => {result}", file=sys.stderr, flush=True)
             return result
 
     def _is_formula_true(self,

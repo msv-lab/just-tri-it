@@ -122,6 +122,7 @@ Your task is to translate the entire problem description into Chinese, while pre
 Translation guidelines:
 1. Keep technical terms such as data types, built-in function names, variable names, and programming language keywords in English.
 2. Preserve all constraints, examples, and formatting from the original text.
+3. The problem must be self-contained, and must not refer to the original function.
 
 Output the translated problem enclosed in `<answer>` and `</answer>` tags.
 
@@ -210,6 +211,7 @@ Given the desired output value `{inv_sig.params[0].name}` (corresponding to the 
 Important points to follow:
 1. Preserve all original constraints, rules, and assumptions from the problem statement.
 2. If multiple values of `{fwd_sig.params[inverse_index].name}` could produce the desired result, clearly state that any valid value is acceptable.
+3. The problem must be self-contained, and must not refer to the original function.        
 4. Update any examples so they demonstrate calling the inverted function instead of the original one.
 
 Output the rewritten problem statement enclosed within `<answer>` and `</answer>` tags.
@@ -232,7 +234,7 @@ Original Problem:
                 match suffix_length:
                     case 1:
                         fwd_sig_note = f"""\
-where the input {req.signature.params[index].name} is split into {fwd_sig.params[index].name} + {fwd_sig.params[index+1].name}, so that {fwd_sig.params[index+1].name} has exactly one element if {req.signature.params[index].name} is not empty. Otherwise {fwd_sig.params[index+1].name} is empty if and only if {req.signature.params[index].name} is empty.
+where the input {req.signature.params[index].name} is split into {fwd_sig.params[index].name} + {fwd_sig.params[index+1].name}, so that {fwd_sig.params[index+1].name} has exactly one element if {req.signature.params[index].name} is not empty, and {fwd_sig.params[index+1].name} is empty if {req.signature.params[index].name} is empty.
                         """
                     case _:
                         fwd_sig_note = f"""\
@@ -269,7 +271,8 @@ The new function should verify whether the given output value (`{last_param.name
 Important points to follow:
 1. Preserve all the original problem's rules, edge cases, and constraints.
 2. If the original problem allows multiple correct solutions, clarify that the new function must return True for any valid output that meets the problem criteria.
-3. Keep any provided examples, but modify them so they demonstrate calling the postcondition function instead of the original implementation.
+3. The problem must be self-contained, and must not refer to the original function.        
+4. Keep any provided examples, but modify them so they demonstrate calling the postcondition function instead of the original implementation.
 
 Enclose the rewritten problem statement inside `<answer>` and `</answer>` tags.
 
@@ -300,6 +303,7 @@ The new function must exhaustively enumerate all valid outputs for a given input
 Important points to follow:
 1. Preserve all the original problem's rules, edge cases, and constraints.
 2. Update any example test cases so they show returning a exhaustive lists of answers.
+3. The problem must be self-contained, and must not refer to the original function.
 
 Enclose the rewritten problem statement inside `<answer>` and `</answer>` tags.
 
@@ -353,12 +357,13 @@ Rewrite this problem so that it instead requires implementing the set-valued inv
 
 Given the desired output value `{sinv_sig.params[0].name}` (corresponding to the original function's return value), the new function should return a list of values for the parameter `{fwd_sig.params[inverse_index].name}` such that if the original function were called with any of these values (and the other parameters unchanged), it would produce `{sinv_sig.params[0].name}` as the result.
 
-The function should return a tuple: (is_exhaustive_list, list_of_values). When it is feasible to enumerate all such values, return the complete list and set is_exhaustive_list to True. If a complete enumeration is impossible (e.g., the set is infinite or prohibitively large), return a representative subset and set is_exhaustive_list to False. When no such values exist (the list is empty), mark it as exhaustive.
+The function should return a tuple: (is_exhaustive_list, list_of_values). When it is feasible to enumerate all such values, return the complete list and set is_exhaustive_list to True. If a complete enumeration is impossible (e.g., the set is infinite or prohibitively large), return a representative subset and set is_exhaustive_list to False.
 
 Important points to follow:
 1. Preserve all constraints, domain assumptions, and rules from the original problem.
 2. Clearly explain that the output must include all possible values.
-3. Specify explicitly that if no such values exist, the function should return an empty list.
+3. Specify explicitly that if no such values exist, the function should return an empty list, and mark it as exhaustive.
+3. The problem must be self-contained, and must not refer to the original function.
 4. Update any example test cases so they show returning a full or a partial answer.
 
 Enclose the rewritten problem description inside `<answer>` and `</answer>` tags.
@@ -381,7 +386,7 @@ Original Problem:
                 match suffix_length:
                     case 1:
                         fwd_sig_note = f"""\
-where the input {req.signature.params[index].name} is split into {fwd_sig.params[index].name} + {fwd_sig.params[index+1].name}, so that {fwd_sig.params[index+1].name} has exactly one element if {req.signature.params[index].name} is not empty. Otherwise {fwd_sig.params[index+1].name} is empty if and only if {req.signature.params[index].name} is empty.
+where the input {req.signature.params[index].name} is split into {fwd_sig.params[index].name} + {fwd_sig.params[index+1].name}, so that {fwd_sig.params[index+1].name} has exactly one element if {req.signature.params[index].name} is not empty, and {fwd_sig.params[index+1].name} is empty if {req.signature.params[index].name} is empty.
                         """
                     case _:
                         fwd_sig_note = f"""\
@@ -480,7 +485,7 @@ def make_partial_fwd_sinv(arity, inversion_scheme):
     program_adapter = fwd_program_adapter(inversion_scheme)
 
     args = [Var(f"i_{i}") for i in range(arity)]
-    inv_arg = Var(f"i_{inversion_scheme.index}")
+    inv_arg = Var(f"i_{inversion_index}")
     arg_prime = Var(f"i_prime")
     remaining_args = args[:inversion_index] + args[inversion_index + 1:]
     args_with_prime = args[:inversion_index] + [arg_prime] + args[inversion_index+1:]
