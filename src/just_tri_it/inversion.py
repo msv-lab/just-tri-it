@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+import copy
 
-from just_tri_it.program import Requirements, NamedReturnSignature, Signature, Parameter
+from just_tri_it.program import Requirements, NamedReturnSignature, Signature, Parameter, Program
 from just_tri_it.cached_llm import Model, Independent
+from just_tri_it.logic import Demonic
 from just_tri_it.utils import (
     gen_and_extract_answer_with_retry,
     ExperimentFailure,
@@ -23,8 +25,56 @@ class ListSuffixInversion:
 type InversionScheme = ParameterInversion | ListSuffixInversion
 
 
+def list_split_signature(index: int, s: Signature):
+    new_sig = copy.deepcopy(s)
+    new_sig.name = new_sig.name + "_split_list_adapter"
+    new_sig.params = new_sig.params[0:index] + \
+        [ Parameter(new_sig.params[index].name + "_prefix", new_sig.params[index].type),
+          Parameter(new_sig.params[index].name + "_suffix", new_sig.params[index].type) ] + \
+        new_sig.params[index+1:]
+    return new_sig
+
+
+
+def fwd_program_adapter(inversion_scheme):
+    match inversion_scheme:
+        case ParameterInversion():
+            return lambda p: p
+        case ListSuffixInversion(index, suffix_length):
+            def adapter(p):
+                new_sig = list_split_signature(index, p.signature)
+                ADAPTER_CODE=f"""
+def {new_sig.name}(*args):
+    args = list(args)
+    new_args = args[:{index}] + [ args[{index}] + args[{index+1}] ] + args[{index+2}:]
+    return {p.signature.name}(*new_args)
+                """
+                return Program(new_sig, p.code + "\n" + ADAPTER_CODE)
+            return adapter
+
+
+def fwd_input_adapter(inversion_scheme):
+    match inversion_scheme:
+        case ParameterInversion():
+            return lambda a: a
+        case ListSuffixInversion(index, suffix_length):
+            def adapter(args):
+                args = copy.deepcopy(args)
+                lst = args[index]
+                if not isinstance(lst, list):
+                    return [Demonic()]
+                split_at = max(0, len(lst) - suffix_length)
+                prefix = lst[:split_at]
+                suffix = lst[split_at:]
+                args[index:index+1] = [prefix, suffix]
+                return args                
+            return adapter
+
+
 def choose_inversion_scheme(model: Model, req: Requirements) -> InversionScheme:
     if len(req.signature.params) == 1:
+        if req.signature.params[0].type.startswith('list'):
+            return ListSuffixInversion(0, 1)
         return ParameterInversion(0)
     else:
         PROMPT = f"""

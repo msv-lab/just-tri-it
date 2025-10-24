@@ -1,6 +1,6 @@
 import sys
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 from functools import partial
 import copy
 import random
@@ -65,16 +65,21 @@ class Interpreter(Checker):
         computed_args = self._eval_term(env, programs, args)
         if not isinstance(computed_args, list):
             computed_args = [Demonic()]
-        if isinstance(func.semantics, Side):
+        if isinstance(func.semantics, Side) or isinstance(func.semantics, Tuple):
             special = [arg for arg in computed_args if isinstance(arg, SpecialValue)]
             if len(special) > 0:
                 return SpecialValue.strongest(special)
             if self.available_call_budget <= 0:
                 raise CallBudgetExceeded()
-            if timeout_guard and programs[func.semantics].time_predicate is not None:
-                if self._predicted_to_exceed_timeout(programs[func.semantics], computed_args):
+            if isinstance(func.semantics, Side):
+                program = programs[func.semantics]
+            if isinstance(func.semantics, Tuple):
+                assert len(func.semantics) == 2 and isinstance(func.semantics[0], Side)
+                program = func.semantics[1](programs[func.semantics[0]])
+            if timeout_guard and program.time_predicate is not None:
+                if self._predicted_to_exceed_timeout(program, computed_args):
                     return Angelic() # this is because fibers can contain values outside of the problem range
-            execution_outcome = self.executor.run(programs[func.semantics], computed_args)
+            execution_outcome = self.executor.run(program, computed_args)
             self.available_call_budget -= 1
             match execution_outcome:
                 case Success(v):
@@ -123,6 +128,9 @@ class Interpreter(Checker):
                 num_angelic = 0
                 if isinstance(domain, Side):
                     computed_domain = inputs[domain]
+                elif isinstance(domain, Tuple):
+                    assert len(domain) == 2 and isinstance(domain[0], Side)
+                    computed_domain = list(map(domain[1], inputs[domain[0]]))
                 else:
                     computed_domain = self._eval_term(env, programs, domain)
                     if isinstance(computed_domain, FullAnswer) or isinstance(computed_domain, PartialAnswer):

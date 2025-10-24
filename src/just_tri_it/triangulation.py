@@ -6,7 +6,13 @@ from typing import Tuple
 from functools import partial
 
 from just_tri_it.executor import Executor
-from just_tri_it.inversion import ParameterInversion, ListSuffixInversion
+from just_tri_it.inversion import (
+    ParameterInversion,
+    ListSuffixInversion,
+    list_split_signature,
+    fwd_program_adapter,
+    fwd_input_adapter
+)
 from just_tri_it.cached_llm import Model, Independent
 from just_tri_it.code_generator import Generator
 from just_tri_it.selection import Agreement, AgreementOutcome
@@ -163,53 +169,77 @@ class TrivialSemantic(Transformation):
 class PartialInverse(Transformation):
     inverse_index: int
 
-    def __init__(self, inverse_index):
-        self.inverse_index = inverse_index
+    def __init__(self, inversion_scheme):
+        self.inversion_scheme = inversion_scheme
 
     def _inverse_signature(self,
-                           model: Model,
                            sig: NamedReturnSignature,
-                           inverse_index: int) -> Signature:
-        new_return_type = sig.params[inverse_index].type
-        new_params = [Parameter(sig.return_name, sig.return_type)]
-        new_params.extend(p for i, p in enumerate(sig.params) if i != inverse_index)
-        new_func_name = "inverse_" + sig.name + "_wrt_" + sig.params[inverse_index].name
-        new_sig = Signature(new_func_name, new_params, new_return_type)
-        return new_sig
+                           inversion_scheme) -> Signature:
+        match inversion_scheme:
+            case ParameterInversion(index):
+                new_return_type = sig.params[index].type
+                new_params = [Parameter(sig.return_name, sig.return_type)]
+                new_params.extend(p for i, p in enumerate(sig.params) if i != index)
+                new_func_name = "inverse_" + sig.name + "_wrt_" + sig.params[index].name
+                new_sig = Signature(new_func_name, new_params, new_return_type)
+                return new_sig
+            case ListSuffixInversion(index, suffix_length):
+                lss = list_split_signature(index, sig)
+                return self._inverse_signature(lss, ParameterInversion(index+1))
 
     def _inverse_description(self,
                              model: Model,
-                             req: Requirements,
-                             inverted_sig: Signature,
+                             description: str,
+                             fwd_sig: Signature,
+                             fwd_sig_note: str,
+                             inv_sig: Signature,
                              inverse_index: int) -> str:
         PROMPT = f"""
 You are given a programming problem that requires implementing the function:
 
-{req.signature.pretty_print()}
+{fwd_sig.pretty_print()}
+
+{fwd_sig_note}
 
 Rewrite this problem so that it instead requires implementing the inverted function:
 
-{inverted_sig.pretty_print()}
+{inv_sig.pretty_print()}
 
-Given the desired output value `{inverted_sig.params[0].name}` (corresponding to the original function's return value), the new function should return a value for the parameter `{req.signature.params[inverse_index].name}` such that if the original function were called with this value (and the other parameters unchanged), it would produce `{inverted_sig.params[0].name}` as the result.
+Given the desired output value `{inv_sig.params[0].name}` (corresponding to the original function's return value), the new function should return a value for the parameter `{fwd_sig.params[inverse_index].name}` such that if the original function were called with this value (and the other parameters unchanged), it would produce `{inv_sig.params[0].name}` as the result.
 
 Important points to follow:
 1. Preserve all original constraints, rules, and assumptions from the problem statement.
-2. If multiple values of `{req.signature.params[inverse_index].name}` could produce the desired result, clearly state that any valid value is acceptable.
+2. If multiple values of `{fwd_sig.params[inverse_index].name}` could produce the desired result, clearly state that any valid value is acceptable.
 4. Update any examples so they demonstrate calling the inverted function instead of the original one.
 
 Output the rewritten problem statement enclosed within `<answer>` and `</answer>` tags.
 
 Original Problem:
-{req.description}
+{description}
         """
         return gen_and_extract_answer_with_retry(model, PROMPT, 3)
 
     def transform(self, model, req: Requirements) -> Requirements:
         named_sig = NamedReturnSignature.infer_name(model, req)
-        inverse_sig = self._inverse_signature(model, named_sig, self.inverse_index)
-        inverse_desc = self._inverse_description(model, req, inverse_sig, self.inverse_index)
-        return Requirements(inverse_sig, inverse_desc)
+        inv_sig = self._inverse_signature(named_sig, self.inversion_scheme)
+        match self.inversion_scheme:
+            case ParameterInversion(index):
+                fwd_sig = req.signature
+                fwd_sig_note = ""
+                inversion_index = index
+            case ListSuffixInversion(index, suffix_length):
+                fwd_sig = list_split_signature(index, req.signature)
+                fwd_sig_note = f"""\
+where the input {req.signature.params[index].name} is split into {fwd_sig.params[index].name} + {fwd_sig.params[index+1].name}, so that len({fwd_sig.params[index+1].name}) is {suffix_length} or less if there is not enough elements in {req.signature.params[index].name}.
+                """
+                inversion_index = index + 1
+        inv_desc = self._inverse_description(model,
+                                             req.description,
+                                             fwd_sig,
+                                             fwd_sig_note,
+                                             inv_sig,
+                                             inversion_index)
+        return Requirements(inv_sig, inv_desc)
 
 
 @dataclass
@@ -378,18 +408,27 @@ def make_postcondition(arity):
 
 
 def make_partial_fwd_inv(arity, inversion_scheme):
-    assert isinstance(inversion_scheme, ParameterInversion)
+    match inversion_scheme:
+        case ParameterInversion(index):
+            inversion_index = index
+        case ListSuffixInversion(index, suffix_length):
+            inversion_index = index + 1
+            arity += 1
+    input_adapter = fwd_input_adapter(inversion_scheme)
+    program_adapter = fwd_program_adapter(inversion_scheme)
+            
     args = [Var(f"i_{i}") for i in range(arity)]
-    inv_arg = Var(f"i_{inversion_scheme.index}")
-    remaining_args = args[:inversion_scheme.index] + args[inversion_scheme.index + 1:]
-    p = Func(Side.LEFT)
+    inv_arg = Var(f"i_{inversion_index}")
+    remaining_args = args[:inversion_index] + args[inversion_index + 1:]
+    p = Func((Side.LEFT, program_adapter))
     q = Func(Side.RIGHT)
-    
+
     return Triangulation(
         "fwd-inv",
         Identity(),
-        PartialInverse(inversion_scheme.index),
-        ForAll(args, Side.LEFT, Equals([inv_arg, q([TolerateInvalid([p(args)])] + remaining_args)]))
+        PartialInverse(inversion_scheme),
+        ForAll(args, (Side.LEFT, input_adapter),
+               Equals([inv_arg, q([TolerateInvalid([p(args)])] + remaining_args)]))
     )
 
 

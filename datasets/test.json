@@ -46,7 +46,33 @@
         "metadata": { }
     },
     {
-        "id": "trivial_inexact_problem",
+        "id": "2_list_sum",
+        "requirements": {
+            "signature": "def list_sum(l: list[int]) -> int",
+            "description": "sum up elements of a list; for empty list return 0"
+        },
+        "tests": [
+            {
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert list_sum([]) == 0"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert list_sum([1]) == 1"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert list_sum([5, -1]) == 4"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert list_sum([5, -1, 1]) == 5"
+            }
+        ],
+        "metadata": { }
+    },
+    {
+        "id": "3_trivial_inexact_problem",
         "requirements": {
             "signature": "def between(a: int, b:int) -> int",
             "description": "give a number between a and b (inclusive)"

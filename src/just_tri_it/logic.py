@@ -3,7 +3,7 @@ import math
 import numbers
 from dataclasses import dataclass
 from enum import Enum
-from typing import Union, Set, Dict, List, Callable, Any, TypeVar, Generic
+from typing import Union, Set, Dict, List, Callable, Any, TypeVar, Generic, Tuple
 from copy import deepcopy
 
 from just_tri_it.utils import ExperimentFailure
@@ -12,7 +12,6 @@ from just_tri_it.utils import ExperimentFailure
 class Side(Enum):
     LEFT = "left"
     RIGHT = "right"
-
 
 T = TypeVar('T')
 
@@ -84,22 +83,21 @@ def get_vars(f: 'Formula') -> Set[str]:
         case And(left, right) | Or(left, right):
             return get_vars(left) | get_vars(right)
 
-
 @dataclass
 class Func:
-    semantics: Callable | Side
+    semantics: Callable | Side | Tuple[Side, Callable]
     display: str = "OPAQUE"
 
     def __call__(self, args: List['Term']) -> 'App':
         return App(func=self, args=args)    
 
     def __str__(self):
-        if self.semantics == Side.LEFT:
-            return "left_func"
-        elif self.semantics == Side.RIGHT:
-            return "right_func"
+        if isinstance(self.semantics, Side):
+            return f"{self.semantics.value}_program"
+        if isinstance(self.semantics, tuple):
+            return f"{self.semantics[0].value}_program_adapted"
         else:
-            return self.display
+            return self.display_id()
 
     def display_id(self):
         return self.display
@@ -168,7 +166,7 @@ class Iff:
 @dataclass
 class ForAll:
     vars: Var | list[Var]
-    domain: Side | Term
+    domain: Side | Term | Tuple[Side, Callable]
     body: 'Formula'
 
     def __str__(self):
@@ -178,6 +176,8 @@ class ForAll:
             vars_str = str(self.vars)
         if isinstance(self.domain, Side):
             domain_str = f"{self.domain.value}_inputs"
+        elif isinstance(self.domain, tuple):
+            domain_str = f"{self.domain[0].value}_adapted_inputs"
         else:
             domain_str = str(self.domain)
         return f"∀{vars_str} ∈ {domain_str}: {self.body}"    
