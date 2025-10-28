@@ -68,7 +68,9 @@ class Triangulator:
         self.model = model
 
         stream_processing = False
-        if self.triangulation_mode in [TriangulationMode.FWD_INV] and \
+        if self.triangulation_mode in [TriangulationMode.FWD_INV,
+                                       TriangulationMode.FWD_SINV,
+                                       TriangulationMode.ENUM_SINV] and \
            self.is_stream_processing_problem(fwd_problem):
             stream_processing = True
 
@@ -83,7 +85,10 @@ class Triangulator:
                 else: 
                     _, _, result = self.fwd_inv(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.FWD_SINV:
-                _, _, result = self.fwd_sinv(fwd_problem, fwd_inputs, fwd_solutions)
+                if stream_processing:
+                    _, _, result = self.stream_fwd_sinv(fwd_problem, fwd_inputs, fwd_solutions)
+                else: 
+                    _, _, result = self.fwd_sinv(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.ENUM_SINV:
                 _, _, result = self.cascade_enum_sinv(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.Postcondition:
@@ -788,9 +793,37 @@ def {new_sig.name}(el):
                              triangulated_single_query_adapted_solutions,
                              bijective=True)
 
-        print(f"\n[multi-query solutions: {len(triangulated_multiple_queries_solutions)}]", file=sys.stderr, flush=True)        
+        print(f"\n[multi-query solutions: {len(triangulated_multiple_queries_solutions)}]", file=sys.stderr, flush=True)
 
         return multiple_queries_problem, multiple_queries_inputs, triangulated_multiple_queries_solutions
+
+    def stream_fwd_sinv(self, multiple_queries_problem, multiple_queries_inputs, multiple_queries_solutions):
+        print(f"\n[stream_fwd_sinv]", file=sys.stderr, flush=True)
+        
+        single_query_adapted_problem, single_query_adapted_inputs, single_query_adapted_solutions = \
+            self.adapt_pointwise(multiple_queries_problem,
+                                 multiple_queries_inputs,
+                                 multiple_queries_solutions)
+
+        _, _, triangulated_single_query_adapted_solutions = \
+            self.fwd_sinv(single_query_adapted_problem,
+                          single_query_adapted_inputs,
+                          single_query_adapted_solutions)
+
+        print(f"\n[single query solutions: {len(triangulated_single_query_adapted_solutions)}]", file=sys.stderr, flush=True)
+
+        stateless_map = self.make_stateless_map(multiple_queries_problem)
+        triangulated_multiple_queries_solutions = \
+            self.triangulate(stateless_map,
+                             multiple_queries_inputs,
+                             multiple_queries_solutions,
+                             [],
+                             triangulated_single_query_adapted_solutions,
+                             bijective=True)
+
+        print(f"\n[multi-query solutions: {len(triangulated_multiple_queries_solutions)}]", file=sys.stderr, flush=True)        
+        return multiple_queries_problem, multiple_queries_inputs, triangulated_multiple_queries_solutions
+
 
     def stream_enum_sinv(self, multiple_queries_problem, multiple_queries_inputs, multiple_queries_solutions):
         single_query_problem = self.transform_pointwise(multiple_queries_problem)

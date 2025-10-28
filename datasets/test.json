@@ -143,7 +143,29 @@
         "metadata": { }
     },
     {
-        "id": "6_trivial_inexact_problem",
+        "id": "6_stream_square",
+        "requirements": {
+            "signature": "def stream_square(l: list[int]) -> list[int]",
+            "description": "compute squares of each element of the list"
+        },
+        "tests": [
+            {
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert stream_square([0]) == [0]"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert stream_square([-1, 2]) == [1, 4]"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert stream_square([]) == []"
+            }
+        ],
+        "metadata": { }
+    },
+    {
+        "id": "7_trivial_inexact_problem",
         "requirements": {
             "signature": "def between(a: int, b:int) -> int",
             "description": "give a number between a and b (inclusive)"
