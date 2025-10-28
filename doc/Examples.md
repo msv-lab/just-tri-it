@@ -30,7 +30,7 @@ fwd-sinv w.r.t. list suffix:
 
 enum-sinv:
 
-    uv run benchmark --dataset datasets/test.json --selector FWD_SINV --model gpt-4o --task 4_smaller_number
+    uv run benchmark --dataset datasets/test.json --selector ENUM_SINV --model gpt-4o --task 4_smaller_number
 
 stream(fwd-inv):
 
