@@ -2,7 +2,7 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from itertools import islice
-from typing import Tuple
+from typing import Tuple, Optional
 from functools import partial
 from enum import Enum
 import copy
@@ -77,8 +77,13 @@ class Triangulator:
             stream_processing = True
 
         fwd_inputs = self.generate_inputs(fwd_problem)
-        #FIXME: decide when we need time predicates
         fwd_solutions = self.sample_solutions(fwd_problem, self.num_left_samples)
+
+        len_par = self.length_parameter(fwd_problem)
+
+        if len_par is not None:
+            fwd_problem, fwd_inputs, fwd_solutions = \
+                self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
 
         match self.triangulation_mode:
             case TriangulationMode.FWD_INV:
@@ -105,6 +110,9 @@ class Triangulator:
         raw_data = {
             "method": self.triangulation_mode.value
         }
+
+        if len_par is not None:
+            result = self.unwrap(result)
 
         return (result, raw_data)
         
@@ -168,6 +176,38 @@ Problem:
         """
         judgement = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
         return judgement.lower() == "yes"
+
+    def length_parameter(self, req: Requirements) -> Optional[Tuple[int, int]]:
+        if not(any(p.type == "int" for p in req.signature.params) and
+               (any(p.type.lower().startswith("list") for p in req.signature.params) or
+                any(p.type == "str" for p in req.signature.params))):
+            return None
+
+        PROMPT = f"""\
+You are given a programming problem that requires implementing the function:
+
+{req.signature.pretty_print()}
+
+{req.signature_note if req.signature_note is not None else ""}
+
+Determine whether the function signature includes a parameter that represents the length of another parameter.
+
+If none exists, return: None
+If one exists, return a tuple of two Python strings: (length_param_name, target_param_name), where the first is the length-indicator parameter and the second is the parameter whose length it indicates.
+
+Wrap your answer with the tags `<answer>` and `</answer>`, e.g.
+
+<answer>None</answer> or <answer>("len_list", "data_list")</answer>
+
+Problem:
+{req.description}
+        """
+        response = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
+        response = eval(response)
+        if response is None:
+            return None
+        p_names = [p.name for p in req.signature.params]
+        return (p_names.index(response[0]), p_names.index(response[1]))
 
     def choose_inversion_scheme(self, req: Requirements) -> InversionScheme:
         if len(req.signature.params) == 1:
@@ -359,6 +399,66 @@ Original Problem:
         """
         translated_description = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
         return Requirements(req.signature, translated_description)
+
+    def remove_length_parameter_signature(self, sig: Signature, len_index: int):
+        new_sig = copy.deepcopy(sig)
+        new_sig.name = new_sig.name + "_simp"
+        new_sig.params = new_sig.params[:len_index] + new_sig.params[len_index+1:]
+        return new_sig
+
+    def transform_remove_length_parameter(self, req: Requirements, len_index: int):
+        new_sig = self.remove_length_parameter_signature(req.signature, len_index)
+        PROMPT = f"""
+You are given a programming problem that requires implementing the function:
+
+{req.signature.pretty_print()}
+
+{req.signature_note if req.signature_note is not None else ""}        
+
+Your task is to rewrite this problem so that it instead requires implementing the function that omits the redundant parameter {req.signature.params[len_index].name}:
+
+{new_sig.pretty_print()}
+
+Important points to follow:
+1. Remove all mentions of {req.signature.params[len_index].name}
+2. Preserve all other original problem's rules, edge cases, and constraints.
+3. The problem must be self-contained, and must not refer to the original function.        
+4. Exclude all examples.
+
+Enclose the rewritten problem statement inside `<answer>` and `</answer>` tags.
+
+Original Problem:
+{req.description}
+        """
+        new_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
+        return Requirements(new_sig, new_desc)
+
+    def remove_length_parameter_adapter(self, problem, inputs, solutions, len_index: int, seq_index: int):
+        sig = problem.signature
+        assert sig.params[len_index].type == "int"
+        
+        adapted_problem = self.transform_remove_length_parameter(problem, len_index)
+        new_sig = adapted_problem.signature
+        
+        def adapt_program(p):
+            adapted_seq_index = seq_index
+            if len_index < seq_index:
+                adapted_seq_index -= 1
+            ADAPTER_CODE=f"""
+def {new_sig.name}(*args):
+    args = list(args)
+    args = args[:{len_index}] + [ len(args[{adapted_seq_index}]) ] + args[{len_index}:]
+    return {p.signature.name}(*args)
+            """
+            return Program(new_sig, p.code + "\n" + ADAPTER_CODE, nested = p.nested + [p.signature])
+        adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
+
+        def adapt_input(args):
+            return args[:len_index] + args[len_index+1:]
+
+        adapted_inputs = list(map(adapt_input, inputs))
+
+        return adapted_problem, adapted_inputs, adapted_solutions    
 
     def transform_off_by_one(self, req: Requirements) -> Requirements:
         return_type = req.signature.return_type
