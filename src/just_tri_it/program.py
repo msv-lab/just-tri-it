@@ -6,7 +6,9 @@ from typing import Any, List, Tuple, Optional
 
 from just_tri_it.cached_llm import Model
 from just_tri_it.utils import (
-    gen_and_extract_answer_with_retry, ContentAddressable, gen_and_extract_code_with_retry
+    gen_and_extract_answer_with_retry,
+    ContentAddressable,
+    gen_and_extract_code_with_retry
 )
 
 

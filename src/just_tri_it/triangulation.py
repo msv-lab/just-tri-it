@@ -7,6 +7,7 @@ from functools import partial
 from enum import Enum
 import copy
 import sys
+import ast
 
 from just_tri_it.executor import Executor
 from just_tri_it.cached_llm import Model, Independent
@@ -19,6 +20,7 @@ from just_tri_it.logic import (
 from just_tri_it.program import Program, Requirements, NamedReturnSignature, Signature, Parameter
 from just_tri_it.utils import (
     gen_and_extract_answer_with_retry,
+    gen_and_extract_code_with_retry,
     ExperimentFailure,
     RawData, extract_answer
 )
@@ -253,6 +255,83 @@ def {new_sig.name}(*args):
             suffix = lst[split_at:]
             args[index:index+1] = [prefix, suffix]
             return args                
+
+        adapted_inputs = list(map(adapt_input, inputs))
+
+        return adapted_problem, adapted_inputs, adapted_solutions
+
+
+    def unpack_argument_signature(self, req):
+        PROMPT_CODE = f"""
+You are given a programming problem that requires implementing the function:
+
+{req.signature.pretty_print()}
+
+{req.signature_note if req.signature_note is not None else ""}
+
+Unpack the input tuple so that each element of the tuple becomes a separate function parameters. 
+
+- The parameters must have descriptive names
+- The parameters must be annotated with types according to elements of the original tuple
+- The return type should remain the same.
+        
+Please return only the function definition with 'pass' as the body inside a Markdown code block.
+
+Problem:
+{req.description}
+        """
+        code = gen_and_extract_code_with_retry(self.model, PROMPT_CODE, 3)
+        tree = ast.parse(code)
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                sig = Signature.from_function_ast(node)
+                sig.name = sig.name + "_unpacked"
+                return sig
+        raise ValueError("No function definition found in code")
+
+    def transform_unpack_argument(self, req):
+        new_sig = self.unpack_argument_signature(req)
+        PROMPT = f"""
+You are given a programming problem that requires implementing the function:
+
+{req.signature.pretty_print()}
+
+{req.signature_note if req.signature_note is not None else ""}        
+
+Your task is to rewrite this problem so that it instead requires implementing the function that unpacks the input tuple {req.signature.params[0].name}:
+
+{new_sig.pretty_print()}
+
+Important points to follow:
+1. Preserve all the original problem's rules, edge cases, and constraints.
+2. The problem must be self-contained, and must not refer to the original function.        
+3. Exclude all examples.
+
+Enclose the rewritten problem statement inside `<answer>` and `</answer>` tags.
+
+Original Problem:
+{req.description}
+        """
+        new_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
+        return Requirements(new_sig, new_desc)
+    
+    def unpack_argument_adapter(self, problem, inputs, solutions):
+        sig = problem.signature
+        assert len(sig.params) == 1 and sig.params[0].type.lower().startswith("tuple")
+        
+        adapted_problem = self.transform_unpack_argument(problem)
+        new_sig = adapted_problem.signature
+        
+        def adapt_program(p):
+            ADAPTER_CODE=f"""
+def {new_sig.name}(*args):
+    return {p.signature.name}(args)
+            """
+            return Program(new_sig, p.code + "\n" + ADAPTER_CODE, nested = p.nested + [p.signature])
+        adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
+
+        def adapt_input(args):
+            return list(args[0])
 
         adapted_inputs = list(map(adapt_input, inputs))
 
@@ -780,6 +859,15 @@ def {new_sig.name}(el):
                                  multiple_queries_inputs,
                                  multiple_queries_solutions)
 
+        tuple_unpacked = False
+        if len(single_query_adapted_problem.signature.params) == 1 and \
+           single_query_adapted_problem.signature.params[0].type.lower().startswith("tuple"):
+            single_query_adapted_problem, single_query_adapted_inputs, single_query_adapted_solutions = \
+                self.unpack_argument_adapter(single_query_adapted_problem,
+                                             single_query_adapted_inputs,
+                                             single_query_adapted_solutions)
+            tuple_unpacked = True
+
         _, _, triangulated_single_query_adapted_solutions = \
             self.fwd_inv(single_query_adapted_problem,
                          single_query_adapted_inputs,
@@ -787,8 +875,12 @@ def {new_sig.name}(el):
 
         print(f"\n[single query solutions: {len(triangulated_single_query_adapted_solutions)}]", file=sys.stderr, flush=True)
 
+        if tuple_unpacked:
+            triangulated_single_query_adapted_solutions = self.unwrap(triangulated_single_query_adapted_solutions)
+        
         triangulated_single_query_unwraped_solutions = self.unwrap(triangulated_single_query_adapted_solutions)
 
+        
         stateless_map = self.make_stateless_map(multiple_queries_problem)
         triangulated_multiple_queries_solutions = \
             self.triangulate(stateless_map,

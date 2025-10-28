@@ -78,7 +78,7 @@ class Interpreter(Checker):
                 if self._predicted_to_exceed_timeout(program, computed_args):
                     return Angelic() # this is because fibers can contain values outside of the problem range
             if len(computed_args) != len(program.signature.params):
-                print(f"\nArguments length mismatch: {program.display_id()}({computed_args})", file=sys.stderr, flush=True)
+                print(f"\nArguments length mismatch: {program.display_id()} {program.signature.pretty_print()} applied to {computed_args}", file=sys.stderr, flush=True)
                 return Demonic()
             execution_outcome = self.executor.run(program, computed_args)
             self.available_call_budget -= 1

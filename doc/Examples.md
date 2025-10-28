@@ -38,12 +38,14 @@ stream(fwd-inv):
 
 stream(fwd-inv) with argument unpacking:
 
+    uv run benchmark --dataset datasets/test.json --selector FWD_INV --model gpt-4o --task 8_stream_plus
+
 stream(fwd-sinv):
 
     uv run benchmark --dataset datasets/test.json --selector FWD_SINV --model gpt-4o --task 6_stream_square
 
 stream(enum-sinv):
 
-    uv run benchmark --dataset datasets/test.json --selector ENUM_SINV --model gpt-4o --task 7_stream_smaller
+    uv run benchmark --dataset datasets/test.json --selector ENUM_SINV --model gpt-4o --task 7_stream_smaller_number
 
 
