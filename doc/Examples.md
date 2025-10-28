@@ -34,6 +34,8 @@ enum-sinv:
 
 stream(fwd-inv):
 
+    uv run benchmark --dataset datasets/test.json --selector FWD_SINV --model gpt-4o --task 5_stream_inc
+
 stream(fwd-inv) with argument unpacking:
 
 stream(fwd-sinv):

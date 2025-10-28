@@ -12,9 +12,9 @@ from just_tri_it.executor import Executor
 from just_tri_it.cached_llm import Model, Independent
 from just_tri_it.code_generator import Generator
 from just_tri_it.selection import Agreement, AgreementOutcome
-from just_tri_it.input_generator import generate_inputs
+from just_tri_it.input_generator import generate_inputs, remove_duplicates
 from just_tri_it.logic import (
-    Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, TolerateInvalid, TimeoutGuard, FullOrPartial
+    Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, TolerateInvalid, TimeoutGuard, FullOrPartial, FlattenMap
 )
 from just_tri_it.program import Program, Requirements, NamedReturnSignature, Signature, Parameter
 from just_tri_it.utils import (
@@ -67,13 +67,21 @@ class Triangulator:
         """
         self.model = model
 
+        stream_processing = False
+        if self.triangulation_mode in [TriangulationMode.FWD_INV] and \
+           self.is_stream_processing_problem(fwd_problem):
+            stream_processing = True
+
         fwd_inputs = self.generate_inputs(fwd_problem)
         #FIXME: decide when we need time predicates
         fwd_solutions = self.sample_solutions(fwd_problem, self.num_left_samples)
 
         match self.triangulation_mode:
             case TriangulationMode.FWD_INV:
-                _, _, result = self.fwd_inv(fwd_problem, fwd_inputs, fwd_solutions)
+                if stream_processing:
+                    _, _, result = self.stream_fwd_inv(fwd_problem, fwd_inputs, fwd_solutions)
+                else: 
+                    _, _, result = self.fwd_inv(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.FWD_SINV:
                 _, _, result = self.fwd_sinv(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.ENUM_SINV:
@@ -129,6 +137,27 @@ class Triangulator:
 
     def generate_inputs(self, req: Requirements):
         return generate_inputs(self.model, req)
+ 
+    def is_stream_processing_problem(self, req: Requirements) -> bool:
+        if not(len(req.signature.params) == 1 and
+               req.signature.params[0].type.lower().startswith('list') and
+               req.signature.return_type.lower().startswith('list')):
+            return False
+
+        PROMPT = f"""\
+You are given a programming problem that requires implementing the function:
+
+{req.signature.pretty_print()}
+
+{req.signature_note if req.signature_note is not None else ""}
+
+Does the problem consist of applying the same operation independently to each element of the input list and returning the per-element results in order? Respond Yes or No. Wrap your answer with the tags `<answer>` and `</answer>`.
+
+Problem:
+{req.description}
+        """
+        judgement = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
+        return judgement.lower() == "yes"
 
     def choose_inversion_scheme(self, req: Requirements) -> InversionScheme:
         if len(req.signature.params) == 1:
@@ -219,7 +248,7 @@ def {new_sig.name}(*args):
 
         adapted_inputs = list(map(adapt_input, inputs))
 
-        return adapted_problem, adapted_inputs, adapted_solutions
+        return adapted_problem, adapted_inputs, adapted_solutions    
 
     def transform_syntactic(self, req: Requirements) -> Requirements:
         PROMPT = f"""
@@ -427,10 +456,10 @@ Original Problem:
         assert sig.params[0].type.lower().startswith('list')
         assert sig.return_type.lower().startswith('list')
         input_element_type = sig.params[0].type[5:-1]
-        return_element_type = sig.return_type.type[5:-1]
+        return_element_type = sig.return_type[5:-1]
         return Signature(sig.name + "_single", [Parameter("single_query", input_element_type)], return_element_type)
 
-    def transform_pointwise(req: Requirements, index: int) -> Requirements:
+    def transform_pointwise(self, req: Requirements) -> Requirements:
         pointwise_sig = self.pointwise_signature(req.signature)
         PROMPT = f"""
 You are given a programming problem that requires implementing the function:
@@ -458,6 +487,23 @@ Original Problem:
         pointwise_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
         return Requirements(pointwise_sig, pointwise_desc)
 
+    def adapt_pointwise(self, problem, inputs, solutions):
+        adapted_problem = self.transform_pointwise(problem)
+        new_sig = adapted_problem.signature
+        
+        def adapt_program(p):
+            ADAPTER_CODE=f"""
+def {new_sig.name}(el):
+    return {problem.signature.name}([el])[0]
+            """
+            return Program(new_sig, p.code + "\n" + ADAPTER_CODE, nested = p.nested + [p.signature])
+        adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
+
+        adapted_inputs = [[y] for sub in inputs for x in sub for y in x]
+        adapted_inputs = remove_duplicates(adapted_inputs)
+
+        return adapted_problem, adapted_inputs, adapted_solutions
+
     def make_equiv(self, req):
         arity = len(req.signature.params)
         args = [Var(f"i_{i}") for i in range(arity)]
@@ -481,6 +527,16 @@ Original Problem:
         q = Func(Side.RIGHT)
 
         return ForAll(args, Side.LEFT, TolerateInvalid([q(args + [p(args)])]))
+
+    def make_stateless_map(self, req):
+        assert len(req.signature.params) == 1
+        
+        arg = Var(f"i")
+        p = Func(Side.LEFT)
+        q = Func(Side.RIGHT)
+        
+        return ForAll(arg, Side.LEFT,
+                      Equals([TolerateInvalid([p(arg)]), FlattenMap(q, arg)]))
 
     def make_fwd_inv(self, req, inversion_index):
         arity = len(req.signature.params)
@@ -570,7 +626,8 @@ Original Problem:
         return fwd_problem, fwd_inputs, triangulated_fwd_solutions
 
     def fwd_inv(self, fwd_problem, fwd_inputs, fwd_solutions):
-
+        print(f"\n[fwd_inv]", file=sys.stderr, flush=True)
+        
         match self.choose_inversion_scheme(fwd_problem):
             case ParameterInversion(i):
                 inv_problem = self.transform_inv(fwd_problem, i)
@@ -707,6 +764,33 @@ Original Problem:
 
         return fwd_problem, fwd_inputs, triangulated_fwd_solutions
 
+    def stream_fwd_inv(self, multiple_queries_problem, multiple_queries_inputs, multiple_queries_solutions):
+        print(f"\n[stream_fwd_inv]", file=sys.stderr, flush=True)
+        
+        single_query_adapted_problem, single_query_adapted_inputs, single_query_adapted_solutions = \
+            self.adapt_pointwise(multiple_queries_problem,
+                                 multiple_queries_inputs,
+                                 multiple_queries_solutions)
+
+        _, _, triangulated_single_query_adapted_solutions = \
+            self.fwd_inv(single_query_adapted_problem,
+                         single_query_adapted_inputs,
+                         single_query_adapted_solutions)
+
+        print(f"\n[single query solutions: {len(triangulated_single_query_adapted_solutions)}]", file=sys.stderr, flush=True)
+
+        stateless_map = self.make_stateless_map(multiple_queries_problem)
+        triangulated_multiple_queries_solutions = \
+            self.triangulate(stateless_map,
+                             multiple_queries_inputs,
+                             multiple_queries_solutions,
+                             [],
+                             triangulated_single_query_adapted_solutions,
+                             bijective=True)
+
+        print(f"\n[multi-query solutions: {len(triangulated_multiple_queries_solutions)}]", file=sys.stderr, flush=True)        
+
+        return multiple_queries_problem, multiple_queries_inputs, triangulated_multiple_queries_solutions
 
     def stream_enum_sinv(self, multiple_queries_problem, multiple_queries_inputs, multiple_queries_solutions):
         single_query_problem = self.transform_pointwise(multiple_queries_problem)

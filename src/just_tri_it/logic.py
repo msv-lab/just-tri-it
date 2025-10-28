@@ -139,8 +139,16 @@ class Map:
     def __str__(self):
         return f"map({str(self.func)}, {recursive_str(self.args)})"
 
+@dataclass
+class FlattenMap:
+    func: Func | FuncWithTimeoutGuard
+    args: 'Term'
 
-Term = Union[Var, App, Map, int, bool, float, str, list]
+    def __str__(self):
+        return f"flatten_map({str(self.func)}, {recursive_str(self.args)})"
+    
+
+Term = Union[Var, App, Map, FlattenMap, int, bool, float, str, list]
 
 
 @dataclass
@@ -266,7 +274,7 @@ def _off_by_one(x):
 OffByOne = Func(_off_by_one, "off-by-one")
 
 
-def _equals_func(x, y):
+def _equals_func(x, y, flat=False):
     """Check equality, using math.isclose for floats."""
     if isinstance(x, Demonic) or isinstance(y, Demonic):
         return Demonic()
@@ -276,6 +284,12 @@ def _equals_func(x, y):
         return True
     if isinstance(x, float) and isinstance(y, float):
         return math.isclose(x, y)
+    #Note: this is for stateless map property:
+    if not flat and isinstance(x, list) and isinstance(y, list) and len(x) == len(y):
+        for x_el, y_el in zip(x, y):
+            if not _equals_func(x_el, y_el, flat=True):
+                return False
+        return True
     return x == y
 
 

@@ -121,7 +121,29 @@
         "metadata": { }
     },
     {
-        "id": "5_trivial_inexact_problem",
+        "id": "5_stream_inc",
+        "requirements": {
+            "signature": "def stream_inc(l: list[int]) -> list[int]",
+            "description": "increment each element of a given list by 1"
+        },
+        "tests": [
+            {
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert stream_inc([0]) == [1]"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert stream_inc([-5]) == [-4]"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert stream_inc([1, 5, -3]) == [2, 6, -2]"
+            }
+        ],
+        "metadata": { }
+    },
+    {
+        "id": "6_trivial_inexact_problem",
         "requirements": {
             "signature": "def between(a: int, b:int) -> int",
             "description": "give a number between a and b (inclusive)"

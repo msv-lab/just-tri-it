@@ -9,7 +9,7 @@ from just_tri_it.executor import Success, Error, Timeout
 from just_tri_it.executor import Executor, EXECUTION_TIMEOUT_SECONDS
 from just_tri_it.logic import (
     Side,
-    Term, Var, Map,
+    Term, Var, Map, FlattenMap,
     Formula, App, Not, And, Or, Implies, Iff, ForAll,
     Func, Equals, SetEquals, OffByOne, Member, TolerateInvalid,
     SpecialValue, Angelic, Demonic, Undefined,
@@ -77,6 +77,9 @@ class Interpreter(Checker):
             if timeout_guard and program.time_predicate is not None:
                 if self._predicted_to_exceed_timeout(program, computed_args):
                     return Angelic() # this is because fibers can contain values outside of the problem range
+            if len(computed_args) != len(program.signature.params):
+                print(f"\nArguments length mismatch: {program.display_id()}({computed_args})", file=sys.stderr, flush=True)
+                return Demonic()
             execution_outcome = self.executor.run(program, computed_args)
             self.available_call_budget -= 1
             match execution_outcome:
@@ -154,6 +157,9 @@ class Interpreter(Checker):
                     if isinstance(ele, Var):
                         new_env[ele.name] = inp
                     else:
+                        if len(inp) != len(ele):
+                            print(f"\nInput length mismatch: {ele} {inp}", file=sys.stderr, flush=True)
+                            return False
                         for index, var in enumerate(ele):
                             new_env[var.name] = inp[index]
                     result = self._is_formula_true(new_env, inputs, programs, body)
@@ -189,11 +195,18 @@ class Interpreter(Checker):
                 return term
             case Map(func, args):
                 computed_args = self._eval_term(env, programs, args)
-                if isinstance(computed_args, SpecialValue) or computed_args is None:
+                if isinstance(computed_args, SpecialValue):
                     computed_args = [computed_args]
                 if not isinstance(computed_args, list):
                     computed_args = [Demonic()]
                 return [self._eval_term(env, programs, func([a])) for a in computed_args]
+            case FlattenMap(func, args):
+                computed_args = self._eval_term(env, programs, args)
+                if isinstance(computed_args, SpecialValue):
+                    computed_args = [computed_args]
+                if not isinstance(computed_args, list):
+                    computed_args = [Demonic()]
+                return [self._eval_term(env, programs, func([x])) for a in computed_args for x in a]
             case App(func, args):
                 return self._eval_app(env, programs, func, args)
             case _:
