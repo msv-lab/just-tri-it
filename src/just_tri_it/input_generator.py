@@ -100,11 +100,11 @@ def generate_inputs(model, req: Requirements, gen_large=False, executor=None) ->
     PROMPT_SMALL = f"""Given a problem description and the function
 signature, generate a comprehensive set of small-scale test cases to
 verify basic functionality. Each test should contain simple, minimal
-values such as small integers, short strings or lists, depending on
+values such as small integers, short strings or lists, strictly confirming to
 the parameter types. Present each input as a list of function
 arguments inside a separate Markdown code block:
 ```
-[argument1, argument2, ...]
+argument1, argument2, ...
 ```
 
 # **Function Signature**:
@@ -118,11 +118,11 @@ arguments inside a separate Markdown code block:
 signature, generate a comprehensive set of medium-scale test cases.
 Each test case should use values that are not trivial like 0 or empty
 string, but still manageable to read and reason about, e.g., medium
-integers, medium-length strings and lists, depending on parameter
-types. Present each input as a list of function arguments inside a
-separate Markdown code block:
+integers, medium-length strings and lists, strictly confirming to the
+parameter types. Present each input as a list of function arguments
+inside a separate Markdown code block:
 ```
-[argument1, argument2, ...]
+argument1, argument2, ...
 ```
 
 # **Function Signature**:
@@ -140,7 +140,7 @@ or corner-case scenarios that could cause unexpected behavior. Present
 each input as a list of function arguments inside a separate
 Markdown code block:
 ```
-[argument1, argument2, ...]
+argument1, argument2, ...
 ```
 
 # **Function Signature**:
@@ -156,7 +156,7 @@ Markdown code block:
             try:
                 response = next(ind_model.sample(prompt, num_retry))
                 blocks = extract_all_code(response)
-                inputs = [eval(block.strip()) for block in blocks]
+                inputs = [eval("[" + block.strip() + "]") for block in blocks]
                 if not gen_large:
                     inputs = [i for i in inputs if not value_is_too_large(i, 10000, 20)]
                 if gen_large:

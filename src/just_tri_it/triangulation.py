@@ -902,12 +902,24 @@ def {new_sig.name}(el):
                                  multiple_queries_inputs,
                                  multiple_queries_solutions)
 
+        tuple_unpacked = False
+        if len(single_query_adapted_problem.signature.params) == 1 and \
+           single_query_adapted_problem.signature.params[0].type.lower().startswith("tuple"):
+            single_query_adapted_problem, single_query_adapted_inputs, single_query_adapted_solutions = \
+                self.unpack_argument_adapter(single_query_adapted_problem,
+                                             single_query_adapted_inputs,
+                                             single_query_adapted_solutions)
+            tuple_unpacked = True
+
         _, _, triangulated_single_query_adapted_solutions = \
             self.fwd_sinv(single_query_adapted_problem,
                           single_query_adapted_inputs,
                           single_query_adapted_solutions)
 
         print(f"\n[single query solutions: {len(triangulated_single_query_adapted_solutions)}]", file=sys.stderr, flush=True)
+
+        if tuple_unpacked:
+            triangulated_single_query_adapted_solutions = self.unwrap(triangulated_single_query_adapted_solutions)
 
         triangulated_single_query_unwraped_solutions = self.unwrap(triangulated_single_query_adapted_solutions)
 
@@ -935,6 +947,20 @@ def {new_sig.name}(el):
             self.adapt_pointwise(multiple_queries_problem,
                                  multiple_queries_inputs,
                                  multiple_queries_solutions)
+
+        tuple_unpacked = False
+        if len(single_query_adapted_problem.signature.params) == 1 and \
+           single_query_adapted_problem.signature.params[0].type.lower().startswith("tuple"):
+            single_query_adapted_problem, single_query_adapted_inputs, single_query_adapted_solutions = \
+                self.unpack_argument_adapter(single_query_adapted_problem,
+                                             single_query_adapted_inputs,
+                                             single_query_adapted_solutions)
+
+            single_query_problem, single_query_inputs, single_query_solutions = \
+                self.unpack_argument_adapter(single_query_problem,
+                                             single_query_inputs,
+                                             single_query_solutions)
+            tuple_unpacked = True
         
         single_query_enum_problem, single_query_enum_inputs, triangulated_single_query_enum_solutions = \
             self.enum_sinv(single_query_problem,
@@ -953,6 +979,9 @@ def {new_sig.name}(el):
                              bijective=False)
 
         print(f"\n[single query adapted solutions: {len(triangulated_single_query_adapted_solutions)}]", file=sys.stderr, flush=True)
+
+        if tuple_unpacked:
+            triangulated_single_query_adapted_solutions = self.unwrap(triangulated_single_query_adapted_solutions)
 
         triangulated_single_query_unwraped_solutions = self.unwrap(triangulated_single_query_adapted_solutions)
 
