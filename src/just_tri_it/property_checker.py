@@ -17,6 +17,7 @@ from just_tri_it.logic import (
     FullAnswer, PartialAnswer
 )
 from just_tri_it.utils import hack
+import just_tri_it.utils
 
 
 class Checker(ABC):
@@ -32,9 +33,6 @@ class Checker(ABC):
 INTERPRETER_CHECKER_CALL_BUDGET_PER_INPUT = 500
 
 INTERPRETER_CHECKER_MAX_FORALL_DOMAIN = 50
-
-
-DEBUG = False
 
 
 class CallBudgetExceeded(Exception):
@@ -68,7 +66,7 @@ class Interpreter(Checker):
         computed_args = self._eval_term(env, programs, args)
         if not isinstance(computed_args, list):
             computed_args = [Demonic()]
-        if isinstance(func.semantics, Side) or isinstance(func.semantics, Tuple):
+        if isinstance(func.semantics, Side):
             special = [arg for arg in computed_args if isinstance(arg, SpecialValue)]
             if len(special) > 0:
                 return SpecialValue.strongest(special)
@@ -76,9 +74,6 @@ class Interpreter(Checker):
                 raise CallBudgetExceeded()
             if isinstance(func.semantics, Side):
                 program = programs[func.semantics]
-            if isinstance(func.semantics, Tuple):
-                assert len(func.semantics) == 2 and isinstance(func.semantics[0], Side)
-                program = func.semantics[1](programs[func.semantics[0]])
             if timeout_guard and program.time_predicate is not None:
                 if self._predicted_to_exceed_timeout(program, computed_args):
                     return Angelic() # this is because fibers can contain values outside of the problem range
@@ -86,21 +81,21 @@ class Interpreter(Checker):
             self.available_call_budget -= 1
             match execution_outcome:
                 case Success(v):
-                    if (DEBUG):
+                    if (just_tri_it.utils.DEBUG):
                         print(f"\n{program.display_id()}({computed_args}) => {v}", file=sys.stderr, flush=True)
                     return v
                 case Error(error_type, error_msg) \
                     if error_type == "ValueError" and error_msg == "Invalid input":
-                    if (DEBUG):
+                    if (just_tri_it.utils.DEBUG):
                         print(f"\n{program.display_id()}({computed_args}) => Invalid Input", file=sys.stderr, flush=True)
                     return Undefined()
                 case _:
-                    if (DEBUG):
+                    if (just_tri_it.utils.DEBUG):
                         print(f"\n{program.display_id()}({computed_args}) => Demonic()", file=sys.stderr, flush=True)
                     return Demonic()
         else:
             result = func.semantics(*computed_args)
-            if (DEBUG):
+            if (just_tri_it.utils.DEBUG):
                 print(f"\n{func}({computed_args}) => {result}", file=sys.stderr, flush=True)
             return result
 
@@ -139,9 +134,6 @@ class Interpreter(Checker):
                 num_angelic = 0
                 if isinstance(domain, Side):
                     computed_domain = inputs[domain]
-                elif isinstance(domain, Tuple):
-                    assert len(domain) == 2 and isinstance(domain[0], Side)
-                    computed_domain = list(map(domain[1], inputs[domain[0]]))
                 else:
                     computed_domain = self._eval_term(env, programs, domain)
                     if isinstance(computed_domain, FullAnswer) or isinstance(computed_domain, PartialAnswer):
@@ -167,15 +159,18 @@ class Interpreter(Checker):
                     result = self._is_formula_true(new_env, inputs, programs, body)
                     if isinstance(result, SpecialValue):
                         if SpecialValue.as_bool(result) is False:
-                            print(f"\n{formula} failed with {result} on {new_env}, left program: {programs[Side.LEFT].display_id()}, right program: {programs[Side.RIGHT].display_id()}", file=sys.stderr, flush=True)
+                            if (just_tri_it.utils.DEBUG):
+                                print(f"\n{formula} failed with {result} on {new_env}, left program: {programs[Side.LEFT].display_id()}, right program: {programs[Side.RIGHT].display_id()}", file=sys.stderr, flush=True)
                             return False
                         else:
                             num_angelic += 1
                     elif result is False:
-                        print(f"\n{formula} failed on {new_env}, left program: {programs[Side.LEFT].display_id()}, right program: {programs[Side.RIGHT].display_id()}", file=sys.stderr, flush=True)
+                        if (just_tri_it.utils.DEBUG):
+                            print(f"\n{formula} failed on {new_env}, left program: {programs[Side.LEFT].display_id()}, right program: {programs[Side.RIGHT].display_id()}", file=sys.stderr, flush=True)
                         return False
                 if (num_angelic / len(computed_domain)) >= 0.34:
-                    print(f"\n{formula} failed due excessive angelic values", file=sys.stderr, flush=True)
+                    if (just_tri_it.utils.DEBUG):
+                        print(f"\n{formula} failed due excessive angelic values", file=sys.stderr, flush=True)
                     return False
                 return True
             case _:

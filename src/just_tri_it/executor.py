@@ -16,6 +16,7 @@ import time
 
 from just_tri_it.program import Program, Signature, Test, InputOutput, TestFunction, Pass, Fail
 from just_tri_it.utils import ContentAddressable
+import just_tri_it.utils
 
 
 # from LiveCodeBench/lcb_runner/evaluation/utils_execute.py
@@ -335,9 +336,10 @@ class PersistentWorkerExecutor(Executor):
 
     @cache_content_addressable
     def run(self, p: Program, inputs, add_lcb_imports=True) -> ExecutionOutcome:
-        # print(p.hash_id(), flush=True)
-        # print(inputs, flush=True)
-        # print(p.get_content(), flush=True)
+        if just_tri_it.utils.DEBUG:
+            print(p.hash_id(), file=sys.stderr, flush=True)
+            print(inputs, file=sys.stderr, flush=True)
+            print(p.get_content(), file=sys.stderr, flush=True)
         assert isinstance(inputs, list)
         args = deepcopy(inputs)
         if add_lcb_imports:

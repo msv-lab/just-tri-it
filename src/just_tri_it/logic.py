@@ -85,7 +85,7 @@ def get_vars(f: 'Formula') -> Set[str]:
 
 @dataclass
 class Func:
-    semantics: Callable | Side | Tuple[Side, Callable]
+    semantics: Callable | Side
     display: str = "OPAQUE"
 
     def __call__(self, args: List['Term']) -> 'App':
@@ -94,8 +94,6 @@ class Func:
     def __str__(self):
         if isinstance(self.semantics, Side):
             return f"{self.semantics.value}_program"
-        if isinstance(self.semantics, tuple):
-            return f"{self.semantics[0].value}_program_adapted"
         else:
             return self.display_id()
 
@@ -166,7 +164,7 @@ class Iff:
 @dataclass
 class ForAll:
     vars: Var | list[Var]
-    domain: Side | Term | Tuple[Side, Callable]
+    domain: Side | Term
     body: 'Formula'
 
     def __str__(self):
@@ -176,8 +174,6 @@ class ForAll:
             vars_str = str(self.vars)
         if isinstance(self.domain, Side):
             domain_str = f"{self.domain.value}_inputs"
-        elif isinstance(self.domain, tuple):
-            domain_str = f"{self.domain[0].value}_adapted_inputs"
         else:
             domain_str = str(self.domain)
         return f"∀{vars_str} ∈ {domain_str}: {self.body}"    
@@ -262,7 +258,7 @@ def _off_by_one(x):
         case list() if all(isinstance(i, int) for i in x):
             return x + [1]
         case tuple() if all(isinstance(i, int) for i in x):
-            return x + (1,)
+            return tuple(e + 1 for e in x)
         case _:
             raise ExperimentFailure(f"off-by-one does not support this type: {x}")
 

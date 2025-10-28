@@ -1,5 +1,5 @@
 import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import ast
 import hashlib
 from typing import Any, List, Tuple, Optional
@@ -124,9 +124,12 @@ class Fail:
 class Requirements(ContentAddressable):
     signature: Signature
     description: str
+    signature_note: Optional[str] = None
 
     def get_content(self) -> str:
-        return "# signature: " + self.signature.pretty_print() + "\n" + self.description
+        return "# signature: " + self.signature.pretty_print() + "\n" \
+            + ("# signature note: " + self.signature_note + "\n" if self.signature_note is not None else "") \
+            + self.description
 
     @staticmethod
     def from_description(model: Model, desc: str) -> 'Requirements':
@@ -179,6 +182,7 @@ Problem:
 class Program(ContentAddressable):
     signature: Signature
     code: str
+    nested: list[Signature] = field(default_factory=list)
     time_predicate: Optional['Program'] = None
 
     def get_content(self) -> str:

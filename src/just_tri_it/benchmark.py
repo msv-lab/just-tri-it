@@ -47,6 +47,11 @@ def parse_args():
         required=True,
         help="LLM to use."
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug messages."
+    )
     return parser.parse_args()
 
 
@@ -73,6 +78,9 @@ def main():
     init_random()
     
     args = parse_args()
+
+    if args.debug:
+        just_tri_it.utils.DEBUG = True
     
     model = {
         "gpt-4o": AI302("gpt-4o", 1.0, max_batch=50),

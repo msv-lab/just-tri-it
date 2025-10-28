@@ -12,6 +12,9 @@ from collections.abc import Mapping, Sequence
 from just_tri_it.cached_llm import Independent, Persistent
 
 
+DEBUG = False
+
+
 RawData = dict[str, Any]
 
 

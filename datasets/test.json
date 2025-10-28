@@ -72,7 +72,56 @@
         "metadata": { }
     },
     {
-        "id": "3_trivial_inexact_problem",
+        "id": "3_square",
+        "requirements": {
+            "signature": "def num_square(i: int) -> int",
+            "description": "compute the square of a given number"
+        },
+        "tests": [
+            {
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert num_square(0) == 0"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert num_square(1) == 1"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert num_square(2) == 4"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert num_square(-3) == 9"
+            }
+        ],
+        "metadata": { }
+    },
+    {
+        "id": "4_smaller_number",
+        "requirements": {
+            "signature": "def smaller(i: int) -> int",
+            "description": "return a number that is strictly smaller than i, but by at most 2."
+        },
+        "judge": "def __judge(i: int, ans: int) -> bool:\n    return ans < i and i - ans <= 2",
+        "tests": [
+            {
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge(0, smaller(0))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge(-2, smaller(-2))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge(3, smaller(3))"
+            }
+        ],
+        "metadata": { }
+    },
+    {
+        "id": "5_trivial_inexact_problem",
         "requirements": {
             "signature": "def between(a: int, b:int) -> int",
             "description": "give a number between a and b (inclusive)"
