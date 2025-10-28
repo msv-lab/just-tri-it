@@ -44,4 +44,6 @@ stream(fwd-sinv):
 
 stream(enum-sinv):
 
+    uv run benchmark --dataset datasets/test.json --selector ENUM_SINV --model gpt-4o --task 7_stream_smaller
+
 

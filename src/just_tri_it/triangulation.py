@@ -90,7 +90,10 @@ class Triangulator:
                 else: 
                     _, _, result = self.fwd_sinv(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.ENUM_SINV:
-                _, _, result = self.cascade_enum_sinv(fwd_problem, fwd_inputs, fwd_solutions)
+                if stream_processing:
+                    _, _, result = self.stream_enum_sinv(fwd_problem, fwd_inputs, fwd_solutions)
+                else: 
+                    _, _, result = self.cascade_enum_sinv(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.Postcondition:
                 _, _, result = self.postcondition(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.OffByOne:
@@ -784,11 +787,13 @@ def {new_sig.name}(el):
 
         print(f"\n[single query solutions: {len(triangulated_single_query_adapted_solutions)}]", file=sys.stderr, flush=True)
 
+        triangulated_single_query_unwraped_solutions = self.unwrap(triangulated_single_query_adapted_solutions)
+
         stateless_map = self.make_stateless_map(multiple_queries_problem)
         triangulated_multiple_queries_solutions = \
             self.triangulate(stateless_map,
                              multiple_queries_inputs,
-                             multiple_queries_solutions,
+                             triangulated_single_query_unwraped_solutions,
                              [],
                              triangulated_single_query_adapted_solutions,
                              bijective=True)
@@ -812,11 +817,13 @@ def {new_sig.name}(el):
 
         print(f"\n[single query solutions: {len(triangulated_single_query_adapted_solutions)}]", file=sys.stderr, flush=True)
 
+        triangulated_single_query_unwraped_solutions = self.unwrap(triangulated_single_query_adapted_solutions)
+
         stateless_map = self.make_stateless_map(multiple_queries_problem)
         triangulated_multiple_queries_solutions = \
             self.triangulate(stateless_map,
                              multiple_queries_inputs,
-                             multiple_queries_solutions,
+                             triangulated_single_query_unwraped_solutions,
                              [],
                              triangulated_single_query_adapted_solutions,
                              bijective=True)
@@ -826,6 +833,8 @@ def {new_sig.name}(el):
 
 
     def stream_enum_sinv(self, multiple_queries_problem, multiple_queries_inputs, multiple_queries_solutions):
+        print(f"\n[stream_enum_sinv]", file=sys.stderr, flush=True)
+        
         single_query_problem = self.transform_pointwise(multiple_queries_problem)
         single_query_inputs = self.generate_inputs(single_query_problem)
         single_query_solutions = self.sample_solutions(single_query_problem, self.num_left_samples)
@@ -840,6 +849,8 @@ def {new_sig.name}(el):
                            single_query_inputs,
                            single_query_solutions)
 
+        print(f"\n[single query enum solutions: {len(triangulated_single_query_enum_solutions)}]", file=sys.stderr, flush=True)
+
         fwd_enum_prop = self.make_fwd_enum(single_query_adapted_problem)
         triangulated_single_query_adapted_solutions = \
             self.triangulate(fwd_enum_prop,
@@ -849,13 +860,19 @@ def {new_sig.name}(el):
                              triangulated_single_query_enum_solutions,
                              bijective=False)
 
+        print(f"\n[single query adapted solutions: {len(triangulated_single_query_adapted_solutions)}]", file=sys.stderr, flush=True)
+
+        triangulated_single_query_unwraped_solutions = self.unwrap(triangulated_single_query_adapted_solutions)
+
         stateless_map = self.make_stateless_map(multiple_queries_problem)
         triangulated_multiple_queries_solutions = \
             self.triangulate(stateless_map,
                              multiple_queries_inputs,
-                             multiple_queries_solutions,
-                             single_query_adapted_inputs,
+                             triangulated_single_query_unwraped_solutions,
+                             [],
                              triangulated_single_query_adapted_solutions,
                              bijective=True)
+
+        print(f"\n[multi-query solutions: {len(triangulated_multiple_queries_solutions)}]", file=sys.stderr, flush=True)
 
         return multiple_queries_problem, multiple_queries_inputs, triangulated_multiple_queries_solutions    

@@ -260,8 +260,8 @@ class PersistentWorkerExecutor(Executor):
 
             try:
                 func = None
-                if program_code in callable_cache:
-                    func = callable_cache[program_code]
+                if program_code + func_name in callable_cache:
+                    func = callable_cache[program_code + func_name]
                 else:
                     namespace = {}
 
@@ -269,7 +269,7 @@ class PersistentWorkerExecutor(Executor):
 
                     if func_name in namespace and callable(namespace[func_name]):
                         func = namespace[func_name]
-                        callable_cache[program_code] = func
+                        callable_cache[program_code + func_name] = func
                     else:
                         return_queue.put({ "status": "error",
                                            "error_type": "panic",

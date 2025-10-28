@@ -165,7 +165,30 @@
         "metadata": { }
     },
     {
-        "id": "7_trivial_inexact_problem",
+        "id": "7_stream_smaller_number",
+        "requirements": {
+            "signature": "def stream_smaller(l: list[int]) -> list[int]",
+            "description": "for each element of the list, compute a number that is strictly smaller than it, but by at most 2."
+        },
+        "judge": "def __judge(l: list[int], ans: [int]) -> bool:\n    return all([a < i and i - a <= 2 for (i, a) in zip(l, ans)])",
+        "tests": [
+            {
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert __judge([0], stream_smaller([0]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert __judge([-2, 1, 4], stream_smaller([-2, 1, 4]))"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert __judge([], stream_smaller([]))"
+            }
+        ],
+        "metadata": { }
+    },
+    {
+        "id": "8_trivial_inexact_problem",
         "requirements": {
             "signature": "def between(a: int, b:int) -> int",
             "description": "give a number between a and b (inclusive)"
