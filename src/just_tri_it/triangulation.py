@@ -728,7 +728,6 @@ Respond Yes if this set is always finite and sufficiently small to algorithmical
 Original Problem:
 {fwd_req.description}
         """
-        print(PROMPT)
         response = gen_and_extract_answer_with_retry(self.model, PROMPT, 3, accepted_case_insensitive_answers=['no', 'yes'])
         return response.lower() == "yes"
         
