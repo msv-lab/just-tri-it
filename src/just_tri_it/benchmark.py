@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+from itertools import islice
 
 from just_tri_it.cached_llm import AI302, XMCP
 from just_tri_it.executor import SubprocessExecutor, PersistentWorkerExecutor
@@ -8,7 +9,7 @@ from just_tri_it.code_generator import Vanilla
 from just_tri_it.selection import Selected, Abstained
 from just_tri_it.utils import print_annotated_hr, add_cache_options, setup_cache, print_legend, init_random
 import just_tri_it.utils
-from just_tri_it.config import init_selectors
+from just_tri_it.config import init_selectors, NUM_LEFT_SAMPLES
 from just_tri_it.program import Program
 
 
@@ -32,9 +33,9 @@ def parse_args():
         help="Identifier of task to run (all by default)."
     )
     parser.add_argument(
-        "--generator",
-        type=str,
-        help="Code generator configuration to benchmark."
+        "--correctness",
+        action="store_true",
+        help="Evaluate sample correctness."
     )
     parser.add_argument(
         "--selector",
@@ -74,6 +75,20 @@ def evaluate_selector(model, executor, selector, dataset):
             case Abstained():
                 print("\nABSTAINED")
 
+def evaluate_correctness(model, executor, task):
+    just_tri_it.utils.CURRENT_TASK = task.id
+    generated = Vanilla().generate(model, task.requirements, batch=NUM_LEFT_SAMPLES)
+    generated = list(islice(generated, NUM_LEFT_SAMPLES))
+    results = {}
+    for program in generated:
+        results[program.display_id()] = program.passes(executor, task.tests)
+
+    print()
+    for p_id, (judgement, outcomes) in results.items():
+        outcomes_str = ', '.join([f"{i}: {r[0]}" for i, r in enumerate(outcomes)])
+        print(f"{p_id}: {'CORRECT  ' if judgement else 'INCORRECT'} {'' if judgement else outcomes_str}")
+            
+
 def main():    
     init_random()
     
@@ -102,12 +117,16 @@ def main():
         dataset = [t for t in dataset if t.id == args.task]
 
     print_legend()
-    
-    selectors = init_selectors(executor, Vanilla(), model)
-        
-    evaluate_selector(model, executor, selectors[args.selector], dataset)
 
-    executor.shutdown()
+    try:
+        if args.correctness:
+            assert args.task
+            evaluate_correctness(model, executor, dataset[0])
+        else:
+            selectors = init_selectors(executor, Vanilla(), model)
+            evaluate_selector(model, executor, selectors[args.selector], dataset)
+    finally:
+        executor.shutdown()
 
 
 if __name__ == "__main__":
