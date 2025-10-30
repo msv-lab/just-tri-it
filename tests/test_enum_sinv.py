@@ -222,3 +222,30 @@ def test_enum_sinv_both_infinite_like_still_fail(checker):
     assert not check(checker, ENUM_PSEUDO_INFINITE, SINV_INFINITE_SIGNALED)
 
     assert not check(checker, ENUM_INFINITE_SIGNALED, SINV_INFINITE_SIGNALED)
+
+
+
+
+ENUM_INFINITE = Program.from_function_code("""
+def enum(i: int) -> list[int]:
+    if i >= 0:
+        while True: 
+            pass   
+    return [i + 1, i + 2]
+""")
+
+def test_enum_sinv_detect_enumerator_infinite(checker):
+    assert not check(checker, ENUM_INFINITE, SINV)
+
+
+SINV_INFINITE = Program.from_function_code("""
+def enum(i: int) -> list[int]:
+    if i >= 0:
+        while True:
+            pass
+    return [i - 1, i - 2]
+""")
+
+
+def test_enum_sinv_both_truly_infinite_still_fail(checker):
+    assert not check(checker, ENUM_INFINITE, SINV_INFINITE)
