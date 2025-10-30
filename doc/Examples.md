@@ -26,7 +26,7 @@ fwd-sinv w.r.t. list suffix:
     
 fwd-inv w.r.t. list suffix with length parameter:
     
-    uv run benchmark --dataset datasets/test.json --selector FWD_INV --model gpt-4o --task 9_list_sum_with_length
+    uv run benchmark --dataset datasets/test.json --selector FWD_SINV --model gpt-4o --task 9_list_sum_with_length
     
 enum-sinv:
 

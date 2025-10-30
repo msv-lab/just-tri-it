@@ -721,13 +721,14 @@ You are given a programming problem that requires implementing the function:
 
 {fwd_req.signature.pretty_print()}
 
-Is it true that for any given desired output value {"and values of " + other_params_str if len(other_params_str) > 0 else ""}, it is possible to exhaustively enumerate the set of all values for the parameter `{fwd_req.signature.params[inverse_index].name}` such that if the original function were called with any of these values, it would produce this desired output as the result.
+Is it true that for any given desired output value {"and concrete " + other_params_str if len(other_params_str) > 0 else ""}, it is possible to exhaustively enumerate the set of all values for the parameter `{fwd_req.signature.params[inverse_index].name}` such that if the original function were called with any of these values, it would produce this desired output as the result.
 
 Respond Yes if this set is always finite and sufficiently small to algorithmically enumerate, and No otherwise. Enclose your answer inside `<answer>` and `</answer>` tags.
 
 Original Problem:
 {fwd_req.description}
         """
+        print(PROMPT)
         response = gen_and_extract_answer_with_retry(self.model, PROMPT, 3, accepted_case_insensitive_answers=['no', 'yes'])
         return response.lower() == "yes"
         
