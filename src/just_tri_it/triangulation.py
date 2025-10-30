@@ -78,7 +78,10 @@ class Triangulator:
             stream_processing = True
 
         fwd_inputs = self.generate_inputs(fwd_problem)
-        fwd_solutions = self.sample_solutions(fwd_problem, self.num_left_samples)
+        need_timeout_guards = self.triangulation_mode in [TriangulationMode.FWD_SINV, TriangulationMode.ENUM_SINV]
+        fwd_solutions = self.sample_solutions(fwd_problem,
+                                              self.num_left_samples,
+                                              time_predicates=need_timeout_guards)
 
         len_par = self.length_parameter(fwd_problem)
 
@@ -159,7 +162,10 @@ class Triangulator:
         def unwrap_program(p):
             assert len(p.nested) > 0
             remaining, last = p.nested[:-1], p.nested[-1]
-            return Program(last, p.code, nested=remaining)
+            if p.time_predicate is None:
+                return Program(last, p.code, nested=remaining)
+            else:
+                return Program(last, p.code, nested=remaining, time_predicate=unwrap_program(p.time_predicate))
 
         return list(map(lambda s: (unwrap_program(s[0]), s[1]), solutions))
 
@@ -189,14 +195,12 @@ You are given a programming problem that requires implementing the function:
 
 {req.signature.pretty_print()}
 
-{req.signature_note if req.signature_note is not None else ""}
-
 Does the problem consist of applying the same operation independently to each element of the input list and returning the per-element results in order? Respond Yes or No. Wrap your answer with the tags `<answer>` and `</answer>`.
 
 Problem:
 {req.description}
         """
-        judgement = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
+        judgement = gen_and_extract_answer_with_retry(self.model, PROMPT, 3, accepted_case_insensitive_answers=['no', 'yes'])
         return judgement.lower() == "yes"
 
     def length_parameter(self, req: Requirements) -> Optional[Tuple[int, int]]:
@@ -209,8 +213,6 @@ Problem:
 You are given a programming problem that requires implementing the function:
 
 {req.signature.pretty_print()}
-
-{req.signature_note if req.signature_note is not None else ""}
 
 Determine whether the function signature includes a parameter that represents the length of another parameter.
 
@@ -241,8 +243,6 @@ Problem:
 The problem below is solved using a function with the signature:
 
 {req.signature.pretty_print()}
-
-{req.signature_note if req.signature_note is not None else ""}
 
 Choose a single input parameter of the function to be replaced by
 its output, thereby formulating an inverse problem. Determine which
@@ -283,20 +283,54 @@ Problem:
             new_sig.params[index+1:]
         return new_sig
 
-    def split_list_adapter(self, problem, inputs, solutions, index, suffix_length):
-        sig = problem.signature
-        new_sig = self.split_list_signature(index, problem.signature)
-        
-        assert problem.signature_note is None
+    def transform_split_list(self, req, index, suffix_length):
+        sig = req.signature
+        new_sig = self.split_list_signature(index, sig)
         match suffix_length:
             case 1:
                 sig_note = f"""\
-where the input {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index+1].name}, so that {new_sig.params[index+1].name} has exactly one element if {sig.params[index].name} is not empty, and {new_sig.params[index+1].name} is empty if {sig.params[index].name} is empty."""
+Specifically, the full input {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index+1].name}, so that {new_sig.params[index+1].name} contains only the last element of the full list {sig.params[index].name}. If the full list {sig.params[index].name} is empty, then both {new_sig.params[index].name} and {new_sig.params[index+1].name} must be empty."""
             case _:
                 sig_note = f"""\
-where the input {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index+1].name}, so that len({new_sig.params[index+1].name}) is exactly {suffix_length} when {sig.params[index].name} has at least {suffix_length} elements, otherwise {new_sig.params[index+1].name} contains the entire {sig.params[index].name}."""
+Specifically, the full input {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index+1].name}, so that len({new_sig.params[index+1].name}) is exactly {suffix_length} when the full list {sig.params[index].name} has at least {suffix_length} elements, otherwise {new_sig.params[index+1].name} contains the entire {sig.params[index].name}."""
 
-        adapted_problem = Requirements(new_sig, problem.description, signature_note=sig_note)
+        PROMPT = f"""
+You are given a programming problem that requires implementing the function:
+
+{sig.pretty_print()}
+
+Your task is to rewrite this problem so that it instead requires implementing the function where the argument {req.signature.params[index].name} is split into suffix and prefix:
+
+{new_sig.pretty_print()}
+
+{sig_note}
+
+When rewriting the problem, please
+0. Minimally modify the original problem
+1. Preserve all the original problem's rules, edge cases, and constraints.
+2. Ensure that the problem is self-contained; it must not refer to the original function.
+3. Emphasize constraints on {new_sig.params[index+1].name}.
+4. Exclude all examples.
+
+Enclose the rewritten problem statement inside `<answer>` and `</answer>` tags.
+
+Original Problem:
+{req.description}
+        """
+        new_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
+        
+        new_req = Requirements(new_sig, new_desc)
+
+        if (just_tri_it.utils.DEBUG):
+            print(new_req.get_content(), file=sys.stderr, flush=True)
+
+        return new_req
+        
+        
+
+    def split_list_adapter(self, problem, inputs, solutions, index, suffix_length):
+        adapted_problem = self.transform_split_list(problem, index, suffix_length)
+        new_sig = adapted_problem.signature
         
         def adapt_program(p):
             ADAPTER_CODE=f"""
@@ -305,7 +339,15 @@ def {new_sig.name}(*args):
     new_args = args[:{index}] + [ args[{index}] + args[{index+1}] ] + args[{index+2}:]
     return {p.signature.name}(*new_args)
             """
-            return Program(new_sig, p.code + "\n" + ADAPTER_CODE, nested = p.nested + [p.signature])
+            if p.time_predicate is None:
+                return Program(new_sig,
+                               p.code + "\n" + ADAPTER_CODE,
+                               nested = p.nested + [p.signature])
+            else:
+                return Program(new_sig,
+                               p.code + "\n" + ADAPTER_CODE,
+                               nested = p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate))
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         def adapt_input(args):
@@ -328,8 +370,6 @@ def {new_sig.name}(*args):
 You are given a programming problem that requires implementing the function:
 
 {req.signature.pretty_print()}
-
-{req.signature_note if req.signature_note is not None else ""}
 
 Unpack the input tuple so that each element of the tuple becomes a separate function parameters. 
 
@@ -358,15 +398,14 @@ You are given a programming problem that requires implementing the function:
 
 {req.signature.pretty_print()}
 
-{req.signature_note if req.signature_note is not None else ""}        
-
 Your task is to rewrite this problem so that it instead requires implementing the function that unpacks the input tuple {req.signature.params[0].name}:
 
 {new_sig.pretty_print()}
 
-Important points to follow:
+When rewriting the problem, please
+0. Minimally modify the original problem        
 1. Preserve all the original problem's rules, edge cases, and constraints.
-2. The problem must be self-contained, and must not refer to the original function.        
+2. Ensure that the problem must be self-contained; it must not refer to the original function.        
 3. Exclude all examples.
 
 Enclose the rewritten problem statement inside `<answer>` and `</answer>` tags.
@@ -375,7 +414,13 @@ Original Problem:
 {req.description}
         """
         new_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
-        return Requirements(new_sig, new_desc)
+        
+        new_req = Requirements(new_sig, new_desc)
+
+        if (just_tri_it.utils.DEBUG):
+            print(new_req.get_content(), file=sys.stderr, flush=True)
+
+        return new_req
     
     def unpack_argument_adapter(self, problem, inputs, solutions):
         sig = problem.signature
@@ -389,7 +434,15 @@ Original Problem:
 def {new_sig.name}(*args):
     return {p.signature.name}(args)
             """
-            return Program(new_sig, p.code + "\n" + ADAPTER_CODE, nested = p.nested + [p.signature])
+            if p.time_predicate is None:
+                return Program(new_sig,
+                               p.code + "\n" + ADAPTER_CODE,
+                               nested = p.nested + [p.signature])
+            else:
+                return Program(new_sig,
+                               p.code + "\n" + ADAPTER_CODE,
+                               nested = p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate))
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         def adapt_input(args):
@@ -405,14 +458,13 @@ You are given a programming problem written in English that requires implementin
 
 {req.signature.pretty_print()}
 
-{req.signature_note if req.signature_note is not None else ""}
-
 Your task is to translate the entire problem description into Chinese, while preserving all the technical accuracy and meaning. Whenever the description first mentions an input parameter, include its original English name from the function signature in parentheses immediately after the Chinese text describing that parameter. 
 
-Translation guidelines:
+When rewriting the problem, please
+0. Minimally modify the original problem        
 1. Keep technical terms such as data types, built-in function names, variable names, and programming language keywords in English.
 2. Preserve all constraints, and formatting from the original text.
-3. The problem must be self-contained, and must not refer to the original function.
+3. Ensure that the problem is self-contained; it must not refer to the original function.
 
 Output the translated problem enclosed in `<answer>` and `</answer>` tags.
 
@@ -420,7 +472,13 @@ Original Problem:
 {req.description}
         """
         translated_description = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
-        return Requirements(req.signature, translated_description)
+        new_req = Requirements(req.signature, translated_description)
+
+        if (just_tri_it.utils.DEBUG):
+            print(new_req.get_content(), file=sys.stderr, flush=True)
+
+        return new_req
+    
 
     def remove_length_parameter_signature(self, sig: Signature, len_index: int):
         new_sig = copy.deepcopy(sig)
@@ -435,16 +493,15 @@ You are given a programming problem that requires implementing the function:
 
 {req.signature.pretty_print()}
 
-{req.signature_note if req.signature_note is not None else ""}        
-
 Your task is to rewrite this problem so that it instead requires implementing the function that omits the redundant parameter {req.signature.params[len_index].name}:
 
 {new_sig.pretty_print()}
 
-Important points to follow:
+When rewriting the problem, please
+0. Minimally modify the original problem        
 1. Remove all mentions of {req.signature.params[len_index].name}
 2. Preserve all other original problem's rules, edge cases, and constraints.
-3. The problem must be self-contained, and must not refer to the original function.        
+3. Ensure that the problem is self-contained; it must not refer to the original function.        
 4. Exclude all examples.
 
 Enclose the rewritten problem statement inside `<answer>` and `</answer>` tags.
@@ -453,7 +510,13 @@ Original Problem:
 {req.description}
         """
         new_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
-        return Requirements(new_sig, new_desc)
+        new_req = Requirements(new_sig, new_desc)
+
+        if (just_tri_it.utils.DEBUG):
+            print(new_req.get_content(), file=sys.stderr, flush=True)
+
+        return new_req
+    
 
     def remove_length_parameter_adapter(self, problem, inputs, solutions, len_index: int, seq_index: int):
         sig = problem.signature
@@ -472,7 +535,15 @@ def {new_sig.name}(*args):
     args = args[:{len_index}] + [ len(args[{adapted_seq_index}]) ] + args[{len_index}:]
     return {p.signature.name}(*args)
             """
-            return Program(new_sig, p.code + "\n" + ADAPTER_CODE, nested = p.nested + [p.signature])
+            if p.time_predicate is None:
+                return Program(new_sig,
+                               p.code + "\n" + ADAPTER_CODE,
+                               nested = p.nested + [p.signature])
+            else:
+                return Program(new_sig,
+                               p.code + "\n" + ADAPTER_CODE,
+                               nested = p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate))
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         def adapt_input(args):
@@ -510,7 +581,12 @@ def {new_sig.name}(*args):
             case _:
                 # troublesome to support more complex types
                 raise ExperimentFailure()
-        return Requirements(req.signature, req.description + "\n" + add_sentence)
+        new_req = Requirements(req.signature, req.description + "\n" + add_sentence)
+
+        if (just_tri_it.utils.DEBUG):
+            print(new_req.get_content(), file=sys.stderr, flush=True)
+
+        return new_req       
 
 
     def inv_signature(self, sig: NamedReturnSignature, inversion_index) -> Signature:
@@ -527,8 +603,6 @@ You are given a programming problem that requires implementing the function:
 
 {fwd_req.signature.pretty_print()}
 
-{fwd_req.signature_note if fwd_req.signature_note is not None else ""}
-
 Rewrite this problem so that it instead requires implementing the inverted function:
 
 {inv_sig.pretty_print()}
@@ -536,6 +610,7 @@ Rewrite this problem so that it instead requires implementing the inverted funct
 Given the desired output value `{inv_sig.params[0].name}` (corresponding to the original function's return value), the new function should return a value for the parameter `{fwd_req.signature.params[inverse_index].name}` such that if the original function were called with this value (and the other parameters unchanged), it would produce `{inv_sig.params[0].name}` as the result.
 
 Important points to follow:
+0. Minimally modify the original problem        
 1. Preserve all original constraints, rules, and assumptions from the problem statement.
 2. If multiple values of `{fwd_req.signature.params[inverse_index].name}` could produce the desired result, clearly state that any valid value is acceptable.
 3. The problem must be self-contained, and must not refer to the original function.        
@@ -552,7 +627,12 @@ Original Problem:
         named_sig = NamedReturnSignature.infer_name(self.model, fwd_req)
         inv_sig = self.inv_signature(named_sig, inversion_index)
         inv_desc = self.inv_description(fwd_req, inv_sig, inversion_index)
-        return Requirements(inv_sig, inv_desc)
+        new_req = Requirements(inv_sig, inv_desc)
+
+        if (just_tri_it.utils.DEBUG):
+            print(new_req.get_content(), file=sys.stderr, flush=True)
+
+        return new_req        
 
     def transform_postcondition(self, req: Requirements) -> Requirements:
         named_sig = NamedReturnSignature.infer_name(self.model, req)
@@ -563,18 +643,17 @@ You are given a programming problem that requires implementing the function:
 
 {req.signature.pretty_print()}
 
-{req.signature_note if req.signature_note is not None else ""}        
-
 Your task is to rewrite this problem so that it instead requires implementing the function:
 
 {post_sig.pretty_print()}
 
 The new function should verify whether the given output value (`{last_param.name}`) is correct for the specified inputs, according to the original problem description.
 
-Important points to follow:
+When rewriting the problem, please
+0. Minimally modify the original problem        
 1. Preserve all the original problem's rules, edge cases, and constraints.
 2. If the original problem allows multiple correct solutions, clarify that the new function must return True for any valid output that meets the problem criteria.
-3. The problem must be self-contained, and must not refer to the original function.        
+3. Ensure that the problem is self-contained; it must not refer to the original function.        
 4. Exclude all examples.
 
 Enclose the rewritten problem statement inside `<answer>` and `</answer>` tags.
@@ -583,7 +662,12 @@ Original Problem:
 {req.description}
         """
         post_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
-        return Requirements(post_sig, post_desc)
+        new_req = Requirements(post_sig, post_desc)
+
+        if (just_tri_it.utils.DEBUG):
+            print(new_req.get_content(), file=sys.stderr, flush=True)
+
+        return new_req        
 
     def transform_enum(self, req: Requirements) -> Requirements:
         #TODO: support infinite sets
@@ -594,17 +678,16 @@ You are given a programming problem that requires implementing the function:
 
 {sig.pretty_print()}
 
-{req.signature_note if req.signature_note is not None else ""}        
-
 Your task is to rewrite this problem so that it instead requires implementing the function:
 
 {enum_sig.pretty_print()}
 
 The new function must exhaustively enumerate all correct outputs for a given input according to the original problem description.
 
-Important points to follow:
+When rewriting the problem, please
+0. Minimally modify the original problem        
 1. Preserve all the original problem's rules, edge cases, and constraints, but avoid your own interpretation that is not mentioned in the original problem.
-2. The problem must be self-contained, and must not refer to the original function.
+2. Ensure that the problem is self-contained; it must not refer to the original function.
 3. Exclude all examples.
 
 Enclose the rewritten problem statement inside `<answer>` and `</answer>` tags.
@@ -613,16 +696,40 @@ Original Problem:
 {req.description}
         """
         enum_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
-        return Requirements(enum_sig, enum_desc)
+        new_req = Requirements(enum_sig, enum_desc)
 
-    def sinv_signature(self, sig: NamedReturnSignature, inversion_index) -> Signature:
-        #TODO: should we also have a simple version without bool?
-        new_return_type = "tuple[bool,list[" + sig.params[inversion_index].type + "]]"
+        if (just_tri_it.utils.DEBUG):
+            print(new_req.get_content(), file=sys.stderr, flush=True)
+
+        return new_req        
+
+    def sinv_signature(self, sig: NamedReturnSignature, inversion_index, tractable_fibers) -> Signature:
+        if tractable_fibers:
+            new_return_type = "list[" + sig.params[inversion_index].type + "]"
+        else:
+            new_return_type = "tuple[bool,list[" + sig.params[inversion_index].type + "]]"
         new_params = [Parameter(sig.return_name, sig.return_type)]
         new_params.extend(p for i, p in enumerate(sig.params) if i != inversion_index)
         new_func_name = sig.name + "_sinv_" + sig.params[inversion_index].name
         new_sig = Signature(new_func_name, new_params, new_return_type)
         return new_sig
+
+    def tractable_fibers(self, fwd_req: Requirements, inverse_index: int):
+        other_params_str = ", ".join([p.name for (i, p) in enumerate(fwd_req.signature.params) if i != inverse_index])
+        PROMPT = f"""
+You are given a programming problem that requires implementing the function:
+
+{fwd_req.signature.pretty_print()}
+
+Is it true that for any given desired output value {"and values of " + other_params_str if len(other_params_str) > 0 else ""}, it is possible to exhaustively enumerate the set of all values for the parameter `{fwd_req.signature.params[inverse_index].name}` such that if the original function were called with any of these values, it would produce this desired output as the result.
+
+Respond Yes if this set is always finite and sufficiently small to algorithmically enumerate, and No otherwise. Enclose your answer inside `<answer>` and `</answer>` tags.
+
+Original Problem:
+{fwd_req.description}
+        """
+        response = gen_and_extract_answer_with_retry(self.model, PROMPT, 3, accepted_case_insensitive_answers=['no', 'yes'])
+        return response.lower() == "yes"
         
     def sinv_description(self, fwd_req: Requirements, sinv_sig: Signature, inverse_index: int):
         PROMPT = f"""
@@ -630,7 +737,32 @@ You are given a programming problem that requires implementing the function:
 
 {fwd_req.signature.pretty_print()}
 
-{fwd_req.signature_note}
+Rewrite this problem so that it instead requires implementing the set-valued inverted function:
+
+{sinv_sig.pretty_print()}
+
+Given the desired output value `{sinv_sig.params[0].name}` (corresponding to the original function's return value), the new function should return an exhaustive list of values for the parameter `{fwd_req.signature.params[inverse_index].name}` such that if the original function were called with any of these values (and the other parameters unchanged), it would produce `{sinv_sig.params[0].name}` as the result.
+
+Important points to follow:
+0. Minimally modify the original problem        
+1. Preserve all constraints, domain assumptions, and rules from the original problem.
+2. Clearly explain that the output must include all possible values.
+3. Specify explicitly that if no such values exist, the function should return an empty list.
+4. The problem must be self-contained, and must not refer to the original function.
+5. Exclude all examples.
+
+Enclose the rewritten problem description inside `<answer>` and `</answer>` tags.
+
+Original Problem:
+{fwd_req.description}
+        """
+        return gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
+
+    def sinv_description_infinite(self, fwd_req: Requirements, sinv_sig: Signature, inverse_index: int):
+        PROMPT = f"""
+You are given a programming problem that requires implementing the function:
+
+{fwd_req.signature.pretty_print()}
 
 Rewrite this problem so that it instead requires implementing the set-valued inverted function:
 
@@ -638,9 +770,10 @@ Rewrite this problem so that it instead requires implementing the set-valued inv
 
 Given the desired output value `{sinv_sig.params[0].name}` (corresponding to the original function's return value), the new function should return a list of values for the parameter `{fwd_req.signature.params[inverse_index].name}` such that if the original function were called with any of these values (and the other parameters unchanged), it would produce `{sinv_sig.params[0].name}` as the result.
 
-The function should return a tuple: (is_exhaustive_list, list_of_values). When it is feasible to enumerate all such values, return the complete list and set is_exhaustive_list to True. If a complete enumeration is impossible (e.g., the set is infinite or prohibitively large), return a representative subset and set is_exhaustive_list to False.
+The function should return a tuple: (is_exhaustive, list_of_answers). When it is feasible to enumerate all such values, return the complete list and set is_exhaustive_list to True. If a complete enumeration is impossible (e.g., the set is infinite or prohibitively large), return a representative subset and set is_exhaustive to False.
 
 Important points to follow:
+0. Minimally modify the original problem        
 1. Preserve all constraints, domain assumptions, and rules from the original problem.
 2. Clearly explain that the output must include all possible values.
 3. Specify explicitly that if no such values exist, the function should return an empty list, and mark it as exhaustive.
@@ -656,9 +789,20 @@ Original Problem:
         
     def transform_sinv(self, fwd_req: Requirements, inversion_index: int) -> Requirements:
         named_sig = NamedReturnSignature.infer_name(self.model, fwd_req)
-        sinv_sig = self.sinv_signature(named_sig, inversion_index)
-        sinv_desc = self.sinv_description(fwd_req, sinv_sig, inversion_index)
-        return Requirements(sinv_sig, sinv_desc)
+        tractable_fibers = self.tractable_fibers(fwd_req, inversion_index)
+        sinv_sig = self.sinv_signature(named_sig, inversion_index, tractable_fibers)
+        if tractable_fibers:
+            print(f"\n[tractable fibers]", file=sys.stderr, flush=True)
+            sinv_desc = self.sinv_description(fwd_req, sinv_sig, inversion_index)
+        else:
+            print(f"\n[intractable fibers]", file=sys.stderr, flush=True)
+            sinv_desc = self.sinv_description_infinite(fwd_req, sinv_sig, inversion_index)
+        new_req = Requirements(sinv_sig, sinv_desc)
+
+        if (just_tri_it.utils.DEBUG):
+            print(new_req.get_content(), file=sys.stderr, flush=True)
+
+        return new_req        
 
     def pointwise_signature(self, sig: Signature) -> Signature:
         assert len(sig.params) == 1
@@ -675,17 +819,16 @@ You are given a programming problem that requires implementing the function:
 
 {req.signature.pretty_print()}
 
-{req.signature_note if req.signature_note is not None else ""}        
-
 Your task is to rewrite this problem so that it instead requires implementing the function:
 
 {pointwise_sig.pretty_print()}
 
 The new function must process individual elements, mirroring the original list-processing logic applied element-wise.
 
-Important points to follow:
+When rewriting the problem, please
+0. Minimally modify the original problem        
 1. Preserve all the original problem's rules, edge cases, and constraints.
-2. The problem must be self-contained, and must not refer to the original function.
+2. Ensure that the problem is self-contained; it must not refer to the original function.
 3. Exclude all examples.
 
 Enclose the rewritten problem statement inside `<answer>` and `</answer>` tags.
@@ -694,7 +837,13 @@ Original Problem:
 {req.description}
         """
         pointwise_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
-        return Requirements(pointwise_sig, pointwise_desc)
+        new_req = Requirements(pointwise_sig, pointwise_desc)
+ 
+        if (just_tri_it.utils.DEBUG):
+            print(new_req.get_content(), file=sys.stderr, flush=True)
+
+        return new_req
+       
 
     def adapt_pointwise(self, problem, inputs, solutions):
         adapted_problem = self.transform_pointwise(problem)
@@ -705,7 +854,15 @@ Original Problem:
 def {new_sig.name}(el):
     return {problem.signature.name}([el])[0]
             """
-            return Program(new_sig, p.code + "\n" + ADAPTER_CODE, nested = p.nested + [p.signature])
+            if p.time_predicate is None:
+                return Program(new_sig,
+                               p.code + "\n" + ADAPTER_CODE,
+                               nested = p.nested + [p.signature])
+            else:
+                return Program(new_sig,
+                               p.code + "\n" + ADAPTER_CODE,
+                               nested = p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate))
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         adapted_inputs = [[y] for sub in inputs for x in sub for y in x]
@@ -904,15 +1061,13 @@ def {new_sig.name}(el):
         match self.choose_inversion_scheme(fwd_problem):
             case ParameterInversion(i):
                 enum_problem = self.transform_enum(fwd_problem)
-                if (just_tri_it.utils.DEBUG):
-                    print(enum_problem.get_content(), file=sys.stderr, flush=True)
                 
                 enum_inputs = self.generate_inputs(enum_problem)
-                enum_solutions = self.sample_solutions(enum_problem, self.num_left_samples)
+                enum_solutions = self.sample_solutions(enum_problem, self.num_left_samples, time_predicates=True)
                 
                 sinv_problem = self.transform_sinv(fwd_problem, i)
                 sinv_inputs = self.generate_inputs(sinv_problem)
-                sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples)
+                sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples, time_predicates=True)
                 
                 enum_sinv_prop = self.make_enum_sinv(fwd_problem, i)
                 triangulated_enum_solutions = \
@@ -928,14 +1083,14 @@ def {new_sig.name}(el):
 
                 enum_problem = self.transform_enum(fwd_problem)
                 enum_inputs = self.generate_inputs(enum_problem)
-                enum_solutions = self.sample_solutions(enum_problem, self.num_left_samples)
+                enum_solutions = self.sample_solutions(enum_problem, self.num_left_samples, time_predicates=True)
                 
                 _, split_list_enum_inputs, split_list_enum_solutions = \
                     self.split_list_adapter(enum_problem, enum_inputs, enum_solutions, i, l)
                 
                 sinv_problem = self.transform_sinv(split_list_problem, i+1)
                 sinv_inputs = self.generate_inputs(sinv_problem)
-                sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples)
+                sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples, time_predicates=True)
 
                 enum_sinv_prop = self.make_enum_sinv(split_list_problem, i+1)
                 

@@ -12,6 +12,9 @@ from just_tri_it.utils import (
 )
 
 
+EXECUTION_TIMEOUT_SECONDS = 8
+
+
 @dataclass
 class Parameter:
     name: str
@@ -126,12 +129,9 @@ class Fail:
 class Requirements(ContentAddressable):
     signature: Signature
     description: str
-    signature_note: Optional[str] = None
 
     def get_content(self) -> str:
-        return "# signature: " + self.signature.pretty_print() + "\n" \
-            + ("# signature note: " + self.signature_note + "\n" if self.signature_note is not None else "") \
-            + self.description
+        return "# signature: " + self.signature.pretty_print() + "\n" + self.description
 
     @staticmethod
     def from_description(model: Model, desc: str) -> 'Requirements':
@@ -228,23 +228,23 @@ class Program(ContentAddressable):
         new_sig = copy.deepcopy(self.signature)
         new_sig.name = "certainly_exceeds_time_limit"
         new_sig.return_type = "bool"
-        new_sig.params.append(Parameter("max_seconds", "int"))
         
         PROMPT = f"""Your task is to generate a Python predicate with the signature
         
 {new_sig}
 
 that conservatively estimates whether executing the following solution
-to the given problem on the given input will exceed `max_seconds` seconds.
+to the given problem on the given input will exceed {EXECUTION_TIMEOUT_SECONDS} seconds.
 
 **Requirements:**
 
 1.  Heuristic analysis only: the predicate must not execute the code,
 and must be at most of a linear complexity.
 
-2. Conservative analysis: return `True` if the analysis determines that
-running this code on this input will certainly take more than `max_seconds`
-seconds on consumer-grade hardware. Otherwise, return `False`.
+2. Conservative analysis: return `True` if the analysis determines
+that running this code on this input will certainly take more than
+{EXECUTION_TIMEOUT_SECONDS} seconds on consumer-grade
+hardware. Otherwise, return `False`.
 
 3. Implement only the function, without using `if __name__ ==
 "__main__":` or any code outside the function.
@@ -266,4 +266,4 @@ Please wrap your final code in a markdown code block.
     """
         predicate_code = gen_and_extract_code_with_retry(model, PROMPT)
         time_predicate = Program(new_sig, predicate_code)
-        return Program(self.signature, self.code, time_predicate)
+        return Program(self.signature, self.code, nested=self.nested, time_predicate=time_predicate)

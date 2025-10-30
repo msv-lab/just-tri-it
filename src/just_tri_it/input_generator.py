@@ -100,9 +100,11 @@ def generate_inputs(model, req: Requirements, gen_large=False, executor=None) ->
     PROMPT_SMALL = f"""Given a problem description and the function
 signature, generate a comprehensive set of small-scale test cases to
 verify basic functionality. Each test should contain simple, minimal
-values such as small integers, short strings or lists, strictly confirming to
-the parameter types. Present each input as a list of function
-arguments inside a separate Markdown code block:
+values such as small integers, short strings or lists, strictly
+confirming to the parameter types. Do not write any comments. Present
+each input as a list of function arguments inside a separate Markdown
+code block:
+
 ```
 argument1, argument2, ...
 ```
@@ -119,8 +121,9 @@ signature, generate a comprehensive set of medium-scale test cases.
 Each test case should use values that are not trivial like 0 or empty
 string, but still manageable to read and reason about, e.g., medium
 integers, medium-length strings and lists, strictly confirming to the
-parameter types. Present each input as a list of function arguments
-inside a separate Markdown code block:
+parameter types. Do not write any comments. Present each input as a
+list of function arguments inside a separate Markdown code block:
+
 ```
 argument1, argument2, ...
 ```
@@ -136,9 +139,10 @@ argument1, argument2, ...
 signature, generate a comprehensive set of boundary test cases to
 verify edge cases and special conditions.  Tests may include minimum
 and maximum allowed values, empty inputs where applicable, and unusual
-or corner-case scenarios that could cause unexpected behavior. Present
-each input as a list of function arguments inside a separate
-Markdown code block:
+or corner-case scenarios that could cause unexpected behavior. Do not
+write any comments. Present each input as a list of function arguments
+inside a separate Markdown code block:
+
 ```
 argument1, argument2, ...
 ```
@@ -150,7 +154,7 @@ argument1, argument2, ...
 {req.description}
     """
 
-    def sample_and_extract_with_retry(prompt, used_model, num_retry=6):
+    def sample_and_extract_with_retry(prompt, used_model, num_retry=3):
         inputs = []
         for attempt in range(num_retry):
             try:
@@ -172,7 +176,7 @@ argument1, argument2, ...
     
     ind_model = Independent(model)
 
-    max_attempts = 6
+    max_attempts = 10
     attempt = 0
     
     while len(all_inputs) < MINIMUM_NUM_INPUTS and attempt < max_attempts:

@@ -168,13 +168,16 @@ def extract_answer(s):
         raise DataExtractionFailure
 
 
-def gen_and_extract_answer_with_retry(model, prompt, num_retry=3):
+def gen_and_extract_answer_with_retry(model, prompt, num_retry=3, accepted_case_insensitive_answers=[]):
     ind_model = Independent(model)
     ans = None
     for attempt in range(num_retry):
         try:
             sample = next(ind_model.sample(prompt, num_retry))
             ans = extract_answer(sample)
+            if len(accepted_case_insensitive_answers) > 0 and\
+               ans.lower() not in accepted_case_insensitive_answers:
+                raise Exception("invalid answer")
             break
         except Exception as e:
             if attempt == num_retry - 1:

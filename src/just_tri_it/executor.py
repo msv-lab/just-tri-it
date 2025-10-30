@@ -14,7 +14,7 @@ import multiprocessing
 import time
 
 
-from just_tri_it.program import Program, Signature, Test, InputOutput, TestFunction, Pass, Fail
+from just_tri_it.program import Program, Signature, Test, InputOutput, TestFunction, Pass, Fail, EXECUTION_TIMEOUT_SECONDS
 from just_tri_it.utils import ContentAddressable
 import just_tri_it.utils
 
@@ -84,9 +84,6 @@ type ExecutionOutcome = Success | Error | Panic | Timeout
 
 
 type TestOutcome = Pass | Fail | Error | Panic | Timeout
-
-
-EXECUTION_TIMEOUT_SECONDS = 8
 
 
 class Executor(ABC):
