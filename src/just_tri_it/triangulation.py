@@ -461,7 +461,7 @@ You are given a programming problem written in English that requires implementin
 Your task is to translate the entire problem description into Chinese, while preserving all the technical accuracy and meaning. Whenever the description first mentions an input parameter, include its original English name from the function signature in parentheses immediately after the Chinese text describing that parameter. 
 
 When rewriting the problem, please
-0. Minimally modify the original problem        
+0. Preserve the structure of the original problem        
 1. Keep technical terms such as data types, built-in function names, variable names, and programming language keywords in English.
 2. Preserve all constraints, and formatting from the original text.
 3. Ensure that the problem is self-contained; it must not refer to the original function.
