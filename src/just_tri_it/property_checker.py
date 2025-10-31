@@ -46,7 +46,7 @@ class Interpreter(Checker):
         self.executor = executor
 
     def _predicted_to_exceed_timeout(self, program, unchecked_input: list):
-        execution_outcome = self.executor.run(program.time_predicate, i)
+        execution_outcome = self.executor.run(program.time_predicate, unchecked_input)
         match execution_outcome:
             case Success(v):
                 if v is True:
