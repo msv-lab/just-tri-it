@@ -23,7 +23,8 @@ from just_tri_it.utils import (
     gen_and_extract_answer_with_retry,
     gen_and_extract_code_with_retry,
     ExperimentFailure,
-    RawData, extract_answer
+    RawData, extract_answer,
+    hack
 )
 from just_tri_it.property_checker import Interpreter
 import just_tri_it.utils
@@ -83,11 +84,20 @@ class Triangulator:
                                               self.num_left_samples,
                                               time_predicates=need_timeout_guards)
 
-        len_par = self.length_parameter(fwd_problem)
+        num_adapters = 0
 
-        if len_par is not None:
+        if hack(task="2_list_sum"):
             fwd_problem, fwd_inputs, fwd_solutions = \
-                self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
+                self.add_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, 0)
+            num_adapters += 1
+
+        else:
+            len_par = self.length_parameter(fwd_problem)
+
+            if len_par is not None:
+                fwd_problem, fwd_inputs, fwd_solutions = \
+                    self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
+                num_adapters += 1
 
         match self.triangulation_mode:
             case TriangulationMode.FWD_INV:
@@ -115,7 +125,7 @@ class Triangulator:
             "method": self.triangulation_mode.value
         }
 
-        if len_par is not None:
+        for _ in range(num_adapters):
             result = self.unwrap(result)
 
         return (result, raw_data)
@@ -234,6 +244,9 @@ Problem:
         return (p_names.index(response[0]), p_names.index(response[1]))
 
     def choose_inversion_scheme(self, req: Requirements) -> InversionScheme:
+        if hack(task="2_list_sum"):
+            return ListSuffixInversion(1, 1) # second parameter w.r.t. the last element
+        
         if len(req.signature.params) == 1:
             if req.signature.params[0].type.lower().startswith('list'):
                 return ListSuffixInversion(0, 1)
@@ -325,8 +338,6 @@ Original Problem:
             print(new_req.get_content(), file=sys.stderr, flush=True)
 
         return new_req
-        
-        
 
     def split_list_adapter(self, problem, inputs, solutions, index, suffix_length):
         adapted_problem = self.transform_split_list(problem, index, suffix_length)
@@ -478,7 +489,6 @@ Original Problem:
             print(new_req.get_content(), file=sys.stderr, flush=True)
 
         return new_req
-    
 
     def remove_length_parameter_signature(self, sig: Signature, len_index: int):
         new_sig = copy.deepcopy(sig)
@@ -516,7 +526,6 @@ Original Problem:
             print(new_req.get_content(), file=sys.stderr, flush=True)
 
         return new_req
-    
 
     def remove_length_parameter_adapter(self, problem, inputs, solutions, len_index: int, seq_index: int):
         sig = problem.signature
@@ -551,7 +560,75 @@ def {new_sig.name}(*args):
 
         adapted_inputs = list(map(adapt_input, inputs))
 
-        return adapted_problem, adapted_inputs, adapted_solutions    
+        return adapted_problem, adapted_inputs, adapted_solutions
+
+    def add_length_parameter_signature(self, sig: Signature, seq_index: int):
+        new_sig = copy.deepcopy(sig)
+        new_sig.name = new_sig.name + "_with_len"
+        extra_param = Parameter(new_sig.params[seq_index].name + "_len", "int")
+        new_sig.params = new_sig.params[:seq_index] + [ extra_param ] + new_sig.params[seq_index:]
+        return new_sig
+
+    def transform_add_length_parameter(self, req: Requirements, seq_index: int):
+        new_sig = self.add_length_parameter_signature(req.signature, seq_index)
+        PROMPT = f"""
+You are given a programming problem that requires implementing the function:
+
+{req.signature.pretty_print()}
+
+Your task is to rewrite this problem so that it takes an extra parameter {new_sig.params[seq_index].name} that indicates the length of {new_sig.params[seq_index+1].name}:
+
+{new_sig.pretty_print()}
+
+When rewriting the problem, please
+0. Minimally modify the original problem.
+1. Preserve all other original problem's rules, edge cases, and constraints.
+2. Ensure that the problem is self-contained; it must not refer to the original function.
+3. Exclude all examples.
+
+Enclose the rewritten problem statement inside `<answer>` and `</answer>` tags.
+
+Original Problem:
+{req.description}
+        """
+        new_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
+        new_req = Requirements(new_sig, new_desc)
+
+        if (just_tri_it.utils.DEBUG):
+            print(new_req.get_content(), file=sys.stderr, flush=True)
+
+        return new_req
+
+    def add_length_parameter_adapter(self, problem, inputs, solutions, seq_index: int):
+        sig = problem.signature
+
+        adapted_problem = self.transform_add_length_parameter(problem, seq_index)
+        new_sig = adapted_problem.signature
+
+        def adapt_program(p):
+            ADAPTER_CODE=f"""
+def {new_sig.name}(*args):
+    args = list(args)
+    args = args[:{seq_index}] + args[{seq_index+1}:]
+    return {p.signature.name}(*args)
+            """
+            if p.time_predicate is None:
+                return Program(new_sig,
+                               p.code + "\n" + ADAPTER_CODE,
+                               nested = p.nested + [p.signature])
+            else:
+                return Program(new_sig,
+                               p.code + "\n" + ADAPTER_CODE,
+                               nested = p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate))
+        adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
+
+        def adapt_input(args):
+            return args[:seq_index] + [ len(args[seq_index]) ] + args[seq_index:]
+
+        adapted_inputs = list(map(adapt_input, inputs))
+
+        return adapted_problem, adapted_inputs, adapted_solutions
 
     def transform_off_by_one(self, req: Requirements) -> Requirements:
         return_type = req.signature.return_type
