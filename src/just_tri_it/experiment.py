@@ -72,6 +72,18 @@ def parse_args():
 
 # to skip running some configurations:
 SKIP_SELECTORS = [
+    # "Plurality",
+    # "MajorityVote",
+    # "MaxTest_Assert",
+    # "MaxTest_IO",
+    # "CodeT_Assert",
+    # "CodeT_IO",
+    # "Syntactic",
+    # "OffByOne",
+    # "Postcondition",
+    # "FWD_INV",
+    # "FWD_SINV",
+    # "ENUM_SINV"
 ]
 
 
@@ -231,7 +243,7 @@ def execute_experiment(model, executor, dataset, db, data_dir):
         selector_ids = all_selectors.keys()
         
         for selector_id in selector_ids:
-            if selector_ids in SKIP_SELECTORS:
+            if selector_id in SKIP_SELECTORS:
                 continue
             
             print(f"\n[{selector_id}]", end="", file=sys.stderr, flush=True)

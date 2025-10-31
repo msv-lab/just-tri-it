@@ -77,7 +77,7 @@ class Triangulator:
            self.is_stream_processing_problem(fwd_problem):
             stream_processing = True
 
-        fwd_inputs = self.generate_inputs(fwd_problem)
+        fwd_inputs = self.generate_inputs(fwd_problem, self.executor)
         need_timeout_guards = self.triangulation_mode in [TriangulationMode.FWD_SINV, TriangulationMode.ENUM_SINV]
         fwd_solutions = self.sample_solutions(fwd_problem,
                                               self.num_left_samples,
@@ -181,8 +181,8 @@ class Triangulator:
         #NOTE: initially, each solution is its own witness            
         return list(map(lambda p: (p, [p]), programs))
 
-    def generate_inputs(self, req: Requirements):
-        return generate_inputs(self.model, req)
+    def generate_inputs(self, req: Requirements, executor):
+        return generate_inputs(self.model, req, executor)
  
     def is_stream_processing_problem(self, req: Requirements) -> bool:
         if not(len(req.signature.params) == 1 and

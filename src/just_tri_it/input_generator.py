@@ -37,6 +37,22 @@ def value_is_too_large(data, int_bound, seq_bound):
                 return True
     return False
 
+def trans_to_list(executor, call_string, func_name):
+    sig = Signature("f", [], "list")
+    to_list_code = f"""
+def {func_name}(*args):
+   return list(args)
+def f():
+   return {call_string}
+    """
+    to_list = Program(sig, to_list_code)
+    outcome = executor.run(to_list, [])
+    match outcome:
+        case Success(outcome):
+            return outcome
+        case _:
+            raise ValueError(f"can't transform {call_string} to list due to {outcome}")
+
 
 def fix_and_filter_bad_inputs(input_list: List[Any], sig: Signature):
     filtered_input = []
@@ -95,18 +111,17 @@ Put the complete code inside a Markdown code block:
     return filtered_input
 
 
-def generate_inputs(model, req: Requirements, gen_large=False, executor=None) -> List[Any]:
+def generate_inputs(model, req: Requirements, executor, gen_large=False) -> List[Any]:
     # Define three different types of prompts
     PROMPT_SMALL = f"""Given a problem description and the function
 signature, generate a comprehensive set of small-scale test cases to
 verify basic functionality. Each test should contain simple, minimal
 values such as small integers, short strings or lists, strictly
 confirming to the parameter types. Do not write any comments. Present
-each input as a list of function arguments inside a separate Markdown
-code block:
+each input as a function call inside a separate Markdown code block:
 
 ```
-argument1, argument2, ...
+target_function(argument1, argument2, ...)
 ```
 
 # **Function Signature**:
@@ -122,10 +137,10 @@ Each test case should use values that are not trivial like 0 or empty
 string, but still manageable to read and reason about, e.g., medium
 integers, medium-length strings and lists, strictly confirming to the
 parameter types. Do not write any comments. Present each input as a
-list of function arguments inside a separate Markdown code block:
+function call inside a separate Markdown code block:
 
 ```
-argument1, argument2, ...
+target_function(argument1, argument2, ...)
 ```
 
 # **Function Signature**:
@@ -140,11 +155,11 @@ signature, generate a comprehensive set of boundary test cases to
 verify edge cases and special conditions.  Tests may include minimum
 and maximum allowed values, empty inputs where applicable, and unusual
 or corner-case scenarios that could cause unexpected behavior. Do not
-write any comments. Present each input as a list of function arguments
-inside a separate Markdown code block:
+write any comments. Present each input as a function call inside a
+separate Markdown code block:
 
 ```
-argument1, argument2, ...
+target_function(argument1, argument2, ...)
 ```
 
 # **Function Signature**:
@@ -154,13 +169,13 @@ argument1, argument2, ...
 {req.description}
     """
 
-    def sample_and_extract_with_retry(prompt, used_model, num_retry=3):
+    def sample_and_extract_with_retry(prompt, used_model, func_name, num_retry=3):
         inputs = []
         for attempt in range(num_retry):
             try:
                 response = next(ind_model.sample(prompt, num_retry))
                 blocks = extract_all_code(response)
-                inputs = [eval("[" + block.strip() + "]") for block in blocks]
+                inputs = [ trans_to_list(executor, block.strip(), func_name) for block in blocks]
                 if not gen_large:
                     inputs = [i for i in inputs if not value_is_too_large(i, 10000, 20)]
                 if gen_large:
@@ -183,9 +198,9 @@ argument1, argument2, ...
         attempt += 1
 
         current_batch = []
-        current_batch.extend(sample_and_extract_with_retry(PROMPT_SMALL, ind_model))
-        current_batch.extend(sample_and_extract_with_retry(PROMPT_MEDIUM, ind_model))
-        current_batch.extend(sample_and_extract_with_retry(PROMPT_BOUNDARY, ind_model))
+        current_batch.extend(sample_and_extract_with_retry(PROMPT_SMALL, ind_model, req.signature.name))
+        current_batch.extend(sample_and_extract_with_retry(PROMPT_MEDIUM, ind_model, req.signature.name))
+        current_batch.extend(sample_and_extract_with_retry(PROMPT_BOUNDARY, ind_model, req.signature.name))
 
         current_batch = fix_and_filter_bad_inputs(current_batch, req.signature)
         

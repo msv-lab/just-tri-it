@@ -34,7 +34,7 @@ class Plurality(Agreement):
               "outputs": <pairs of programs and corresponding output vectors>,
            }
         """
-        inputs = generate_inputs(model, req)
+        inputs = generate_inputs(model, req, self.executor)
         programs = list(islice(self.generator.generate(model, req, self.num_programs), self.num_programs))
 
         classes = []
