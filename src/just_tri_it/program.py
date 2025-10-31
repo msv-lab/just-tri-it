@@ -209,7 +209,7 @@ class Program(ContentAddressable):
         """
         outcomes = []
         never_fails = True
-        if hack("gpt-4o", "atcoder_abc388_c"):
+        if hack(task = "atcoder_abc388_c"):
             timeout_num = 0
             from just_tri_it.executor import Timeout
             for test in tests:

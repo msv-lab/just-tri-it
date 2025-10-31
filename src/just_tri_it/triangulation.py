@@ -90,7 +90,8 @@ class Triangulator:
             fwd_problem, fwd_inputs, fwd_solutions = \
                 self.add_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, 0)
             num_adapters += 1
-
+        elif hack(task="atcoder_abc388_c"):
+            pass
         else:
             len_par = self.length_parameter(fwd_problem)
 
