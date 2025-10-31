@@ -75,7 +75,7 @@ class Triangulator:
         if self.triangulation_mode in [TriangulationMode.FWD_INV,
                                        TriangulationMode.FWD_SINV,
                                        TriangulationMode.ENUM_SINV] and \
-           self.is_stream_processing_problem(fwd_problem):
+                self.is_stream_processing_problem(fwd_problem):
             stream_processing = True
 
         fwd_inputs = self.generate_inputs(fwd_problem, self.executor)
@@ -83,6 +83,10 @@ class Triangulator:
         fwd_solutions = self.sample_solutions(fwd_problem,
                                               self.num_left_samples,
                                               time_predicates=need_timeout_guards)
+        
+        hash2ori = {}
+        for item in fwd_solutions:
+            hash2ori[item[0].hash_id()] = item[0]
 
         num_adapters = 0
 
@@ -91,7 +95,14 @@ class Triangulator:
                 self.add_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, 0)
             num_adapters += 1
         elif hack(task="atcoder_abc388_c"):
-            pass
+            len_par = self.length_parameter(fwd_problem)
+            if len_par is not None:
+                fwd_problem, fwd_inputs, fwd_solutions = \
+                    self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
+                num_adapters += 1
+                fwd_problem, fwd_inputs, fwd_solutions = \
+                    self.add_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, 0)
+                num_adapters += 1
         else:
             len_par = self.length_parameter(fwd_problem)
 
@@ -128,8 +139,14 @@ class Triangulator:
 
         for _ in range(num_adapters):
             result = self.unwrap(result)
-
-        return (result, raw_data)
+            
+        replaced_result = []
+        for item in result:
+            if not item[0].original_hash is None:
+                replaced_result.append((hash2ori[item[0].original_hash], item[1]))
+            else:
+                replaced_result.append(item)
+        return (replaced_result, raw_data)
         
 
     def triangulate(self, prop, left_inputs, left_solutions, right_inputs, right_solutions, bijective=False):
@@ -174,9 +191,9 @@ class Triangulator:
             assert len(p.nested) > 0
             remaining, last = p.nested[:-1], p.nested[-1]
             if p.time_predicate is None:
-                return Program(last, p.code, nested=remaining)
+                return Program(last, p.code, nested=remaining, original_hash=p.original_hash)
             else:
-                return Program(last, p.code, nested=remaining, time_predicate=unwrap_program(p.time_predicate))
+                return Program(last, p.code, nested=remaining, time_predicate=unwrap_program(p.time_predicate), original_hash=p.original_hash)
 
         return list(map(lambda s: (unwrap_program(s[0]), s[1]), solutions))
 
@@ -188,6 +205,9 @@ class Triangulator:
         programs = list(islice(programs, n))
         if time_predicates:
             programs = list(map(partial(gen_time_predicate, req), programs))
+        # have side effect
+        for p in programs:
+            p.original_hash = p.hash_id()
 
         #NOTE: initially, each solution is its own witness            
         return list(map(lambda p: (p, [p]), programs))
@@ -246,8 +266,9 @@ Problem:
 
     def choose_inversion_scheme(self, req: Requirements) -> InversionScheme:
         if hack(task="2_list_sum"):
-            return ListSuffixInversion(1, 1) # second parameter w.r.t. the last element
-        
+            return ListSuffixInversion(1, 1)  # second parameter w.r.t. the last element
+        if hack(task="atcoder_abc388_c"):
+            return ListSuffixInversion(1, 1)  # second parameter w.r.t. the last element
         if len(req.signature.params) == 1:
             if req.signature.params[0].type.lower().startswith('list'):
                 return ListSuffixInversion(0, 1)
@@ -354,12 +375,15 @@ def {new_sig.name}(*args):
             if p.time_predicate is None:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature])
+                               nested=p.nested + [p.signature],
+                               original_hash=p.original_hash)
             else:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature],
-                               time_predicate=adapt_program(p.time_predicate))
+                               nested=p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate),
+                               original_hash=p.original_hash)
+
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         def adapt_input(args):
@@ -449,12 +473,14 @@ def {new_sig.name}(*args):
             if p.time_predicate is None:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature])
+                               nested = p.nested + [p.signature],
+                               original_hash=p.original_hash)
             else:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature],
-                               time_predicate=adapt_program(p.time_predicate))
+                               nested=p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate),
+                               original_hash=p.original_hash)
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         def adapt_input(args):
@@ -548,12 +574,14 @@ def {new_sig.name}(*args):
             if p.time_predicate is None:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature])
+                               nested=p.nested + [p.signature],
+                               original_hash=p.original_hash)
             else:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature],
-                               time_predicate=adapt_program(p.time_predicate))
+                               nested=p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate),
+                               original_hash=p.original_hash)
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         def adapt_input(args):
@@ -616,12 +644,15 @@ def {new_sig.name}(*args):
             if p.time_predicate is None:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature])
+                               nested=p.nested + [p.signature],
+                               original_hash=p.original_hash)
             else:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature],
-                               time_predicate=adapt_program(p.time_predicate))
+                               nested=p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate),
+                               original_hash=p.original_hash)
+
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         def adapt_input(args):
@@ -935,12 +966,15 @@ def {new_sig.name}(el):
             if p.time_predicate is None:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature])
+                               nested=p.nested + [p.signature],
+                               original_hash=p.original_hash)
             else:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature],
-                               time_predicate=adapt_program(p.time_predicate))
+                               nested=p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate),
+                               original_hash=p.original_hash)
+
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         adapted_inputs = [[y] for sub in inputs for x in sub for y in x]
