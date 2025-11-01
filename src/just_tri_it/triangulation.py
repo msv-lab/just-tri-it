@@ -91,7 +91,7 @@ class Triangulator:
 
         num_adapters = 0
 
-        if hack(task="11_binary_string"):
+        if hack(task="11_binary_string") or hack(task="atcoder_abc393_d"):
             pass
         elif hack(task="2_list_sum"):
             fwd_problem, fwd_inputs, fwd_solutions = \
@@ -274,6 +274,8 @@ Problem:
             return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
         if hack(task="atcoder_abc388_c"):
             return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
+        if hack(task="atcoder_abc393_d"):
+            return SuffixInversion(1, 1, "str")
         if len(req.signature.params) == 1:
             if req.signature.params[0].type.lower().startswith('list'):
                 return SuffixInversion(0, 1, "list")
