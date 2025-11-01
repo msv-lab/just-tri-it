@@ -253,5 +253,31 @@
             }
         ],
         "metadata": { }
+    },
+    {
+        "id": "11_binary_string",
+        "requirements": {
+            "signature": "def bin_is_odd(l: int, bin: str) -> bool",
+            "description": "`bin` is a non-empty string consisting of 0 and 1 of length `l`; check if the number it represents in the binary encoding is odd"
+        },
+        "tests": [
+            {
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert bin_is_odd(3, \"111\") == True"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert bin_is_odd(1, \"1\") == True"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_3():\n    assert bin_is_odd(5, \"11110\") == False"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_4():\n    assert bin_is_odd(4, \"1010\") == False"
+            }
+        ],
+        "metadata": { }
     }
 ]

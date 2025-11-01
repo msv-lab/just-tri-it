@@ -16,6 +16,10 @@ fwd-inv:
 
     uv run benchmark --dataset datasets/test.json --selector FWD_INV --model gpt-4o --task 1_plus
 
+fwd-inv w.r.t. string suffix:
+
+    uv run benchmark --dataset datasets/test.json --selector FWD_INV --model gpt-4o --task 11_binary_string
+
 fwd-sinv:
 
     uv run benchmark --dataset datasets/test.json --selector FWD_SINV --model gpt-4o --task 3_square

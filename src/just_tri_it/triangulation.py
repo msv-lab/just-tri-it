@@ -36,12 +36,13 @@ class ParameterInversion:
 
 
 @dataclass
-class ListSuffixInversion:
+class SuffixInversion:
     index: str
     suffix_length: int
+    type: str
 
 
-type InversionScheme = ParameterInversion | ListSuffixInversion
+type InversionScheme = ParameterInversion | SuffixInversion
 
 
 class TriangulationMode(Enum):
@@ -78,7 +79,7 @@ class Triangulator:
                 self.is_stream_processing_problem(fwd_problem):
             stream_processing = True
 
-        fwd_inputs = self.generate_inputs(fwd_problem, self.executor)
+        fwd_inputs = self.generate_inputs(fwd_problem)
         need_timeout_guards = self.triangulation_mode in [TriangulationMode.FWD_SINV, TriangulationMode.ENUM_SINV]
         fwd_solutions = self.sample_solutions(fwd_problem,
                                               self.num_left_samples,
@@ -90,7 +91,9 @@ class Triangulator:
 
         num_adapters = 0
 
-        if hack(task="2_list_sum"):
+        if hack(task="11_binary_string"):
+            pass
+        elif hack(task="2_list_sum"):
             fwd_problem, fwd_inputs, fwd_solutions = \
                 self.add_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, 0)
             num_adapters += 1
@@ -212,8 +215,8 @@ class Triangulator:
         #NOTE: initially, each solution is its own witness            
         return list(map(lambda p: (p, [p]), programs))
 
-    def generate_inputs(self, req: Requirements, executor):
-        return generate_inputs(self.model, req, executor)
+    def generate_inputs(self, req: Requirements):
+        return generate_inputs(self.model, req, self.executor)
  
     def is_stream_processing_problem(self, req: Requirements) -> bool:
         if not(len(req.signature.params) == 1 and
@@ -265,13 +268,15 @@ Problem:
         return (p_names.index(response[0]), p_names.index(response[1]))
 
     def choose_inversion_scheme(self, req: Requirements) -> InversionScheme:
+        if hack(task="11_binary_string"):
+            return SuffixInversion(1, 1, "str")  # second parameter w.r.t. the last element
         if hack(task="2_list_sum"):
-            return ListSuffixInversion(1, 1)  # second parameter w.r.t. the last element
+            return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
         if hack(task="atcoder_abc388_c"):
-            return ListSuffixInversion(1, 1)  # second parameter w.r.t. the last element
+            return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
         if len(req.signature.params) == 1:
             if req.signature.params[0].type.lower().startswith('list'):
-                return ListSuffixInversion(0, 1)
+                return SuffixInversion(0, 1, "list")
             return ParameterInversion(0)
         else:
             PROMPT = f"""\
@@ -309,7 +314,7 @@ Problem:
                         raise ExperimentFailure(f"retry failed with {type(e).__name__}: {e}")
             return ParameterInversion(return_param)
 
-    def split_list_signature(self, index: int, s: Signature):
+    def split_arg_signature(self, index: int, s: Signature):
         new_sig = copy.deepcopy(s)
         new_sig.name = new_sig.name + f"_split_{index}"
         new_sig.params = new_sig.params[0:index] + \
@@ -318,16 +323,27 @@ Problem:
             new_sig.params[index+1:]
         return new_sig
 
-    def transform_split_list(self, req, index, suffix_length):
+    def transform_split_arg(self, req, index, suffix_length, type: str):
         sig = req.signature
-        new_sig = self.split_list_signature(index, sig)
-        match suffix_length:
-            case 1:
-                sig_note = f"""\
+        new_sig = self.split_arg_signature(index, sig)
+        if type == "list":
+            match suffix_length:
+                case 1:
+                    sig_note = f"""\
 Specifically, the full input {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index+1].name}, so that {new_sig.params[index+1].name} contains only the last element of the full list {sig.params[index].name}. If the full list {sig.params[index].name} is empty, then both {new_sig.params[index].name} and {new_sig.params[index+1].name} must be empty."""
-            case _:
-                sig_note = f"""\
+                case _:
+                    sig_note = f"""\
 Specifically, the full input {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index+1].name}, so that len({new_sig.params[index+1].name}) is exactly {suffix_length} when the full list {sig.params[index].name} has at least {suffix_length} elements, otherwise {new_sig.params[index+1].name} contains the entire {sig.params[index].name}."""
+        elif type == "str":
+            match suffix_length:
+                case 1:
+                    sig_note = f"""\
+Specifically, the full input {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index+1].name}, so that {new_sig.params[index+1].name} contains only the last character of the full string {sig.params[index].name}. If the full string {sig.params[index].name} is empty, then both {new_sig.params[index].name} and {new_sig.params[index+1].name} must be empty."""
+                case _:
+                    sig_note = f"""\
+Specifically, the full input string {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index+1].name}, so that len({new_sig.params[index+1].name}) is exactly {suffix_length} when the full string {sig.params[index].name} has at least {suffix_length} characters, otherwise {new_sig.params[index+1].name} is the entire {sig.params[index].name}."""
+        else:
+            raise ValueError("unsupported argument type for splitting")
 
         PROMPT = f"""
 You are given a programming problem that requires implementing the function:
@@ -361,8 +377,8 @@ Original Problem:
 
         return new_req
 
-    def split_list_adapter(self, problem, inputs, solutions, index, suffix_length):
-        adapted_problem = self.transform_split_list(problem, index, suffix_length)
+    def split_arg_adapter(self, problem, inputs, solutions, index, suffix_length, type):
+        adapted_problem = self.transform_split_arg(problem, index, suffix_length, type)
         new_sig = adapted_problem.signature
         
         def adapt_program(p):
@@ -389,7 +405,7 @@ def {new_sig.name}(*args):
         def adapt_input(args):
             args = copy.deepcopy(args)
             lst = args[index]
-            assert isinstance(lst, list) # we only adapt inputs that go through type check
+            assert isinstance(lst, list) or isinstance(lst, str) # we only adapt inputs that go through type check
             split_at = max(0, len(lst) - suffix_length)
             prefix = lst[:split_at]
             suffix = lst[split_at:]
@@ -399,7 +415,6 @@ def {new_sig.name}(*args):
         adapted_inputs = list(map(adapt_input, inputs))
 
         return adapted_problem, adapted_inputs, adapted_solutions
-
 
     def unpack_argument_signature(self, req):
         PROMPT_CODE = f"""
@@ -1118,20 +1133,20 @@ def {new_sig.name}(el):
                                      [],
                                      inv_solutions,
                                      bijective=True)
-            case ListSuffixInversion(i, l):
-                split_list_problem, split_list_inputs, split_list_solutions = \
-                    self.split_list_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l)
-                inv_problem = self.transform_inv(split_list_problem, i+1)
+            case SuffixInversion(i, l, type):
+                split_arg_problem, split_arg_inputs, split_arg_solutions = \
+                    self.split_arg_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l, type)
+                inv_problem = self.transform_inv(split_arg_problem, i+1)
                 inv_solutions = self.sample_solutions(inv_problem, self.num_right_samples)
-                fwd_inv_prop = self.make_fwd_inv(split_list_problem, i+1)
-                triangulated_split_list_solutions = \
+                fwd_inv_prop = self.make_fwd_inv(split_arg_problem, i+1)
+                triangulated_split_arg_solutions = \
                     self.triangulate(fwd_inv_prop,
-                                     split_list_inputs,
-                                     split_list_solutions,
+                                     split_arg_inputs,
+                                     split_arg_solutions,
                                      [],
                                      inv_solutions,
                                      bijective=True)
-                triangulated_fwd_solutions = self.unwrap(triangulated_split_list_solutions)
+                triangulated_fwd_solutions = self.unwrap(triangulated_split_arg_solutions)
 
         return fwd_problem, fwd_inputs, triangulated_fwd_solutions
 
@@ -1150,20 +1165,20 @@ def {new_sig.name}(el):
                                      [],
                                      sinv_solutions,
                                      bijective=True)
-            case ListSuffixInversion(i, l):
-                split_list_problem, split_list_inputs, split_list_solutions = \
-                    self.split_list_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l)
-                fwd_sinv_prop = self.make_fwd_sinv(split_list_problem, i+1)
-                sinv_problem = self.transform_sinv(split_list_problem, i+1)
+            case SuffixInversion(i, l, type):
+                split_arg_problem, split_arg_inputs, split_arg_solutions = \
+                    self.split_arg_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l, type)
+                fwd_sinv_prop = self.make_fwd_sinv(split_arg_problem, i+1)
+                sinv_problem = self.transform_sinv(split_arg_problem, i+1)
                 sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples)
-                triangulated_split_list_solutions = \
+                triangulated_split_arg_solutions = \
                     self.triangulate(fwd_sinv_prop,
-                                     split_list_inputs,
-                                     split_list_solutions,
+                                     split_arg_inputs,
+                                     split_arg_solutions,
                                      [],
                                      sinv_solutions,
                                      bijective=True)
-                triangulated_fwd_solutions = self.unwrap(triangulated_split_list_solutions)
+                triangulated_fwd_solutions = self.unwrap(triangulated_split_arg_solutions)
 
         return fwd_problem, fwd_inputs, triangulated_fwd_solutions
 
@@ -1189,32 +1204,32 @@ def {new_sig.name}(el):
                                      sinv_inputs,
                                      sinv_solutions,
                                      bijective=True)
-            case ListSuffixInversion(i, l):
-                split_list_problem, _, _ = \
-                    self.split_list_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l)
+            case SuffixInversion(i, l, type):
+                split_arg_problem, _, _ = \
+                    self.split_arg_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l, type)
 
                 enum_problem = self.transform_enum(fwd_problem)
                 enum_inputs = self.generate_inputs(enum_problem)
                 enum_solutions = self.sample_solutions(enum_problem, self.num_left_samples, time_predicates=True)
                 
-                _, split_list_enum_inputs, split_list_enum_solutions = \
-                    self.split_list_adapter(enum_problem, enum_inputs, enum_solutions, i, l)
+                _, split_arg_enum_inputs, split_arg_enum_solutions = \
+                    self.split_arg_adapter(enum_problem, enum_inputs, enum_solutions, i, l)
                 
-                sinv_problem = self.transform_sinv(split_list_problem, i+1)
+                sinv_problem = self.transform_sinv(split_arg_problem, i+1)
                 sinv_inputs = self.generate_inputs(sinv_problem)
                 sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples, time_predicates=True)
 
-                enum_sinv_prop = self.make_enum_sinv(split_list_problem, i+1)
+                enum_sinv_prop = self.make_enum_sinv(split_arg_problem, i+1)
                 
-                triangulated_split_list_enum_solutions = \
+                triangulated_split_arg_enum_solutions = \
                     self.triangulate(enum_sinv_prop,
-                                     split_list_enum_inputs,
-                                     split_list_enum_solutions,
+                                     split_arg_enum_inputs,
+                                     split_arg_enum_solutions,
                                      sinv_inputs,
                                      sinv_solutions,
                                      bijective=True)
                 
-                triangulated_enum_solutions = self.unwrap(triangulated_split_list_enum_solutions)
+                triangulated_enum_solutions = self.unwrap(triangulated_split_arg_enum_solutions)
 
         return enum_problem, enum_inputs, triangulated_enum_solutions
 
