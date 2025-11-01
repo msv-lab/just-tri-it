@@ -16,7 +16,8 @@ from just_tri_it.code_generator import Generator
 from just_tri_it.selection import Agreement, AgreementOutcome
 from just_tri_it.input_generator import generate_inputs, remove_duplicates
 from just_tri_it.logic import (
-    Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, TolerateInvalid, TimeoutGuard, FullOrPartial, FlattenMap
+    Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, TolerateInvalid, TimeoutGuard,
+    FullOrPartial, FlattenMap
 )
 from just_tri_it.program import Program, Requirements, NamedReturnSignature, Signature, Parameter
 from just_tri_it.utils import (
@@ -24,11 +25,11 @@ from just_tri_it.utils import (
     gen_and_extract_code_with_retry,
     ExperimentFailure,
     RawData, extract_answer,
-    hack,
-    ONLY_CACHE
+    hack
 )
 from just_tri_it.property_checker import Interpreter
 import just_tri_it.utils
+
 
 @dataclass
 class ParameterInversion:
@@ -36,12 +37,13 @@ class ParameterInversion:
 
 
 @dataclass
-class ListSuffixInversion:
+class SuffixInversion:
     index: str
     suffix_length: int
+    type: str
 
 
-type InversionScheme = ParameterInversion | ListSuffixInversion
+type InversionScheme = ParameterInversion | SuffixInversion
 
 
 class TriangulationMode(Enum):
@@ -75,23 +77,36 @@ class Triangulator:
         if self.triangulation_mode in [TriangulationMode.FWD_INV,
                                        TriangulationMode.FWD_SINV,
                                        TriangulationMode.ENUM_SINV] and \
-           self.is_stream_processing_problem(fwd_problem):
+                self.is_stream_processing_problem(fwd_problem):
             stream_processing = True
 
-        fwd_inputs = self.generate_inputs(fwd_problem, self.executor)
+        fwd_inputs = self.generate_inputs(fwd_problem)
         need_timeout_guards = self.triangulation_mode in [TriangulationMode.FWD_SINV, TriangulationMode.ENUM_SINV]
         fwd_solutions = self.sample_solutions(fwd_problem,
                                               self.num_left_samples,
                                               time_predicates=need_timeout_guards)
 
+        hash2ori = {}
+        for item in fwd_solutions:
+            hash2ori[item[0].hash_id()] = item[0]
+
         num_adapters = 0
 
-        if hack(task="2_list_sum"):
+        if hack(task="11_binary_string") or hack(task="atcoder_abc393_d"):
+            pass
+        elif hack(task="2_list_sum"):
             fwd_problem, fwd_inputs, fwd_solutions = \
                 self.add_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, 0)
             num_adapters += 1
         elif hack(task="atcoder_abc388_c"):
-            pass
+            len_par = self.length_parameter(fwd_problem)
+            if len_par is not None:
+                fwd_problem, fwd_inputs, fwd_solutions = \
+                    self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
+                num_adapters += 1
+                fwd_problem, fwd_inputs, fwd_solutions = \
+                    self.add_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, 0)
+                num_adapters += 1
         else:
             len_par = self.length_parameter(fwd_problem)
 
@@ -104,17 +119,17 @@ class Triangulator:
             case TriangulationMode.FWD_INV:
                 if stream_processing:
                     _, _, result = self.stream_fwd_inv(fwd_problem, fwd_inputs, fwd_solutions)
-                else: 
+                else:
                     _, _, result = self.fwd_inv(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.FWD_SINV:
                 if stream_processing:
                     _, _, result = self.stream_fwd_sinv(fwd_problem, fwd_inputs, fwd_solutions)
-                else: 
+                else:
                     _, _, result = self.fwd_sinv(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.ENUM_SINV:
                 if stream_processing:
                     _, _, result = self.stream_enum_sinv(fwd_problem, fwd_inputs, fwd_solutions)
-                else: 
+                else:
                     _, _, result = self.cascade_enum_sinv(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.Postcondition:
                 _, _, result = self.postcondition(fwd_problem, fwd_inputs, fwd_solutions)
@@ -129,16 +144,20 @@ class Triangulator:
         for _ in range(num_adapters):
             result = self.unwrap(result)
 
-        return (result, raw_data)
-        
+        replaced_result = []
+        for item in result:
+            if not item[0].original_hash is None:
+                replaced_result.append((hash2ori[item[0].original_hash], item[1]))
+            else:
+                replaced_result.append(item)
+        return (replaced_result, raw_data)
 
     def triangulate(self, prop, left_inputs, left_solutions, right_inputs, right_solutions, bijective=False):
         programs_and_witnesses = []
-
-        if not ONLY_CACHE:
-            q_witnesses = {} # from right program to its witnesses
-            q_agreement = {} # from right program to its first left agreement
-            p_agreements = defaultdict(list) # from left program to all its right agreements
+        if not just_tri_it.utils.ONLY_CACHE:
+            q_witnesses = {}  # from right program to its witnesses
+            q_agreement = {}  # from right program to its first left agreement
+            p_agreements = defaultdict(list)  # from left program to all its right agreements
 
             for (p, pws) in left_solutions:
                 for (q, qws) in right_solutions:
@@ -146,7 +165,7 @@ class Triangulator:
                         q_witnesses[q.hash_id()] = qws
 
                     if self.checker.check({Side.LEFT: left_inputs, Side.RIGHT: right_inputs},
-                                          {Side.LEFT: p, Side.RIGHT: q },
+                                          {Side.LEFT: p, Side.RIGHT: q},
                                           prop):
 
                         if bijective and q.hash_id() in q_agreement:
@@ -163,7 +182,7 @@ class Triangulator:
                 p = next(p for (p, _) in left_solutions if p.hash_id() == p_id)
                 p_witnesses = []
                 for q_id in q_ids:
-                    p_witnesses.extend(q_witnesses[q_id]) # inherit all witnesses from all matched right programs
+                    p_witnesses.extend(q_witnesses[q_id])  # inherit all witnesses from all matched right programs
                 if len(p_witnesses) > 0:
                     programs_and_witnesses.append((p, p_witnesses))
         else:
@@ -176,31 +195,35 @@ class Triangulator:
             assert len(p.nested) > 0
             remaining, last = p.nested[:-1], p.nested[-1]
             if p.time_predicate is None:
-                return Program(last, p.code, nested=remaining)
+                return Program(last, p.code, nested=remaining, original_hash=p.original_hash)
             else:
-                return Program(last, p.code, nested=remaining, time_predicate=unwrap_program(p.time_predicate))
+                return Program(last, p.code, nested=remaining, time_predicate=unwrap_program(p.time_predicate),
+                               original_hash=p.original_hash)
 
         return list(map(lambda s: (unwrap_program(s[0]), s[1]), solutions))
 
     def sample_solutions(self, req: Requirements, n: int, time_predicates=False):
         def gen_time_predicate(req, program):
             return program.gen_time_predicate(self.model, req)
-        
+
         programs = self.code_generator.generate(self.model, req, n)
         programs = list(islice(programs, n))
         if time_predicates:
             programs = list(map(partial(gen_time_predicate, req), programs))
+        # have side effect
+        for p in programs:
+            p.original_hash = p.hash_id()
 
-        #NOTE: initially, each solution is its own witness            
+        # NOTE: initially, each solution is its own witness
         return list(map(lambda p: (p, [p]), programs))
 
-    def generate_inputs(self, req: Requirements, executor):
-        return generate_inputs(self.model, req, executor)
- 
+    def generate_inputs(self, req: Requirements):
+        return generate_inputs(self.model, req, self.executor)
+
     def is_stream_processing_problem(self, req: Requirements) -> bool:
-        if not(len(req.signature.params) == 1 and
-               req.signature.params[0].type.lower().startswith('list') and
-               req.signature.return_type.lower().startswith('list')):
+        if not (len(req.signature.params) == 1 and
+                req.signature.params[0].type.lower().startswith('list') and
+                req.signature.return_type.lower().startswith('list')):
             return False
 
         PROMPT = f"""\
@@ -213,13 +236,14 @@ Does the problem consist of applying the same operation independently to each el
 Problem:
 {req.description}
         """
-        judgement = gen_and_extract_answer_with_retry(self.model, PROMPT, 3, accepted_case_insensitive_answers=['no', 'yes'])
+        judgement = gen_and_extract_answer_with_retry(self.model, PROMPT, 3,
+                                                      accepted_case_insensitive_answers=['no', 'yes'])
         return judgement.lower() == "yes"
 
     def length_parameter(self, req: Requirements) -> Optional[Tuple[int, int]]:
-        if not(any(p.type == "int" for p in req.signature.params) and
-               (any(p.type.lower().startswith("list") for p in req.signature.params) or
-                any(p.type == "str" for p in req.signature.params))):
+        if not (any(p.type == "int" for p in req.signature.params) and
+                (any(p.type.lower().startswith("list") for p in req.signature.params) or
+                 any(p.type == "str" for p in req.signature.params))):
             return None
 
         PROMPT = f"""\
@@ -247,12 +271,19 @@ Problem:
         return (p_names.index(response[0]), p_names.index(response[1]))
 
     def choose_inversion_scheme(self, req: Requirements) -> InversionScheme:
+        if hack(task="11_binary_string"):
+            return SuffixInversion(1, 1, "str")  # second parameter w.r.t. the last element
+        if hack(task="atcoder_abc388_a"):
+            return SuffixInversion(0, 1, "str")
         if hack(task="2_list_sum"):
-            return ListSuffixInversion(1, 1) # second parameter w.r.t. the last element
-        
+            return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
+        if hack(task="atcoder_abc388_c"):
+            return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
+        if hack(task="atcoder_abc393_d"):
+            return SuffixInversion(1, 1, "str")
         if len(req.signature.params) == 1:
             if req.signature.params[0].type.lower().startswith('list'):
-                return ListSuffixInversion(0, 1)
+                return SuffixInversion(0, 1, "list")
             return ParameterInversion(0)
         else:
             PROMPT = f"""\
@@ -280,6 +311,8 @@ Problem:
                     tried_samples.append(sample)
                     valid_name = extract_answer(sample)
                     valid_name = valid_name.strip() if valid_name else None
+                    if hack(task="atcoder_abc400_d"):
+                        valid_name = "fish_shop_row"
                     if valid_name:
                         return_param = [p.name for p in req.signature.params].index(valid_name)
                         break
@@ -290,25 +323,36 @@ Problem:
                         raise ExperimentFailure(f"retry failed with {type(e).__name__}: {e}")
             return ParameterInversion(return_param)
 
-    def split_list_signature(self, index: int, s: Signature):
+    def split_arg_signature(self, index: int, s: Signature):
         new_sig = copy.deepcopy(s)
         new_sig.name = new_sig.name + f"_split_{index}"
         new_sig.params = new_sig.params[0:index] + \
-            [ Parameter(new_sig.params[index].name + "_prefix", new_sig.params[index].type),
-              Parameter(new_sig.params[index].name + "_suffix", new_sig.params[index].type) ] + \
-            new_sig.params[index+1:]
+                         [Parameter(new_sig.params[index].name + "_prefix", new_sig.params[index].type),
+                          Parameter(new_sig.params[index].name + "_suffix", new_sig.params[index].type)] + \
+                         new_sig.params[index + 1:]
         return new_sig
 
-    def transform_split_list(self, req, index, suffix_length):
+    def transform_split_arg(self, req, index, suffix_length, type: str):
         sig = req.signature
-        new_sig = self.split_list_signature(index, sig)
-        match suffix_length:
-            case 1:
-                sig_note = f"""\
-Specifically, the full input {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index+1].name}, so that {new_sig.params[index+1].name} contains only the last element of the full list {sig.params[index].name}. If the full list {sig.params[index].name} is empty, then both {new_sig.params[index].name} and {new_sig.params[index+1].name} must be empty."""
-            case _:
-                sig_note = f"""\
-Specifically, the full input {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index+1].name}, so that len({new_sig.params[index+1].name}) is exactly {suffix_length} when the full list {sig.params[index].name} has at least {suffix_length} elements, otherwise {new_sig.params[index+1].name} contains the entire {sig.params[index].name}."""
+        new_sig = self.split_arg_signature(index, sig)
+        if type == "list":
+            match suffix_length:
+                case 1:
+                    sig_note = f"""\
+Specifically, the full input {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index + 1].name}, so that {new_sig.params[index + 1].name} contains only the last element of the full list {sig.params[index].name}. If the full list {sig.params[index].name} is empty, then both {new_sig.params[index].name} and {new_sig.params[index + 1].name} must be empty."""
+                case _:
+                    sig_note = f"""\
+Specifically, the full input {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index + 1].name}, so that len({new_sig.params[index + 1].name}) is exactly {suffix_length} when the full list {sig.params[index].name} has at least {suffix_length} elements, otherwise {new_sig.params[index + 1].name} contains the entire {sig.params[index].name}."""
+        elif type == "str":
+            match suffix_length:
+                case 1:
+                    sig_note = f"""\
+Specifically, the full input {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index + 1].name}, so that {new_sig.params[index + 1].name} contains only the last character of the full string {sig.params[index].name}. If the full string {sig.params[index].name} is empty, then both {new_sig.params[index].name} and {new_sig.params[index + 1].name} must be empty."""
+                case _:
+                    sig_note = f"""\
+Specifically, the full input string {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index + 1].name}, so that len({new_sig.params[index + 1].name}) is exactly {suffix_length} when the full string {sig.params[index].name} has at least {suffix_length} characters, otherwise {new_sig.params[index + 1].name} is the entire {sig.params[index].name}."""
+        else:
+            raise ValueError("unsupported argument type for splitting")
 
         PROMPT = f"""
 You are given a programming problem that requires implementing the function:
@@ -325,7 +369,7 @@ When rewriting the problem, please
 0. Minimally modify the original problem
 1. Preserve all the original problem's rules, edge cases, and constraints.
 2. Ensure that the problem is self-contained; it must not refer to the original function.
-3. Emphasize constraints on {new_sig.params[index+1].name}.
+3. Emphasize constraints on {new_sig.params[index + 1].name}.
 4. Exclude all examples.
 
 Enclose the rewritten problem statement inside `<answer>` and `</answer>` tags.
@@ -334,7 +378,9 @@ Original Problem:
 {req.description}
         """
         new_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
-        
+        if hack(task="atcoder_abc388_a", model="gpt-4o"):
+            wrong_words = "- `input_string_prefix` consists of the first character of the original input string, and it is an uppercase English letter."
+            new_desc = new_desc.replace(wrong_words, "")
         new_req = Requirements(new_sig, new_desc)
 
         if (just_tri_it.utils.DEBUG):
@@ -342,42 +388,44 @@ Original Problem:
 
         return new_req
 
-    def split_list_adapter(self, problem, inputs, solutions, index, suffix_length):
-        adapted_problem = self.transform_split_list(problem, index, suffix_length)
+    def split_arg_adapter(self, problem, inputs, solutions, index, suffix_length, type):
+        adapted_problem = self.transform_split_arg(problem, index, suffix_length, type)
         new_sig = adapted_problem.signature
-        
+
         def adapt_program(p):
-            ADAPTER_CODE=f"""
+            ADAPTER_CODE = f"""
 def {new_sig.name}(*args):
     args = list(args)
-    new_args = args[:{index}] + [ args[{index}] + args[{index+1}] ] + args[{index+2}:]
+    new_args = args[:{index}] + [ args[{index}] + args[{index + 1}] ] + args[{index + 2}:]
     return {p.signature.name}(*new_args)
             """
             if p.time_predicate is None:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature])
+                               nested=p.nested + [p.signature],
+                               original_hash=p.original_hash)
             else:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature],
-                               time_predicate=adapt_program(p.time_predicate))
+                               nested=p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate),
+                               original_hash=p.original_hash)
+
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         def adapt_input(args):
             args = copy.deepcopy(args)
             lst = args[index]
-            assert isinstance(lst, list) # we only adapt inputs that go through type check
+            assert isinstance(lst, list) or isinstance(lst, str)  # we only adapt inputs that go through type check
             split_at = max(0, len(lst) - suffix_length)
             prefix = lst[:split_at]
             suffix = lst[split_at:]
-            args[index:index+1] = [prefix, suffix]
-            return args                
+            args[index:index + 1] = [prefix, suffix]
+            return args
 
         adapted_inputs = list(map(adapt_input, inputs))
 
         return adapted_problem, adapted_inputs, adapted_solutions
-
 
     def unpack_argument_signature(self, req):
         PROMPT_CODE = f"""
@@ -390,7 +438,7 @@ Unpack the input tuple so that each element of the tuple becomes a separate func
 - The parameters must have descriptive names
 - The parameters must be annotated with types according to elements of the original tuple
 - The return type should remain the same.
-        
+
 Please return only the function definition with 'pass' as the body inside a Markdown code block.
 
 Problem:
@@ -428,35 +476,38 @@ Original Problem:
 {req.description}
         """
         new_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
-        
+
         new_req = Requirements(new_sig, new_desc)
 
         if (just_tri_it.utils.DEBUG):
             print(new_req.get_content(), file=sys.stderr, flush=True)
 
         return new_req
-    
+
     def unpack_argument_adapter(self, problem, inputs, solutions):
         sig = problem.signature
         assert len(sig.params) == 1 and sig.params[0].type.lower().startswith("tuple")
-        
+
         adapted_problem = self.transform_unpack_argument(problem)
         new_sig = adapted_problem.signature
-        
+
         def adapt_program(p):
-            ADAPTER_CODE=f"""
+            ADAPTER_CODE = f"""
 def {new_sig.name}(*args):
     return {p.signature.name}(args)
             """
             if p.time_predicate is None:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature])
+                               nested=p.nested + [p.signature],
+                               original_hash=p.original_hash)
             else:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature],
-                               time_predicate=adapt_program(p.time_predicate))
+                               nested=p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate),
+                               original_hash=p.original_hash)
+
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         def adapt_input(args):
@@ -464,7 +515,7 @@ def {new_sig.name}(*args):
 
         adapted_inputs = list(map(adapt_input, inputs))
 
-        return adapted_problem, adapted_inputs, adapted_solutions    
+        return adapted_problem, adapted_inputs, adapted_solutions
 
     def transform_syntactic(self, req: Requirements) -> Requirements:
         PROMPT = f"""
@@ -496,7 +547,7 @@ Original Problem:
     def remove_length_parameter_signature(self, sig: Signature, len_index: int):
         new_sig = copy.deepcopy(sig)
         new_sig.name = new_sig.name + "_simp"
-        new_sig.params = new_sig.params[:len_index] + new_sig.params[len_index+1:]
+        new_sig.params = new_sig.params[:len_index] + new_sig.params[len_index + 1:]
         return new_sig
 
     def transform_remove_length_parameter(self, req: Requirements, len_index: int):
@@ -533,15 +584,15 @@ Original Problem:
     def remove_length_parameter_adapter(self, problem, inputs, solutions, len_index: int, seq_index: int):
         sig = problem.signature
         assert sig.params[len_index].type == "int"
-        
+
         adapted_problem = self.transform_remove_length_parameter(problem, len_index)
         new_sig = adapted_problem.signature
-        
+
         def adapt_program(p):
             adapted_seq_index = seq_index
             if len_index < seq_index:
                 adapted_seq_index -= 1
-            ADAPTER_CODE=f"""
+            ADAPTER_CODE = f"""
 def {new_sig.name}(*args):
     args = list(args)
     args = args[:{len_index}] + [ len(args[{adapted_seq_index}]) ] + args[{len_index}:]
@@ -550,16 +601,19 @@ def {new_sig.name}(*args):
             if p.time_predicate is None:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature])
+                               nested=p.nested + [p.signature],
+                               original_hash=p.original_hash)
             else:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature],
-                               time_predicate=adapt_program(p.time_predicate))
+                               nested=p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate),
+                               original_hash=p.original_hash)
+
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         def adapt_input(args):
-            return args[:len_index] + args[len_index+1:]
+            return args[:len_index] + args[len_index + 1:]
 
         adapted_inputs = list(map(adapt_input, inputs))
 
@@ -569,7 +623,7 @@ def {new_sig.name}(*args):
         new_sig = copy.deepcopy(sig)
         new_sig.name = new_sig.name + "_with_len"
         extra_param = Parameter(new_sig.params[seq_index].name + "_len", "int")
-        new_sig.params = new_sig.params[:seq_index] + [ extra_param ] + new_sig.params[seq_index:]
+        new_sig.params = new_sig.params[:seq_index] + [extra_param] + new_sig.params[seq_index:]
         return new_sig
 
     def transform_add_length_parameter(self, req: Requirements, seq_index: int):
@@ -579,7 +633,7 @@ You are given a programming problem that requires implementing the function:
 
 {req.signature.pretty_print()}
 
-Your task is to rewrite this problem so that it takes an extra parameter {new_sig.params[seq_index].name} that indicates the length of {new_sig.params[seq_index+1].name}:
+Your task is to rewrite this problem so that it takes an extra parameter {new_sig.params[seq_index].name} that indicates the length of {new_sig.params[seq_index + 1].name}:
 
 {new_sig.pretty_print()}
 
@@ -609,25 +663,28 @@ Original Problem:
         new_sig = adapted_problem.signature
 
         def adapt_program(p):
-            ADAPTER_CODE=f"""
+            ADAPTER_CODE = f"""
 def {new_sig.name}(*args):
     args = list(args)
-    args = args[:{seq_index}] + args[{seq_index+1}:]
+    args = args[:{seq_index}] + args[{seq_index + 1}:]
     return {p.signature.name}(*args)
             """
             if p.time_predicate is None:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature])
+                               nested=p.nested + [p.signature],
+                               original_hash=p.original_hash)
             else:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature],
-                               time_predicate=adapt_program(p.time_predicate))
+                               nested=p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate),
+                               original_hash=p.original_hash)
+
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         def adapt_input(args):
-            return args[:seq_index] + [ len(args[seq_index]) ] + args[seq_index:]
+            return args[:seq_index] + [len(args[seq_index])] + args[seq_index:]
 
         adapted_inputs = list(map(adapt_input, inputs))
 
@@ -657,7 +714,7 @@ def {new_sig.name}(*args):
             case "list[int]" | "List[int]":
                 add_sentence = EXTRA_INSTR.format(sth="append 1 to it")
             case t if is_all_int_tuple(t):
-                add_sentence = EXTRA_INSTR.format(sth="add 1 to each element of the resulting tuple")           
+                add_sentence = EXTRA_INSTR.format(sth="add 1 to each element of the resulting tuple")
             case _:
                 # troublesome to support more complex types
                 raise ExperimentFailure()
@@ -666,8 +723,7 @@ def {new_sig.name}(*args):
         if (just_tri_it.utils.DEBUG):
             print(new_req.get_content(), file=sys.stderr, flush=True)
 
-        return new_req       
-
+        return new_req
 
     def inv_signature(self, sig: NamedReturnSignature, inversion_index) -> Signature:
         new_return_type = sig.params[inversion_index].type
@@ -712,7 +768,7 @@ Original Problem:
         if (just_tri_it.utils.DEBUG):
             print(new_req.get_content(), file=sys.stderr, flush=True)
 
-        return new_req        
+        return new_req
 
     def transform_postcondition(self, req: Requirements) -> Requirements:
         named_sig = NamedReturnSignature.infer_name(self.model, req)
@@ -747,10 +803,10 @@ Original Problem:
         if (just_tri_it.utils.DEBUG):
             print(new_req.get_content(), file=sys.stderr, flush=True)
 
-        return new_req        
+        return new_req
 
     def transform_enum(self, req: Requirements) -> Requirements:
-        #TODO: support infinite sets
+        # TODO: support infinite sets
         sig = req.signature
         enum_sig = Signature(f"{sig.name}_enum", sig.params, f"list[{sig.return_type}]")
         PROMPT = f"""
@@ -781,7 +837,7 @@ Original Problem:
         if (just_tri_it.utils.DEBUG):
             print(new_req.get_content(), file=sys.stderr, flush=True)
 
-        return new_req        
+        return new_req
 
     def sinv_signature(self, sig: NamedReturnSignature, inversion_index, tractable_fibers) -> Signature:
         if tractable_fibers:
@@ -808,9 +864,10 @@ Respond Yes if this set is always finite and sufficiently small to algorithmical
 Original Problem:
 {fwd_req.description}
         """
-        response = gen_and_extract_answer_with_retry(self.model, PROMPT, 3, accepted_case_insensitive_answers=['no', 'yes'])
+        response = gen_and_extract_answer_with_retry(self.model, PROMPT, 3,
+                                                     accepted_case_insensitive_answers=['no', 'yes'])
         return response.lower() == "yes"
-        
+
     def sinv_description(self, fwd_req: Requirements, sinv_sig: Signature, inverse_index: int):
         PROMPT = f"""
 You are given a programming problem that requires implementing the function:
@@ -866,7 +923,7 @@ Original Problem:
 {fwd_req.description}
         """
         return gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
-        
+
     def transform_sinv(self, fwd_req: Requirements, inversion_index: int) -> Requirements:
         named_sig = NamedReturnSignature.infer_name(self.model, fwd_req)
         tractable_fibers = self.tractable_fibers(fwd_req, inversion_index)
@@ -882,7 +939,7 @@ Original Problem:
         if (just_tri_it.utils.DEBUG):
             print(new_req.get_content(), file=sys.stderr, flush=True)
 
-        return new_req        
+        return new_req
 
     def pointwise_signature(self, sig: Signature) -> Signature:
         assert len(sig.params) == 1
@@ -918,31 +975,33 @@ Original Problem:
         """
         pointwise_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
         new_req = Requirements(pointwise_sig, pointwise_desc)
- 
+
         if (just_tri_it.utils.DEBUG):
             print(new_req.get_content(), file=sys.stderr, flush=True)
 
         return new_req
-       
 
     def adapt_pointwise(self, problem, inputs, solutions):
         adapted_problem = self.transform_pointwise(problem)
         new_sig = adapted_problem.signature
-        
+
         def adapt_program(p):
-            ADAPTER_CODE=f"""
+            ADAPTER_CODE = f"""
 def {new_sig.name}(el):
     return {problem.signature.name}([el])[0]
             """
             if p.time_predicate is None:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature])
+                               nested=p.nested + [p.signature],
+                               original_hash=p.original_hash)
             else:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature],
-                               time_predicate=adapt_program(p.time_predicate))
+                               nested=p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate),
+                               original_hash=p.original_hash)
+
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         adapted_inputs = [[y] for sub in inputs for x in sub for y in x]
@@ -963,9 +1022,9 @@ def {new_sig.name}(el):
         args = [Var(f"i_{i}") for i in range(arity)]
         p = Func(Side.LEFT)
         q = Func(Side.RIGHT)
-        
+
         return ForAll(args, Side.LEFT, Equals([OffByOne([p(args)]), q(args)]))
-                      
+
     def make_postcondition(self, req):
         arity = len(req.signature.params)
         args = [Var(f"i_{i}") for i in range(arity)]
@@ -976,11 +1035,11 @@ def {new_sig.name}(el):
 
     def make_stateless_map(self, req):
         assert len(req.signature.params) == 1
-        
+
         arg = Var(f"i")
         p = Func(Side.LEFT)
         q = Func(Side.RIGHT)
-        
+
         return ForAll(arg, Side.LEFT,
                       Equals([TolerateInvalid([p(arg)]), FlattenMap(q, arg)]))
 
@@ -991,7 +1050,7 @@ def {new_sig.name}(el):
         remaining_args = args[:inversion_index] + args[inversion_index + 1:]
         p = Func(Side.LEFT)
         q = Func(Side.RIGHT)
-        
+
         return ForAll(args, Side.LEFT,
                       Equals([inv_arg, q([TolerateInvalid([p(args)])] + remaining_args)]))
 
@@ -1001,7 +1060,7 @@ def {new_sig.name}(el):
         inv_arg = Var(f"i_{inversion_index}")
         arg_prime = Var(f"i_prime")
         remaining_args = args[:inversion_index] + args[inversion_index + 1:]
-        args_with_prime = args[:inversion_index] + [arg_prime] + args[inversion_index+1:]
+        args_with_prime = args[:inversion_index] + [arg_prime] + args[inversion_index + 1:]
         p = Func(Side.LEFT)
         q = Func(Side.RIGHT)
 
@@ -1033,7 +1092,7 @@ def {new_sig.name}(el):
         p = Func(Side.LEFT)
         q = Func(Side.RIGHT)
 
-        return ForAll(args, Side.LEFT, Member([p(args), FullOrPartial([q(args)])]))        
+        return ForAll(args, Side.LEFT, Member([p(args), FullOrPartial([q(args)])]))
 
     def postcondition(self, fwd_problem, fwd_inputs, fwd_solutions):
         post_problem = self.transform_postcondition(fwd_problem)
@@ -1073,7 +1132,7 @@ def {new_sig.name}(el):
 
     def fwd_inv(self, fwd_problem, fwd_inputs, fwd_solutions):
         print(f"\n[fwd_inv]", file=sys.stderr, flush=True)
-        
+
         match self.choose_inversion_scheme(fwd_problem):
             case ParameterInversion(i):
                 inv_problem = self.transform_inv(fwd_problem, i)
@@ -1086,20 +1145,20 @@ def {new_sig.name}(el):
                                      [],
                                      inv_solutions,
                                      bijective=True)
-            case ListSuffixInversion(i, l):
-                split_list_problem, split_list_inputs, split_list_solutions = \
-                    self.split_list_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l)
-                inv_problem = self.transform_inv(split_list_problem, i+1)
+            case SuffixInversion(i, l, type):
+                split_arg_problem, split_arg_inputs, split_arg_solutions = \
+                    self.split_arg_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l, type)
+                inv_problem = self.transform_inv(split_arg_problem, i + 1)
                 inv_solutions = self.sample_solutions(inv_problem, self.num_right_samples)
-                fwd_inv_prop = self.make_fwd_inv(split_list_problem, i+1)
-                triangulated_split_list_solutions = \
+                fwd_inv_prop = self.make_fwd_inv(split_arg_problem, i + 1)
+                triangulated_split_arg_solutions = \
                     self.triangulate(fwd_inv_prop,
-                                     split_list_inputs,
-                                     split_list_solutions,
+                                     split_arg_inputs,
+                                     split_arg_solutions,
                                      [],
                                      inv_solutions,
                                      bijective=True)
-                triangulated_fwd_solutions = self.unwrap(triangulated_split_list_solutions)
+                triangulated_fwd_solutions = self.unwrap(triangulated_split_arg_solutions)
 
         return fwd_problem, fwd_inputs, triangulated_fwd_solutions
 
@@ -1109,7 +1168,7 @@ def {new_sig.name}(el):
             case ParameterInversion(i):
                 sinv_problem = self.transform_sinv(fwd_problem, i)
                 sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples)
-                
+
                 fwd_sinv_prop = self.make_fwd_sinv(fwd_problem, i)
                 triangulated_fwd_solutions = \
                     self.triangulate(fwd_sinv_prop,
@@ -1118,37 +1177,36 @@ def {new_sig.name}(el):
                                      [],
                                      sinv_solutions,
                                      bijective=True)
-            case ListSuffixInversion(i, l):
-                split_list_problem, split_list_inputs, split_list_solutions = \
-                    self.split_list_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l)
-                fwd_sinv_prop = self.make_fwd_sinv(split_list_problem, i+1)
-                sinv_problem = self.transform_sinv(split_list_problem, i+1)
+            case SuffixInversion(i, l, type):
+                split_arg_problem, split_arg_inputs, split_arg_solutions = \
+                    self.split_arg_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l, type)
+                fwd_sinv_prop = self.make_fwd_sinv(split_arg_problem, i + 1)
+                sinv_problem = self.transform_sinv(split_arg_problem, i + 1)
                 sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples)
-                triangulated_split_list_solutions = \
+                triangulated_split_arg_solutions = \
                     self.triangulate(fwd_sinv_prop,
-                                     split_list_inputs,
-                                     split_list_solutions,
+                                     split_arg_inputs,
+                                     split_arg_solutions,
                                      [],
                                      sinv_solutions,
                                      bijective=True)
-                triangulated_fwd_solutions = self.unwrap(triangulated_split_list_solutions)
+                triangulated_fwd_solutions = self.unwrap(triangulated_split_arg_solutions)
 
         return fwd_problem, fwd_inputs, triangulated_fwd_solutions
-
 
     def enum_sinv(self, fwd_problem, fwd_inputs, fwd_solutions):
 
         match self.choose_inversion_scheme(fwd_problem):
             case ParameterInversion(i):
                 enum_problem = self.transform_enum(fwd_problem)
-                
+
                 enum_inputs = self.generate_inputs(enum_problem)
                 enum_solutions = self.sample_solutions(enum_problem, self.num_left_samples, time_predicates=True)
-                
+
                 sinv_problem = self.transform_sinv(fwd_problem, i)
                 sinv_inputs = self.generate_inputs(sinv_problem)
                 sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples, time_predicates=True)
-                
+
                 enum_sinv_prop = self.make_enum_sinv(fwd_problem, i)
                 triangulated_enum_solutions = \
                     self.triangulate(enum_sinv_prop,
@@ -1157,35 +1215,34 @@ def {new_sig.name}(el):
                                      sinv_inputs,
                                      sinv_solutions,
                                      bijective=True)
-            case ListSuffixInversion(i, l):
-                split_list_problem, _, _ = \
-                    self.split_list_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l)
+            case SuffixInversion(i, l, type):
+                split_arg_problem, _, _ = \
+                    self.split_arg_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l, type)
 
                 enum_problem = self.transform_enum(fwd_problem)
                 enum_inputs = self.generate_inputs(enum_problem)
                 enum_solutions = self.sample_solutions(enum_problem, self.num_left_samples, time_predicates=True)
-                
-                _, split_list_enum_inputs, split_list_enum_solutions = \
-                    self.split_list_adapter(enum_problem, enum_inputs, enum_solutions, i, l)
-                
-                sinv_problem = self.transform_sinv(split_list_problem, i+1)
+
+                _, split_arg_enum_inputs, split_arg_enum_solutions = \
+                    self.split_arg_adapter(enum_problem, enum_inputs, enum_solutions, i, l)
+
+                sinv_problem = self.transform_sinv(split_arg_problem, i + 1)
                 sinv_inputs = self.generate_inputs(sinv_problem)
                 sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples, time_predicates=True)
 
-                enum_sinv_prop = self.make_enum_sinv(split_list_problem, i+1)
-                
-                triangulated_split_list_enum_solutions = \
+                enum_sinv_prop = self.make_enum_sinv(split_arg_problem, i + 1)
+
+                triangulated_split_arg_enum_solutions = \
                     self.triangulate(enum_sinv_prop,
-                                     split_list_enum_inputs,
-                                     split_list_enum_solutions,
+                                     split_arg_enum_inputs,
+                                     split_arg_enum_solutions,
                                      sinv_inputs,
                                      sinv_solutions,
                                      bijective=True)
-                
-                triangulated_enum_solutions = self.unwrap(triangulated_split_list_enum_solutions)
+
+                triangulated_enum_solutions = self.unwrap(triangulated_split_arg_enum_solutions)
 
         return enum_problem, enum_inputs, triangulated_enum_solutions
-
 
     def cascade_enum_sinv(self, fwd_problem, fwd_inputs, fwd_solutions):
 
@@ -1210,7 +1267,7 @@ def {new_sig.name}(el):
 
     def stream_fwd_inv(self, multiple_queries_problem, multiple_queries_inputs, multiple_queries_solutions):
         print(f"\n[stream_fwd_inv]", file=sys.stderr, flush=True)
-        
+
         single_query_adapted_problem, single_query_adapted_inputs, single_query_adapted_solutions = \
             self.adapt_pointwise(multiple_queries_problem,
                                  multiple_queries_inputs,
@@ -1218,7 +1275,7 @@ def {new_sig.name}(el):
 
         tuple_unpacked = False
         if len(single_query_adapted_problem.signature.params) == 1 and \
-           single_query_adapted_problem.signature.params[0].type.lower().startswith("tuple"):
+                single_query_adapted_problem.signature.params[0].type.lower().startswith("tuple"):
             single_query_adapted_problem, single_query_adapted_inputs, single_query_adapted_solutions = \
                 self.unpack_argument_adapter(single_query_adapted_problem,
                                              single_query_adapted_inputs,
@@ -1230,14 +1287,14 @@ def {new_sig.name}(el):
                          single_query_adapted_inputs,
                          single_query_adapted_solutions)
 
-        print(f"\n[single query solutions: {len(triangulated_single_query_adapted_solutions)}]", file=sys.stderr, flush=True)
+        print(f"\n[single query solutions: {len(triangulated_single_query_adapted_solutions)}]", file=sys.stderr,
+              flush=True)
 
         if tuple_unpacked:
             triangulated_single_query_adapted_solutions = self.unwrap(triangulated_single_query_adapted_solutions)
-        
+
         triangulated_single_query_unwraped_solutions = self.unwrap(triangulated_single_query_adapted_solutions)
 
-        
         stateless_map = self.make_stateless_map(multiple_queries_problem)
         triangulated_multiple_queries_solutions = \
             self.triangulate(stateless_map,
@@ -1253,7 +1310,7 @@ def {new_sig.name}(el):
 
     def stream_fwd_sinv(self, multiple_queries_problem, multiple_queries_inputs, multiple_queries_solutions):
         print(f"\n[stream_fwd_sinv]", file=sys.stderr, flush=True)
-        
+
         single_query_adapted_problem, single_query_adapted_inputs, single_query_adapted_solutions = \
             self.adapt_pointwise(multiple_queries_problem,
                                  multiple_queries_inputs,
@@ -1261,7 +1318,7 @@ def {new_sig.name}(el):
 
         tuple_unpacked = False
         if len(single_query_adapted_problem.signature.params) == 1 and \
-           single_query_adapted_problem.signature.params[0].type.lower().startswith("tuple"):
+                single_query_adapted_problem.signature.params[0].type.lower().startswith("tuple"):
             single_query_adapted_problem, single_query_adapted_inputs, single_query_adapted_solutions = \
                 self.unpack_argument_adapter(single_query_adapted_problem,
                                              single_query_adapted_inputs,
@@ -1273,7 +1330,8 @@ def {new_sig.name}(el):
                           single_query_adapted_inputs,
                           single_query_adapted_solutions)
 
-        print(f"\n[single query solutions: {len(triangulated_single_query_adapted_solutions)}]", file=sys.stderr, flush=True)
+        print(f"\n[single query solutions: {len(triangulated_single_query_adapted_solutions)}]", file=sys.stderr,
+              flush=True)
 
         if tuple_unpacked:
             triangulated_single_query_adapted_solutions = self.unwrap(triangulated_single_query_adapted_solutions)
@@ -1289,17 +1347,16 @@ def {new_sig.name}(el):
                              triangulated_single_query_adapted_solutions,
                              bijective=True)
 
-        print(f"\n[multi-query solutions: {len(triangulated_multiple_queries_solutions)}]", file=sys.stderr, flush=True)        
+        print(f"\n[multi-query solutions: {len(triangulated_multiple_queries_solutions)}]", file=sys.stderr, flush=True)
         return multiple_queries_problem, multiple_queries_inputs, triangulated_multiple_queries_solutions
-
 
     def stream_enum_sinv(self, multiple_queries_problem, multiple_queries_inputs, multiple_queries_solutions):
         print(f"\n[stream_enum_sinv]", file=sys.stderr, flush=True)
-        
+
         single_query_problem = self.transform_pointwise(multiple_queries_problem)
         single_query_inputs = self.generate_inputs(single_query_problem)
         single_query_solutions = self.sample_solutions(single_query_problem, self.num_left_samples)
-        
+
         single_query_adapted_problem, single_query_adapted_inputs, single_query_adapted_solutions = \
             self.adapt_pointwise(multiple_queries_problem,
                                  multiple_queries_inputs,
@@ -1307,7 +1364,7 @@ def {new_sig.name}(el):
 
         tuple_unpacked = False
         if len(single_query_adapted_problem.signature.params) == 1 and \
-           single_query_adapted_problem.signature.params[0].type.lower().startswith("tuple"):
+                single_query_adapted_problem.signature.params[0].type.lower().startswith("tuple"):
             single_query_adapted_problem, single_query_adapted_inputs, single_query_adapted_solutions = \
                 self.unpack_argument_adapter(single_query_adapted_problem,
                                              single_query_adapted_inputs,
@@ -1318,13 +1375,14 @@ def {new_sig.name}(el):
                                              single_query_inputs,
                                              single_query_solutions)
             tuple_unpacked = True
-        
+
         single_query_enum_problem, single_query_enum_inputs, triangulated_single_query_enum_solutions = \
             self.enum_sinv(single_query_problem,
                            single_query_inputs,
                            single_query_solutions)
 
-        print(f"\n[single query enum solutions: {len(triangulated_single_query_enum_solutions)}]", file=sys.stderr, flush=True)
+        print(f"\n[single query enum solutions: {len(triangulated_single_query_enum_solutions)}]", file=sys.stderr,
+              flush=True)
 
         fwd_enum_prop = self.make_fwd_enum(single_query_adapted_problem)
         triangulated_single_query_adapted_solutions = \
@@ -1335,7 +1393,8 @@ def {new_sig.name}(el):
                              triangulated_single_query_enum_solutions,
                              bijective=False)
 
-        print(f"\n[single query adapted solutions: {len(triangulated_single_query_adapted_solutions)}]", file=sys.stderr, flush=True)
+        print(f"\n[single query adapted solutions: {len(triangulated_single_query_adapted_solutions)}]",
+              file=sys.stderr, flush=True)
 
         if tuple_unpacked:
             triangulated_single_query_adapted_solutions = self.unwrap(triangulated_single_query_adapted_solutions)
@@ -1353,4 +1412,4 @@ def {new_sig.name}(el):
 
         print(f"\n[multi-query solutions: {len(triangulated_multiple_queries_solutions)}]", file=sys.stderr, flush=True)
 
-        return multiple_queries_problem, multiple_queries_inputs, triangulated_multiple_queries_solutions    
+        return multiple_queries_problem, multiple_queries_inputs, triangulated_multiple_queries_solutions
