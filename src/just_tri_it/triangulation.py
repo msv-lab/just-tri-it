@@ -24,11 +24,11 @@ from just_tri_it.utils import (
     gen_and_extract_code_with_retry,
     ExperimentFailure,
     RawData, extract_answer,
-    hack
+    hack,
+    ONLY_CACHE
 )
 from just_tri_it.property_checker import Interpreter
 import just_tri_it.utils
-
 
 @dataclass
 class ParameterInversion:
@@ -135,37 +135,39 @@ class Triangulator:
     def triangulate(self, prop, left_inputs, left_solutions, right_inputs, right_solutions, bijective=False):
         programs_and_witnesses = []
 
-        q_witnesses = {} # from right program to its witnesses
-        q_agreement = {} # from right program to its first left agreement
-        p_agreements = defaultdict(list) # from left program to all its right agreements
+        if not ONLY_CACHE:
+            q_witnesses = {} # from right program to its witnesses
+            q_agreement = {} # from right program to its first left agreement
+            p_agreements = defaultdict(list) # from left program to all its right agreements
 
-        for (p, pws) in left_solutions:
-            for (q, qws) in right_solutions:
-                if q.hash_id() not in q_witnesses:
-                    q_witnesses[q.hash_id()] = qws
+            for (p, pws) in left_solutions:
+                for (q, qws) in right_solutions:
+                    if q.hash_id() not in q_witnesses:
+                        q_witnesses[q.hash_id()] = qws
 
-                if self.checker.check({Side.LEFT: left_inputs, Side.RIGHT: right_inputs},
-                                      {Side.LEFT: p, Side.RIGHT: q },
-                                      prop):
+                    if self.checker.check({Side.LEFT: left_inputs, Side.RIGHT: right_inputs},
+                                          {Side.LEFT: p, Side.RIGHT: q },
+                                          prop):
 
-                    if bijective and q.hash_id() in q_agreement:
-                        # if the property is bijective, and q is matched with at least one program, we inherit all matches from that program
-                        p_agreements[p.hash_id()] = p_agreements[q_agreement[q.hash_id()]]
-                        break
-                    else:
-                        if q.hash_id() not in q_agreement:
-                            # this is q's first agreement with a left program
-                            q_agreement[q.hash_id()] = p.hash_id()
-                        p_agreements[p.hash_id()].append(q.hash_id())
+                        if bijective and q.hash_id() in q_agreement:
+                            # if the property is bijective, and q is matched with at least one program, we inherit all matches from that program
+                            p_agreements[p.hash_id()] = p_agreements[q_agreement[q.hash_id()]]
+                            break
+                        else:
+                            if q.hash_id() not in q_agreement:
+                                # this is q's first agreement with a left program
+                                q_agreement[q.hash_id()] = p.hash_id()
+                            p_agreements[p.hash_id()].append(q.hash_id())
 
-        for (p_id, q_ids) in p_agreements.items():
-            p = next(p for (p, _) in left_solutions if p.hash_id() == p_id)
-            p_witnesses = []
-            for q_id in q_ids:
-                p_witnesses.extend(q_witnesses[q_id]) # inherit all witnesses from all matched right programs
-            if len(p_witnesses) > 0:
-                programs_and_witnesses.append((p, p_witnesses))
-
+            for (p_id, q_ids) in p_agreements.items():
+                p = next(p for (p, _) in left_solutions if p.hash_id() == p_id)
+                p_witnesses = []
+                for q_id in q_ids:
+                    p_witnesses.extend(q_witnesses[q_id]) # inherit all witnesses from all matched right programs
+                if len(p_witnesses) > 0:
+                    programs_and_witnesses.append((p, p_witnesses))
+        else:
+            pass
         return programs_and_witnesses
 
     def unwrap(self, solutions):

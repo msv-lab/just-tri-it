@@ -257,18 +257,19 @@ def execute_experiment(model, executor, dataset, db, data_dir):
                 else:
                     s = selector
                 outcome, raw_data = s.generate_and_select(model, task.requirements)
-                selector_data["raw_data"] = raw_data
-                match outcome:
-                    case Selected(program, witnesses):
-                        selector_data["outcome"] = "selected"
-                        selector_data["selected"] = program
-                        selector_data["witnesses"] = witnesses
-                    case Abstained():
-                        selector_data["outcome"] = "abstained"
-                obj["selectors"].append(selector_data)
+                if not just_tri_it.utils.ONLY_CACHE:
+                    selector_data["raw_data"] = raw_data
+                    match outcome:
+                        case Selected(program, witnesses):
+                            selector_data["outcome"] = "selected"
+                            selector_data["selected"] = program
+                            selector_data["witnesses"] = witnesses
+                        case Abstained():
+                            selector_data["outcome"] = "abstained"
+                    obj["selectors"].append(selector_data)
             except ExperimentFailure as e:
                 print(f"\n{selector_id} failed on {task.id} with {e}", file=sys.stderr, flush=True)
-    
-        dbobj = replace_with_hash_and_update_map(obj, db.content)
-        db.objects.append(dbobj)
-        db.save(data_dir)
+        if not just_tri_it.utils.ONLY_CACHE:
+            dbobj = replace_with_hash_and_update_map(obj, db.content)
+            db.objects.append(dbobj)
+            db.save(data_dir)

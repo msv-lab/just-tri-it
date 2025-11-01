@@ -21,6 +21,7 @@ RawData = dict[str, Any]
 CURRENT_MODEL = None
 CURRENT_TASK = None
 ENABLE_HACKS = True
+ONLY_CACHE = True
 
 
 def hack(model=None, task=None):

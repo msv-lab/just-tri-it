@@ -7,7 +7,7 @@ from just_tri_it.program import Requirements
 from just_tri_it.test_generator import TestGenerator
 from just_tri_it.selection import Agreement, AgreementOutcome
 from just_tri_it.code_generator import Generator
-from just_tri_it.utils import RawData
+from just_tri_it.utils import RawData, ONLY_CACHE
 
 
 class TestAgreement(Agreement):
@@ -42,15 +42,16 @@ class TestAgreement(Agreement):
 
         agreement = []
 
-        for program in programs:
-            agreed_tests = []
-            for test in tests:
-                match self.executor.run_test(program, test):
-                    case Pass():
-                        agreed_tests.append(test)
-                    case _:
-                        pass
-            if len(agreed_tests) > 0:
-                agreement.append((program, agreed_tests))
+        if not ONLY_CACHE:
+            for program in programs:
+                agreed_tests = []
+                for test in tests:
+                    match self.executor.run_test(program, test):
+                        case Pass():
+                            agreed_tests.append(test)
+                        case _:
+                            pass
+                if len(agreed_tests) > 0:
+                    agreement.append((program, agreed_tests))
 
         return agreement, raw_data
