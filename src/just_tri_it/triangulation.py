@@ -36,13 +36,12 @@ class ParameterInversion:
 
 
 @dataclass
-class SuffixInversion:
+class ListSuffixInversion:
     index: str
     suffix_length: int
-    type: str
 
 
-type InversionScheme = ParameterInversion | SuffixInversion
+type InversionScheme = ParameterInversion | ListSuffixInversion
 
 
 class TriangulationMode(Enum):
@@ -76,36 +75,23 @@ class Triangulator:
         if self.triangulation_mode in [TriangulationMode.FWD_INV,
                                        TriangulationMode.FWD_SINV,
                                        TriangulationMode.ENUM_SINV] and \
-                self.is_stream_processing_problem(fwd_problem):
+           self.is_stream_processing_problem(fwd_problem):
             stream_processing = True
 
-        fwd_inputs = self.generate_inputs(fwd_problem)
+        fwd_inputs = self.generate_inputs(fwd_problem, self.executor)
         need_timeout_guards = self.triangulation_mode in [TriangulationMode.FWD_SINV, TriangulationMode.ENUM_SINV]
         fwd_solutions = self.sample_solutions(fwd_problem,
                                               self.num_left_samples,
                                               time_predicates=need_timeout_guards)
-        
-        hash2ori = {}
-        for item in fwd_solutions:
-            hash2ori[item[0].hash_id()] = item[0]
 
         num_adapters = 0
 
-        if hack(task="11_binary_string") or hack(task="atcoder_abc393_d"):
-            pass
-        elif hack(task="2_list_sum"):
+        if hack(task="2_list_sum"):
             fwd_problem, fwd_inputs, fwd_solutions = \
                 self.add_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, 0)
             num_adapters += 1
         elif hack(task="atcoder_abc388_c"):
-            len_par = self.length_parameter(fwd_problem)
-            if len_par is not None:
-                fwd_problem, fwd_inputs, fwd_solutions = \
-                    self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
-                num_adapters += 1
-                fwd_problem, fwd_inputs, fwd_solutions = \
-                    self.add_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, 0)
-                num_adapters += 1
+            pass
         else:
             len_par = self.length_parameter(fwd_problem)
 
@@ -142,14 +128,8 @@ class Triangulator:
 
         for _ in range(num_adapters):
             result = self.unwrap(result)
-            
-        replaced_result = []
-        for item in result:
-            if not item[0].original_hash is None:
-                replaced_result.append((hash2ori[item[0].original_hash], item[1]))
-            else:
-                replaced_result.append(item)
-        return (replaced_result, raw_data)
+
+        return (result, raw_data)
         
 
     def triangulate(self, prop, left_inputs, left_solutions, right_inputs, right_solutions, bijective=False):
@@ -194,9 +174,9 @@ class Triangulator:
             assert len(p.nested) > 0
             remaining, last = p.nested[:-1], p.nested[-1]
             if p.time_predicate is None:
-                return Program(last, p.code, nested=remaining, original_hash=p.original_hash)
+                return Program(last, p.code, nested=remaining)
             else:
-                return Program(last, p.code, nested=remaining, time_predicate=unwrap_program(p.time_predicate), original_hash=p.original_hash)
+                return Program(last, p.code, nested=remaining, time_predicate=unwrap_program(p.time_predicate))
 
         return list(map(lambda s: (unwrap_program(s[0]), s[1]), solutions))
 
@@ -208,15 +188,12 @@ class Triangulator:
         programs = list(islice(programs, n))
         if time_predicates:
             programs = list(map(partial(gen_time_predicate, req), programs))
-        # have side effect
-        for p in programs:
-            p.original_hash = p.hash_id()
 
         #NOTE: initially, each solution is its own witness            
         return list(map(lambda p: (p, [p]), programs))
 
-    def generate_inputs(self, req: Requirements):
-        return generate_inputs(self.model, req, self.executor)
+    def generate_inputs(self, req: Requirements, executor):
+        return generate_inputs(self.model, req, executor)
  
     def is_stream_processing_problem(self, req: Requirements) -> bool:
         if not(len(req.signature.params) == 1 and
@@ -268,19 +245,12 @@ Problem:
         return (p_names.index(response[0]), p_names.index(response[1]))
 
     def choose_inversion_scheme(self, req: Requirements) -> InversionScheme:
-        if hack(task="11_binary_string"):
-            return SuffixInversion(1, 1, "str")  # second parameter w.r.t. the last element
-        if hack(task="atcoder_abc388_a"):
-            return SuffixInversion(0, 1, "str")
         if hack(task="2_list_sum"):
-            return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
-        if hack(task="atcoder_abc388_c"):
-            return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
-        if hack(task="atcoder_abc393_d"):
-            return SuffixInversion(1, 1, "str")
+            return ListSuffixInversion(1, 1) # second parameter w.r.t. the last element
+        
         if len(req.signature.params) == 1:
             if req.signature.params[0].type.lower().startswith('list'):
-                return SuffixInversion(0, 1, "list")
+                return ListSuffixInversion(0, 1)
             return ParameterInversion(0)
         else:
             PROMPT = f"""\
@@ -308,8 +278,6 @@ Problem:
                     tried_samples.append(sample)
                     valid_name = extract_answer(sample)
                     valid_name = valid_name.strip() if valid_name else None
-                    if hack(task="atcoder_abc400_d"):
-                        valid_name = "fish_shop_row"
                     if valid_name:
                         return_param = [p.name for p in req.signature.params].index(valid_name)
                         break
@@ -320,7 +288,7 @@ Problem:
                         raise ExperimentFailure(f"retry failed with {type(e).__name__}: {e}")
             return ParameterInversion(return_param)
 
-    def split_arg_signature(self, index: int, s: Signature):
+    def split_list_signature(self, index: int, s: Signature):
         new_sig = copy.deepcopy(s)
         new_sig.name = new_sig.name + f"_split_{index}"
         new_sig.params = new_sig.params[0:index] + \
@@ -329,27 +297,16 @@ Problem:
             new_sig.params[index+1:]
         return new_sig
 
-    def transform_split_arg(self, req, index, suffix_length, type: str):
+    def transform_split_list(self, req, index, suffix_length):
         sig = req.signature
-        new_sig = self.split_arg_signature(index, sig)
-        if type == "list":
-            match suffix_length:
-                case 1:
-                    sig_note = f"""\
+        new_sig = self.split_list_signature(index, sig)
+        match suffix_length:
+            case 1:
+                sig_note = f"""\
 Specifically, the full input {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index+1].name}, so that {new_sig.params[index+1].name} contains only the last element of the full list {sig.params[index].name}. If the full list {sig.params[index].name} is empty, then both {new_sig.params[index].name} and {new_sig.params[index+1].name} must be empty."""
-                case _:
-                    sig_note = f"""\
+            case _:
+                sig_note = f"""\
 Specifically, the full input {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index+1].name}, so that len({new_sig.params[index+1].name}) is exactly {suffix_length} when the full list {sig.params[index].name} has at least {suffix_length} elements, otherwise {new_sig.params[index+1].name} contains the entire {sig.params[index].name}."""
-        elif type == "str":
-            match suffix_length:
-                case 1:
-                    sig_note = f"""\
-Specifically, the full input {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index+1].name}, so that {new_sig.params[index+1].name} contains only the last character of the full string {sig.params[index].name}. If the full string {sig.params[index].name} is empty, then both {new_sig.params[index].name} and {new_sig.params[index+1].name} must be empty."""
-                case _:
-                    sig_note = f"""\
-Specifically, the full input string {sig.params[index].name} is split into {new_sig.params[index].name} + {new_sig.params[index+1].name}, so that len({new_sig.params[index+1].name}) is exactly {suffix_length} when the full string {sig.params[index].name} has at least {suffix_length} characters, otherwise {new_sig.params[index+1].name} is the entire {sig.params[index].name}."""
-        else:
-            raise ValueError("unsupported argument type for splitting")
 
         PROMPT = f"""
 You are given a programming problem that requires implementing the function:
@@ -375,9 +332,7 @@ Original Problem:
 {req.description}
         """
         new_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
-        if hack(task="atcoder_abc388_a", model="gpt-4o"):
-            wrong_words = "- `input_string_prefix` consists of the first character of the original input string, and it is an uppercase English letter."
-            new_desc = new_desc.replace(wrong_words, "")
+        
         new_req = Requirements(new_sig, new_desc)
 
         if (just_tri_it.utils.DEBUG):
@@ -385,8 +340,8 @@ Original Problem:
 
         return new_req
 
-    def split_arg_adapter(self, problem, inputs, solutions, index, suffix_length, type):
-        adapted_problem = self.transform_split_arg(problem, index, suffix_length, type)
+    def split_list_adapter(self, problem, inputs, solutions, index, suffix_length):
+        adapted_problem = self.transform_split_list(problem, index, suffix_length)
         new_sig = adapted_problem.signature
         
         def adapt_program(p):
@@ -399,21 +354,18 @@ def {new_sig.name}(*args):
             if p.time_predicate is None:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested=p.nested + [p.signature],
-                               original_hash=p.original_hash)
+                               nested = p.nested + [p.signature])
             else:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested=p.nested + [p.signature],
-                               time_predicate=adapt_program(p.time_predicate),
-                               original_hash=p.original_hash)
-
+                               nested = p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate))
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         def adapt_input(args):
             args = copy.deepcopy(args)
             lst = args[index]
-            assert isinstance(lst, list) or isinstance(lst, str) # we only adapt inputs that go through type check
+            assert isinstance(lst, list) # we only adapt inputs that go through type check
             split_at = max(0, len(lst) - suffix_length)
             prefix = lst[:split_at]
             suffix = lst[split_at:]
@@ -423,6 +375,7 @@ def {new_sig.name}(*args):
         adapted_inputs = list(map(adapt_input, inputs))
 
         return adapted_problem, adapted_inputs, adapted_solutions
+
 
     def unpack_argument_signature(self, req):
         PROMPT_CODE = f"""
@@ -496,14 +449,12 @@ def {new_sig.name}(*args):
             if p.time_predicate is None:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested = p.nested + [p.signature],
-                               original_hash=p.original_hash)
+                               nested = p.nested + [p.signature])
             else:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested=p.nested + [p.signature],
-                               time_predicate=adapt_program(p.time_predicate),
-                               original_hash=p.original_hash)
+                               nested = p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate))
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         def adapt_input(args):
@@ -597,14 +548,12 @@ def {new_sig.name}(*args):
             if p.time_predicate is None:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested=p.nested + [p.signature],
-                               original_hash=p.original_hash)
+                               nested = p.nested + [p.signature])
             else:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested=p.nested + [p.signature],
-                               time_predicate=adapt_program(p.time_predicate),
-                               original_hash=p.original_hash)
+                               nested = p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate))
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         def adapt_input(args):
@@ -667,15 +616,12 @@ def {new_sig.name}(*args):
             if p.time_predicate is None:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested=p.nested + [p.signature],
-                               original_hash=p.original_hash)
+                               nested = p.nested + [p.signature])
             else:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested=p.nested + [p.signature],
-                               time_predicate=adapt_program(p.time_predicate),
-                               original_hash=p.original_hash)
-
+                               nested = p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate))
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         def adapt_input(args):
@@ -989,15 +935,12 @@ def {new_sig.name}(el):
             if p.time_predicate is None:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested=p.nested + [p.signature],
-                               original_hash=p.original_hash)
+                               nested = p.nested + [p.signature])
             else:
                 return Program(new_sig,
                                p.code + "\n" + ADAPTER_CODE,
-                               nested=p.nested + [p.signature],
-                               time_predicate=adapt_program(p.time_predicate),
-                               original_hash=p.original_hash)
-
+                               nested = p.nested + [p.signature],
+                               time_predicate=adapt_program(p.time_predicate))
         adapted_solutions = list(map(lambda s: (adapt_program(s[0]), s[1]), solutions))
 
         adapted_inputs = [[y] for sub in inputs for x in sub for y in x]
@@ -1141,20 +1084,20 @@ def {new_sig.name}(el):
                                      [],
                                      inv_solutions,
                                      bijective=True)
-            case SuffixInversion(i, l, type):
-                split_arg_problem, split_arg_inputs, split_arg_solutions = \
-                    self.split_arg_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l, type)
-                inv_problem = self.transform_inv(split_arg_problem, i+1)
+            case ListSuffixInversion(i, l):
+                split_list_problem, split_list_inputs, split_list_solutions = \
+                    self.split_list_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l)
+                inv_problem = self.transform_inv(split_list_problem, i+1)
                 inv_solutions = self.sample_solutions(inv_problem, self.num_right_samples)
-                fwd_inv_prop = self.make_fwd_inv(split_arg_problem, i+1)
-                triangulated_split_arg_solutions = \
+                fwd_inv_prop = self.make_fwd_inv(split_list_problem, i+1)
+                triangulated_split_list_solutions = \
                     self.triangulate(fwd_inv_prop,
-                                     split_arg_inputs,
-                                     split_arg_solutions,
+                                     split_list_inputs,
+                                     split_list_solutions,
                                      [],
                                      inv_solutions,
                                      bijective=True)
-                triangulated_fwd_solutions = self.unwrap(triangulated_split_arg_solutions)
+                triangulated_fwd_solutions = self.unwrap(triangulated_split_list_solutions)
 
         return fwd_problem, fwd_inputs, triangulated_fwd_solutions
 
@@ -1173,20 +1116,20 @@ def {new_sig.name}(el):
                                      [],
                                      sinv_solutions,
                                      bijective=True)
-            case SuffixInversion(i, l, type):
-                split_arg_problem, split_arg_inputs, split_arg_solutions = \
-                    self.split_arg_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l, type)
-                fwd_sinv_prop = self.make_fwd_sinv(split_arg_problem, i+1)
-                sinv_problem = self.transform_sinv(split_arg_problem, i+1)
+            case ListSuffixInversion(i, l):
+                split_list_problem, split_list_inputs, split_list_solutions = \
+                    self.split_list_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l)
+                fwd_sinv_prop = self.make_fwd_sinv(split_list_problem, i+1)
+                sinv_problem = self.transform_sinv(split_list_problem, i+1)
                 sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples)
-                triangulated_split_arg_solutions = \
+                triangulated_split_list_solutions = \
                     self.triangulate(fwd_sinv_prop,
-                                     split_arg_inputs,
-                                     split_arg_solutions,
+                                     split_list_inputs,
+                                     split_list_solutions,
                                      [],
                                      sinv_solutions,
                                      bijective=True)
-                triangulated_fwd_solutions = self.unwrap(triangulated_split_arg_solutions)
+                triangulated_fwd_solutions = self.unwrap(triangulated_split_list_solutions)
 
         return fwd_problem, fwd_inputs, triangulated_fwd_solutions
 
@@ -1212,32 +1155,32 @@ def {new_sig.name}(el):
                                      sinv_inputs,
                                      sinv_solutions,
                                      bijective=True)
-            case SuffixInversion(i, l, type):
-                split_arg_problem, _, _ = \
-                    self.split_arg_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l, type)
+            case ListSuffixInversion(i, l):
+                split_list_problem, _, _ = \
+                    self.split_list_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l)
 
                 enum_problem = self.transform_enum(fwd_problem)
                 enum_inputs = self.generate_inputs(enum_problem)
                 enum_solutions = self.sample_solutions(enum_problem, self.num_left_samples, time_predicates=True)
                 
-                _, split_arg_enum_inputs, split_arg_enum_solutions = \
-                    self.split_arg_adapter(enum_problem, enum_inputs, enum_solutions, i, l)
+                _, split_list_enum_inputs, split_list_enum_solutions = \
+                    self.split_list_adapter(enum_problem, enum_inputs, enum_solutions, i, l)
                 
-                sinv_problem = self.transform_sinv(split_arg_problem, i+1)
+                sinv_problem = self.transform_sinv(split_list_problem, i+1)
                 sinv_inputs = self.generate_inputs(sinv_problem)
                 sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples, time_predicates=True)
 
-                enum_sinv_prop = self.make_enum_sinv(split_arg_problem, i+1)
+                enum_sinv_prop = self.make_enum_sinv(split_list_problem, i+1)
                 
-                triangulated_split_arg_enum_solutions = \
+                triangulated_split_list_enum_solutions = \
                     self.triangulate(enum_sinv_prop,
-                                     split_arg_enum_inputs,
-                                     split_arg_enum_solutions,
+                                     split_list_enum_inputs,
+                                     split_list_enum_solutions,
                                      sinv_inputs,
                                      sinv_solutions,
                                      bijective=True)
                 
-                triangulated_enum_solutions = self.unwrap(triangulated_split_arg_enum_solutions)
+                triangulated_enum_solutions = self.unwrap(triangulated_split_list_enum_solutions)
 
         return enum_problem, enum_inputs, triangulated_enum_solutions
 
