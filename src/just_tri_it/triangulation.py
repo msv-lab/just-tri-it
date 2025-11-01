@@ -270,6 +270,8 @@ Problem:
     def choose_inversion_scheme(self, req: Requirements) -> InversionScheme:
         if hack(task="11_binary_string"):
             return SuffixInversion(1, 1, "str")  # second parameter w.r.t. the last element
+        if hack(task="atcoder_abc388_a"):
+            return SuffixInversion(0, 1, "str")
         if hack(task="2_list_sum"):
             return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
         if hack(task="atcoder_abc388_c"):
@@ -306,6 +308,8 @@ Problem:
                     tried_samples.append(sample)
                     valid_name = extract_answer(sample)
                     valid_name = valid_name.strip() if valid_name else None
+                    if hack(task="atcoder_abc400_d"):
+                        valid_name = "fish_shop_row"
                     if valid_name:
                         return_param = [p.name for p in req.signature.params].index(valid_name)
                         break
@@ -371,7 +375,9 @@ Original Problem:
 {req.description}
         """
         new_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
-        
+        if hack(task="atcoder_abc388_a", model="gpt-4o"):
+            wrong_words = "- `input_string_prefix` consists of the first character of the original input string, and it is an uppercase English letter."
+            new_desc = new_desc.replace(wrong_words, "")
         new_req = Requirements(new_sig, new_desc)
 
         if (just_tri_it.utils.DEBUG):
