@@ -62,6 +62,11 @@ def parse_args():
         help="LLM to use."
     )
     parser.add_argument(
+        "--correctness",
+        action="store_true",
+        help="Evaluate sample correctness."
+    )
+    parser.add_argument(
         "--data",
         type=str,
         required=True,
@@ -188,12 +193,16 @@ def main():
     if args.only:
         dataset = [task for task in dataset if task.id == args.only]
 
-    execute_experiment(model, executor, dataset, database, data_dir)
+    correctness_only = False
+    if args.correctness:
+        correctness_only= True
+
+    execute_experiment(model, executor, dataset, database, data_dir, correctness_only)
 
     executor.shutdown()
 
 
-def execute_experiment(model, executor, dataset, db, data_dir):
+def execute_experiment(model, executor, dataset, db, data_dir, correctness_only=False):
     """Schema (for objects):
     {
         "task_id": ...,
@@ -239,35 +248,37 @@ def execute_experiment(model, executor, dataset, db, data_dir):
             status, details = s.passes(executor, task.tests)
             obj["sample_correctness"].append((s, status, details))
 
-        all_selectors = init_selectors(executor, Vanilla(), model)
-        selector_ids = all_selectors.keys()
-        
-        for selector_id in selector_ids:
-            if selector_id in SKIP_SELECTORS:
-                continue
-            
-            print(f"\n[{selector_id}]", end="", file=sys.stderr, flush=True)
-            
-            selector_data = { "id": selector_id }
-            try:
-                selector = all_selectors[selector_id]
+        if not correctness_only:
 
-                if callable(selector):
-                    s = selector(task)
-                else:
-                    s = selector
-                outcome, raw_data = s.generate_and_select(model, task.requirements)
-                selector_data["raw_data"] = raw_data
-                match outcome:
-                    case Selected(program, witnesses):
-                        selector_data["outcome"] = "selected"
-                        selector_data["selected"] = program
-                        selector_data["witnesses"] = witnesses
-                    case Abstained():
-                        selector_data["outcome"] = "abstained"
-                obj["selectors"].append(selector_data)
-            except ExperimentFailure as e:
-                print(f"\n{selector_id} failed on {task.id} with {e}", file=sys.stderr, flush=True)
+            all_selectors = init_selectors(executor, Vanilla(), model)
+            selector_ids = all_selectors.keys()
+
+            for selector_id in selector_ids:
+                if selector_id in SKIP_SELECTORS:
+                    continue
+
+                print(f"\n[{selector_id}]", end="", file=sys.stderr, flush=True)
+
+                selector_data = { "id": selector_id }
+                try:
+                    selector = all_selectors[selector_id]
+
+                    if callable(selector):
+                        s = selector(task)
+                    else:
+                        s = selector
+                    outcome, raw_data = s.generate_and_select(model, task.requirements)
+                    selector_data["raw_data"] = raw_data
+                    match outcome:
+                        case Selected(program, witnesses):
+                            selector_data["outcome"] = "selected"
+                            selector_data["selected"] = program
+                            selector_data["witnesses"] = witnesses
+                        case Abstained():
+                            selector_data["outcome"] = "abstained"
+                    obj["selectors"].append(selector_data)
+                except ExperimentFailure as e:
+                    print(f"\n{selector_id} failed on {task.id} with {e}", file=sys.stderr, flush=True)
     
         dbobj = replace_with_hash_and_update_map(obj, db.content)
         db.objects.append(dbobj)

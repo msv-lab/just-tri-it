@@ -1,5 +1,6 @@
 import argparse
 import copy
+import csv
 import json
 from pathlib import Path
 from collections import defaultdict
@@ -359,30 +360,38 @@ def main():
     db = Database.load_ignore(data_dir)
     report_dir = Path(args.report)
     report_dir.mkdir(parents=True, exist_ok=True)
+
+    corr_dist = prob_correct_by_task(db)
+    with (report_dir / "prob_correct_per_task.csv").open(mode="w") as file:
+        writer = csv.writer(file)
+        for task_id, prob in corr_dist.items():
+            writer.writerow([task_id, prob])
+    
+    plot_distribution_with_separate_zero(list(corr_dist.values()), report_dir / "prob_correct_distribution.pdf")
+
     method_to_measures = abstention_measures(db)
 
-    # transposing table:
-    measure_to_methods = {
-        k2: {k1: method_to_measures[k1][k2] for k1 in method_to_measures}
-        for k2 in next(iter(method_to_measures.values()))
-    }
-    measure_to_methods["prob_correct_under_agreement"] = prob_correct_under_agreement(db)
+    if len(method_to_measures) > 0:
+        # transposing table:
+        measure_to_methods = {
+            k2: {k1: method_to_measures[k1][k2] for k1 in method_to_measures}
+            for k2 in next(iter(method_to_measures.values()))
+        }
+        measure_to_methods["prob_correct_under_agreement"] = prob_correct_under_agreement(db)
 
-    for measure in measure_to_methods:
-        plot_sorted_percentages(measure_to_methods[measure],
-                                measure,
-                                report_dir / f"{measure}.png")
+        for measure in measure_to_methods:
+            plot_sorted_percentages(measure_to_methods[measure],
+                                    measure,
+                                    report_dir / f"{measure}.png")
 
-    interval_data, box_data = cal_class_size_info(db)
-    if interval_data and box_data:
-        plot_distribution(interval_data, report_dir / "prob_selected_distribution.png")
-        plot_box(box_data, report_dir / "box.png")
+        interval_data, box_data = cal_class_size_info(db)
+        if interval_data and box_data:
+            plot_distribution(interval_data, report_dir / "prob_selected_distribution.png")
+            plot_box(box_data, report_dir / "box.png")
 
-    with (report_dir / "metrics.json").open("w", encoding="utf-8") as f:
-        json.dump(measure_to_methods, f, indent=4)
+        with (report_dir / "metrics.json").open("w", encoding="utf-8") as f:
+            json.dump(measure_to_methods, f, indent=4)
 
-    corr_dist =  prob_correct_by_task(db)
-    plot_distribution_with_separate_zero(list(corr_dist.values()), report_dir / "prob_correct_distribution.pdf")
 
 
 if __name__ == "__main__":
