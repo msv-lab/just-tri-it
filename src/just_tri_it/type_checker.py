@@ -13,6 +13,8 @@ def check_type(data, type_str):
             return isinstance(data, float)
         case 'str':
             return isinstance(data, str)
+        case 'list':
+            return isinstance(data, list)
         case 'list[int]':
             if not isinstance(data, list):
                 return False
