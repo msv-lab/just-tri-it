@@ -309,6 +309,15 @@ def check_type(data, type_str):
                 return True
             else:
                 return False
+        case 'list[union[int, list[int]]]':
+            if isinstance(data, list):
+                for item in data:
+                    if not (isinstance(item, int) or 
+                            (isinstance(item, list) and all(isinstance(subitem, int) for subitem in item))):
+                        return False
+                return True
+            else:
+                return False            
         case _:
             raise ValueError(f"unsupported type: {type_str}")
 
