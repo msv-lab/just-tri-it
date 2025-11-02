@@ -432,7 +432,7 @@ def humaneval_extract_signature(code):
 
 
 def humaneval_signature_from_description(model, function_name: str, desc: str) -> 'Signature':
-        PROMPT_CODE = f"""
+    PROMPT_CODE = f"""
 For the problem below, write a signature of the Python function {function_name} with:
 - Type annotations for all parameters
 - Specified return type
@@ -442,13 +442,13 @@ Please return only the function definition (with
 
 Problem:
 {desc}
-        """
-        code = gen_and_extract_code_with_retry(model, PROMPT_CODE, 3)
-        tree = ast.parse(code)
-        for node in tree.body:
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                return Signature.from_function_ast(node)
-        raise ValueError("No function definition found in code")
+    """
+    code = gen_and_extract_code_with_retry(model, PROMPT_CODE, 3)
+    tree = ast.parse(code)
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return Signature.from_function_ast(node)
+    raise ValueError("No function definition found in code")
 
 def humaneval_convert(model: Model,
                       executor: Executor,
@@ -510,6 +510,203 @@ def humaneval_convert(model: Model,
             )
             tasks.append(task)
             save_dataset(tasks, output_file, compress=True)
+
+
+def mbpp_signature_from_description(model, function_name: str, desc: str, code: str) -> 'Signature':
+    PROMPT_CODE = f"""
+For the problem and solution below, write a signature of the Python function {function_name} with:
+- Type annotations for all parameters
+- Specified return type
+        
+Please return only the function definition (with
+'pass' as the body) inside a Markdown code block.
+
+Problem:
+{desc}
+
+Solution:
+{code}
+    """
+    code = gen_and_extract_code_with_retry(model, PROMPT_CODE, 3)
+    tree = ast.parse(code)
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return Signature.from_function_ast(node)
+    raise ValueError("No function definition found in code")
+
+# from https://github.com/evalplus/evalplus/blob/master/evalplus/data/mbpp.py
+def mbpp_deserialize_inputs(task_id: str, inputs: list) -> list:
+    task_id = int(task_id.split("/")[-1])
+    if task_id in [
+        2,
+        116,
+        132,
+        143,
+        222,
+        261,
+        273,
+        394,
+        399,
+        421,
+        424,
+        429,
+        470,
+        560,
+        579,
+        596,
+        616,
+        630,
+        726,
+        740,
+        744,
+        809,
+    ]:
+        modified_inputs = [[tuple(lst) for lst in inp] for inp in inputs]
+
+    elif task_id in [
+        63,
+        64,
+        70,
+        94,
+        120,
+        237,
+        272,
+        299,
+        400,
+        409,
+        417,
+        438,
+        473,
+        614,
+        780,
+    ]:
+        modified_inputs = [
+            [[tuple(lst) for lst in lst_lst] for lst_lst in inp] for inp in inputs
+        ]
+
+    elif task_id in [75, 413, 444, 753]:
+        modified_inputs = [
+            [[tuple(lst) for lst in inp[0]]] + [inp[1]] for inp in inputs
+        ]
+
+    elif task_id == 106 or task_id == 750:
+        modified_inputs = [[inp[0]] + [tuple(inp[1])] for inp in inputs]
+
+    elif task_id == 115:
+        modified_inputs = [
+            [
+                [
+                    set(item) if isinstance(item, list) and len(item) else {}
+                    for item in inp[0]
+                ]
+            ]
+            for inp in inputs
+        ]
+
+    elif task_id == 124:
+        modified_inputs = [(float(inp[0]), complex(inp[1])) for inp in inputs]
+
+    elif task_id in [250, 405, 446, 617, 720, 763, 808]:
+        modified_inputs = [[tuple(inp[0])] + [inp[1]] for inp in inputs]
+
+    elif task_id in [259, 401, 445]:
+        modified_inputs = [
+            [[tuple(lst) for lst in lst_lst] for lst_lst in inp] for inp in inputs
+        ]
+        modified_inputs = [[tuple(lst) for lst in inp] for inp in modified_inputs]
+
+    elif task_id == 278:
+        modified_inputs = [
+            [[tuple(item) if isinstance(item, list) else item for item in inp[0]]]
+            for inp in inputs
+        ]
+        modified_inputs = [[tuple(lst) for lst in inp] for inp in modified_inputs]
+
+    elif task_id == 307:
+        modified_inputs = [[tuple(inp[0])] + [inp[1], inp[2]] for inp in inputs]
+
+    elif task_id == 722:
+        modified_inputs = [
+            [{key: tuple(value) for key, value in inp[0].items()}] + inp[1:]
+            for inp in inputs
+        ]
+
+    elif task_id == 252:
+        modified_inputs = [[complex(inp[0])] for inp in inputs]
+
+    elif task_id in [580, 615, 791]:
+
+        def turn_all_list_into_tuple(inp):
+            if isinstance(inp, list):
+                return tuple([turn_all_list_into_tuple(item) for item in inp])
+            return inp
+
+        modified_inputs = [turn_all_list_into_tuple(inp) for inp in inputs]
+
+    else:
+        modified_inputs = inputs
+
+    return modified_inputs
+            
+
+def mbpp_convert(model: Model,
+                 executor: Executor,
+                 input_file: Path,
+                 output_file: Path):
+    tasks: Dataset = []
+    
+    skip = set()
+    if output_file.exists():
+        tasks = load_dataset(output_file)
+        skip.update([t.id for t in tasks])
+
+    # reference program failures:
+    skip.add("Mbpp/99")
+    skip.add("Mbpp/116")
+    skip.add("Mbpp/124")
+    skip.add("Mbpp/439")
+    skip.add("Mbpp/566")
+    skip.add("Mbpp/580")
+    skip.add("Mbpp/615")
+    skip.add("Mbpp/737")
+    skip.add("Mbpp/787")
+    skip.add("Mbpp/791")
+    skip.add("Mbpp/793")
+    skip.add("Mbpp/794")
+    
+    with jsonlines.open(input_file) as reader:
+        for entry in reader:
+            unique_id = entry["task_id"]
+            if unique_id in skip:
+                continue
+            print(f"\n[{unique_id}]", file=sys.stderr, flush=True)
+            signature = mbpp_signature_from_description(model,
+                                                        entry["entry_point"],
+                                                        entry["prompt"],
+                                                        entry["canonical_solution"])
+            req = Requirements(signature, entry["prompt"])
+            reference_program = Program(signature, entry["canonical_solution"])
+
+            tests = []
+            test_data = mbpp_deserialize_inputs(unique_id, entry["base_input"] + entry["plus_input"])
+
+            for i in test_data:
+                result = executor.run(reference_program, i)
+                match result:
+                    case Success(o):
+                       tests.append(InputOutput(i, o))
+                    case _:
+                        panic("reference program failed")
+
+            task = Task(
+                id=unique_id,
+                requirements=req,
+                tests=tests,
+                metadata={}
+            )
+            tasks.append(task)
+            save_dataset(tasks, output_file, compress=True)
+            
 
 if __name__ == "__main__":
     main()
