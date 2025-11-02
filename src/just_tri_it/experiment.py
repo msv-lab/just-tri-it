@@ -56,6 +56,11 @@ def parse_args():
         help="task ID to run (all by default)."
     )
     parser.add_argument(
+        "--only-list",
+        type=str,
+        help="file with task IDs to run"
+    )
+    parser.add_argument(
         "--model",
         type=str,
         required=True,
@@ -192,6 +197,10 @@ def main():
 
     if args.only:
         dataset = [task for task in dataset if task.id == args.only]
+    if args.only_list:
+        path = Path(args.only_list)
+        ids = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        dataset = [task for task in dataset if task.id in ids]
 
     correctness_only = False
     if args.correctness:
