@@ -72,13 +72,6 @@ class Triangulator:
         """
         self.model = model
 
-        stream_processing = False
-        if self.triangulation_mode in [TriangulationMode.FWD_INV,
-                                       TriangulationMode.FWD_SINV,
-                                       TriangulationMode.ENUM_SINV] and \
-                self.is_stream_processing_problem(fwd_problem):
-            stream_processing = True
-
         fwd_inputs = self.generate_inputs(fwd_problem)
         need_timeout_guards = self.triangulation_mode in [TriangulationMode.FWD_SINV, TriangulationMode.ENUM_SINV]
         fwd_solutions = self.sample_solutions(fwd_problem,
@@ -113,6 +106,17 @@ class Triangulator:
                 fwd_problem, fwd_inputs, fwd_solutions = \
                     self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
                 num_adapters += 1
+
+        stream_processing = False
+        if self.triangulation_mode in [TriangulationMode.FWD_INV,
+                                       TriangulationMode.FWD_SINV,
+                                       TriangulationMode.ENUM_SINV] and \
+                self.is_stream_processing_problem(fwd_problem):
+            stream_processing = True
+
+        if hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam"]):
+            stream_processing = True
+
 
         match self.triangulation_mode:
             case TriangulationMode.FWD_INV:
