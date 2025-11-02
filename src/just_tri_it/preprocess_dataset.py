@@ -12,7 +12,7 @@ import jsonlines
 from just_tri_it.dataset import Dataset
 from just_tri_it.utils import panic, add_cache_options, setup_cache
 from just_tri_it.cached_llm import Model, Persistent, Independent, AI302
-from just_tri_it.utils import extract_code
+from just_tri_it.utils import extract_code, gen_and_extract_code_with_retry
 from just_tri_it.program import Signature, Test, Parameter, Program, InputOutput, Requirements
 from just_tri_it.executor import PersistentWorkerExecutor, Executor, Success
 from just_tri_it.dataset import Task, save_dataset, load_dataset, lcb_decompress
@@ -71,6 +71,10 @@ def main():
 
     if args.format == 'LiveCodeBench':
         lcb_convert(model, executor, Path(args.dataset), Path(args.output))
+    elif args.format == 'HumanEvalPlus':
+        humaneval_convert(model, executor, Path(args.dataset), Path(args.output))
+    elif args.format == 'MBPPPlus':
+        mbpp_convert(model, executor, Path(args.dataset), Path(args.output))
     else:
         panic("unsupported dataset format")
 
@@ -417,6 +421,94 @@ def lcb_convert(model: Model,
                         print("\nretrying...\n", file=sys.stderr, flush=True)
                     else:
                         print(e)
+            save_dataset(tasks, output_file, compress=True)
+
+
+def humaneval_extract_signature(code):
+    tree = ast.parse(code)
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return Signature.from_function_ast(node)
+
+
+def humaneval_signature_from_description(model, function_name: str, desc: str) -> 'Signature':
+        PROMPT_CODE = f"""
+For the problem below, write a signature of the Python function {function_name} with:
+- Type annotations for all parameters
+- Specified return type
+        
+Please return only the function definition (with
+'pass' as the body) inside a Markdown code block.
+
+Problem:
+{desc}
+        """
+        code = gen_and_extract_code_with_retry(model, PROMPT_CODE, 3)
+        tree = ast.parse(code)
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                return Signature.from_function_ast(node)
+        raise ValueError("No function definition found in code")
+
+def humaneval_convert(model: Model,
+                      executor: Executor,
+                      input_file: Path,
+                      output_file: Path):
+    tasks: Dataset = []
+    
+    skip = set()
+    if output_file.exists():
+        tasks = load_dataset(output_file)
+        skip.update([t.id for t in tasks])
+
+    # reference program failures:
+    skip.add("HumanEval/79")
+    skip.add("HumanEval/108")
+    skip.add("HumanEval/131")
+    
+    with jsonlines.open(input_file) as reader:
+        for entry in reader:
+            unique_id = entry["task_id"]
+            if unique_id in skip:
+                continue
+            print(f"\n[{unique_id}]", file=sys.stderr, flush=True)
+            if unique_id == "HumanEval/30":
+                signature = Signature("get_positive", [Parameter("l", "list[int]")], "list[int]")
+            elif unique_id == "HumanEval/31":
+                signature = Signature("is_prime", [Parameter("n", "int")], "bool")
+            elif unique_id == "HumanEval/32":
+                signature = Signature("find_zero", [Parameter("xs", "list")], "float")
+            elif unique_id == "HumanEval/33":
+                signature = Signature("sort_third", [Parameter("l", "list")], "list")
+            else:
+                try:
+                    signature = humaneval_extract_signature(entry["prompt"])
+                except:
+                    signature = humaneval_signature_from_description(model,
+                                                                     entry["entry_point"],
+                                                                     entry["prompt"])
+            # print(signature.pretty_print())
+            req = Requirements(signature, entry["prompt"])
+            reference_program = Program(signature, entry["prompt"] + entry["canonical_solution"])
+
+            tests = []
+            test_data = entry["base_input"] + entry["plus_input"]
+
+            for i in test_data:
+                result = executor.run(reference_program, i)
+                match result:
+                    case Success(o):
+                       tests.append(InputOutput(i, o))
+                    case _:
+                        panic("reference program failed")
+
+            task = Task(
+                id=unique_id,
+                requirements=req,
+                tests=tests,
+                metadata={}
+            )
+            tasks.append(task)
             save_dataset(tasks, output_file, compress=True)
 
 if __name__ == "__main__":

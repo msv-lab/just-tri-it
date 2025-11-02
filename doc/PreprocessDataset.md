@@ -52,3 +52,16 @@ It will check the ability of the test suite to classify the correct solution as 
 Command to generate problem descriptions:
 
     jq -r 'map(select(.problem_id=="1991C"))[0] | .description + "\n\n# Input:\n" + .input + "\n\n# Output:\n" + .output + "\n\n# Example input:\n" + .examples[0].input + "\n\n# Example output:\n" + .examples[0].output + "\n\n# Notes:\n" + .note' datasets/codeelo_inexact_raw.json
+
+# HumanEval and MBPP
+
+Download:
+
+- https://github.com/evalplus/mbppplus_release/releases/tag/v0.2.0
+- https://github.com/evalplus/humanevalplus_release/releases/tag/v0.1.10
+
+Convert:
+
+    uv run preprocess_dataset --format HumanEvalPlus --dataset HumanEvalPlus.jsonl --output humanevalplus.json
+    
+    
