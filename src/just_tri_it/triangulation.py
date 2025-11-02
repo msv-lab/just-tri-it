@@ -1224,7 +1224,7 @@ def {new_sig.name}(el):
                 enum_solutions = self.sample_solutions(enum_problem, self.num_left_samples, time_predicates=True)
 
                 _, split_arg_enum_inputs, split_arg_enum_solutions = \
-                    self.split_arg_adapter(enum_problem, enum_inputs, enum_solutions, i, l)
+                    self.split_arg_adapter(enum_problem, enum_inputs, enum_solutions, i, l, type)
 
                 sinv_problem = self.transform_sinv(split_arg_problem, i + 1)
                 sinv_inputs = self.generate_inputs(sinv_problem)
