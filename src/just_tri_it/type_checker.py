@@ -148,7 +148,7 @@ def check_type(data, type_str):
                     if not isinstance(s, str):
                         return False
             return True
-        case 'union[list[int], int]':
+        case 'union[list[int], int]' | 'union[int, list[int]]':
             if isinstance(data, int):
                 return True
             if isinstance(data, list):
