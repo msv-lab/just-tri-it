@@ -264,12 +264,24 @@ Wrap your answer with the tags `<answer>` and `</answer>`, e.g.
 Problem:
 {req.description}
         """
-        response = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
-        response = eval(response)
-        if response is None:
-            return None
-        p_names = [p.name for p in req.signature.params]
-        return (p_names.index(response[0]), p_names.index(response[1]))
+        num_retry = 3
+        model = Independent(self.model)
+        for attempt in range(num_retry):
+            try:
+                response = gen_and_extract_answer_with_retry(model, PROMPT, 3)
+                response = eval(response)
+                if response is None:
+                    result =  None
+                else:
+                    p_names = [p.name for p in req.signature.params]
+                    if response[0] not in p_names or response[1] not in p_names:
+                        raise Exception(f"bad response {response}")
+                    result = (p_names.index(response[0]), p_names.index(response[1]))
+                break
+            except Exception as e:
+                if attempt == num_retry - 1:
+                    raise ExperimentFailure(f"reply for length parameter failed: {e}")
+        return result
 
     def choose_inversion_scheme(self, req: Requirements) -> InversionScheme:
         if hack(task="11_binary_string"):
