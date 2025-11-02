@@ -83,7 +83,7 @@ SKIP_SELECTORS = [
     # "Postcondition",
     # "FWD_INV",
     # "FWD_SINV",
-    # "ENUM_SINV"
+    "ENUM_SINV"
 ]
 
 
