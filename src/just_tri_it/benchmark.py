@@ -9,6 +9,7 @@ from just_tri_it.code_generator import Vanilla
 from just_tri_it.selection import Selected, Abstained
 from just_tri_it.utils import print_annotated_hr, add_cache_options, setup_cache, print_legend, init_random
 import just_tri_it.utils
+import just_tri_it.config
 from just_tri_it.config import init_selectors, NUM_LEFT_SAMPLES
 from just_tri_it.program import Program
 
@@ -41,6 +42,16 @@ def parse_args():
         "--selector",
         type=str,
         help="Code selector configuration to benchmark."
+    )
+    parser.add_argument(
+        "--num-left-samples",
+        type=int,
+        help="Number of left samples"
+    )
+    parser.add_argument(
+        "--num-right-samples",
+        type=int,
+        help="Number of right samples"
     )
     parser.add_argument(
         "--model",
@@ -96,6 +107,11 @@ def main():
 
     if args.debug:
         just_tri_it.utils.DEBUG = True
+
+    if args.num_left_samples:
+        just_tri_it.config.NUM_LEFT_SAMPLES = args.num_left_samples
+    if args.num_right_samples:
+        just_tri_it.config.NUM_RIGHT_SAMPLES = args.num_right_samples
     
     model = {
         "gpt-4o": AI302("gpt-4o", 1.0, max_batch=50),

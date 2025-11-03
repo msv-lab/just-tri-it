@@ -32,8 +32,6 @@ class Checker(ABC):
 
 INTERPRETER_CHECKER_CALL_BUDGET_PER_INPUT = 500
 
-INTERPRETER_CHECKER_MAX_FORALL_DOMAIN = 50
-
 
 class CallBudgetExceeded(Exception):
     "Raised when make too many program calls"
@@ -145,14 +143,11 @@ class Interpreter(Checker):
                         return False
                     if not isinstance(computed_domain, list):
                         computed_domain = [Demonic()]
+                    if len(computed_domain) > self.max_domain:
+                        random.seed(42) # each sample should be independent
+                        computed_domain = list(random.sample(computed_domain, self.max_domain))
                 if len(computed_domain) == 0:
                     return True # not sure about it, but alternatives seem worse
-                max_domain = INTERPRETER_CHECKER_MAX_FORALL_DOMAIN
-                if hack(task="generate_permutation"):
-                    max_domain = 10
-                if len(computed_domain) > max_domain:
-                    random.seed(42) # each sample should be independent
-                    computed_domain = list(random.sample(computed_domain, max_domain))
                 for inp in computed_domain:
                     new_env = env.copy()
                     if isinstance(ele, Var):
@@ -216,7 +211,11 @@ class Interpreter(Checker):
     def check(self,
               inputs: Dict[Side, Any],
               programs: Dict[Side, 'Program'],
-              formula: Formula):
+              formula: Formula,
+              max_domain):
+
+        self.max_domain = max_domain
+
         max_num_inputs = max(len(inputs[Side.LEFT]), len(inputs[Side.RIGHT]))
 
         self.available_call_budget = INTERPRETER_CHECKER_CALL_BUDGET_PER_INPUT * max_num_inputs

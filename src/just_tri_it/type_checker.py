@@ -1,5 +1,6 @@
 from typing import List, Any
 from just_tri_it.program import Signature
+from just_tri_it.utils import ExperimentFailure
 
 
 def check_type(data, type_str):
@@ -366,9 +367,23 @@ def check_type(data, type_str):
                 return False
 
             a, b, c = data
-            return isinstance(a, int) and isinstance(b, int) and isinstance(c, int)        
+            return isinstance(a, int) and isinstance(b, int) and isinstance(c, int)
+        case 'tuple[str, str]':
+            if not (isinstance(data, tuple) and len(data) == 2):
+                return False
+            a, b = data
+            return isinstance(a, str) and isinstance(b, str)
+        case 'tuple[int, ...]': # is it even a valid syntax?
+            if not isinstance(data, tuple):
+                return False
+            if len(data) == 0:
+                return False
+            for item in data:
+                if not isinstance(item, int):
+                    return False
+            return True        
         case _:
-            raise ValueError(f"unsupported type: {type_str}")
+            raise ExperimentFailure(f"unsupported type: {type_str}")
 
 
 def args_match_signature(args: List[Any], sig: Signature):

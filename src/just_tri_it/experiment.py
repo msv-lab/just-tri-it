@@ -24,6 +24,7 @@ from just_tri_it.config import init_selectors, NUM_LEFT_SAMPLES
 from just_tri_it.code_generator import Vanilla
 from just_tri_it.selection import Selected, Abstained
 from just_tri_it.input_generator import generate_inputs
+import just_tri_it.config
 
 
 def parse_args():
@@ -59,6 +60,16 @@ def parse_args():
         "--only-list",
         type=str,
         help="file with task IDs to run"
+    )
+    parser.add_argument(
+        "--num-left-samples",
+        type=int,
+        help="Number of left samples"
+    )
+    parser.add_argument(
+        "--num-right-samples",
+        type=int,
+        help="Number of right samples"
     )
     parser.add_argument(
         "--model",
@@ -156,6 +167,11 @@ def main():
     init_random()
     
     args = parse_args()
+
+    if args.num_left_samples:
+        just_tri_it.config.NUM_LEFT_SAMPLES = args.num_left_samples
+    if args.num_right_samples:
+        just_tri_it.config.NUM_RIGHT_SAMPLES = args.num_right_samples
 
     model = {
         "gpt-4o": AI302("gpt-4o", 1.0, max_batch=NUM_LEFT_SAMPLES),

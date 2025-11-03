@@ -161,7 +161,7 @@ class Triangulator:
         return (replaced_result, raw_data)
         
 
-    def triangulate(self, prop, left_inputs, left_solutions, right_inputs, right_solutions, bijective=False):
+    def triangulate(self, prop, left_inputs, left_solutions, right_inputs, right_solutions, bijective=False, max_domain=50):
         programs_and_witnesses = []
 
         q_witnesses = {} # from right program to its witnesses
@@ -175,7 +175,8 @@ class Triangulator:
 
                 if self.checker.check({Side.LEFT: left_inputs, Side.RIGHT: right_inputs},
                                       {Side.LEFT: p, Side.RIGHT: q },
-                                      prop):
+                                      prop,
+                                      max_domain):
 
                     if bijective and q.hash_id() in q_agreement:
                         # if the property is bijective, and q is matched with at least one program, we inherit all matches from that program
@@ -1274,7 +1275,8 @@ def {new_sig.name}(el):
                                      enum_solutions,
                                      sinv_inputs,
                                      sinv_solutions,
-                                     bijective=True)
+                                     bijective=True,
+                                     max_domain=10)
             case SuffixInversion(i, l, type):
                 split_arg_problem, _, _ = \
                     self.split_arg_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l, type)
@@ -1298,7 +1300,8 @@ def {new_sig.name}(el):
                                      split_arg_enum_solutions,
                                      sinv_inputs,
                                      sinv_solutions,
-                                     bijective=True)
+                                     bijective=True,
+                                     max_domain=10)
                 
                 triangulated_enum_solutions = self.unwrap(triangulated_split_arg_enum_solutions)
 
