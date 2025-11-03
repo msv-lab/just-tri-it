@@ -237,6 +237,8 @@ def execute_experiment(model, executor, dataset, db, data_dir, correctness_only=
     task_num = len(dataset)
 
     for index, task in enumerate(dataset):
+        if task.id == "HumanEval/129":
+            continue
         if task.id in map(lambda o: o["task_id"], db.objects):
             continue
         just_tri_it.utils.CURRENT_TASK = task.id

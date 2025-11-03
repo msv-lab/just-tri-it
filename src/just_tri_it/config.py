@@ -11,7 +11,7 @@ from just_tri_it.cached_llm import Model
 from just_tri_it.test_generator import InputOutputGenerator, TestFunctionGenerator
 
 
-NUM_LEFT_SAMPLES = 20
+NUM_LEFT_SAMPLES = 30
 NUM_RIGHT_SAMPLES = 20
 
 
