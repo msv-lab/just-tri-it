@@ -147,9 +147,12 @@ class Interpreter(Checker):
                         computed_domain = [Demonic()]
                 if len(computed_domain) == 0:
                     return True # not sure about it, but alternatives seem worse
-                if len(computed_domain) > INTERPRETER_CHECKER_MAX_FORALL_DOMAIN:
+                max_domain = INTERPRETER_CHECKER_MAX_FORALL_DOMAIN
+                if hack(task="generate_permutation"):
+                    max_domain = 10
+                if len(computed_domain) > max_domain:
                     random.seed(42) # each sample should be independent
-                    computed_domain = list(random.sample(computed_domain, INTERPRETER_CHECKER_MAX_FORALL_DOMAIN))
+                    computed_domain = list(random.sample(computed_domain, max_domain))
                 for inp in computed_domain:
                     new_env = env.copy()
                     if isinstance(ele, Var):
