@@ -337,7 +337,30 @@ def check_type(data, type_str):
                         return False
                 return True
             else:
-                return False        
+                return False
+        case 'tuple[int, int, list[tuple[int, int]]]':
+            if not (isinstance(data, tuple) and len(data) == 3):
+                return False
+
+            a, b, lst = data
+
+            if not isinstance(a, int):
+                return False
+            if not isinstance(b, int):
+                return False
+            if not isinstance(lst, list):
+                return False
+
+            for item in lst:
+                if not (
+                    isinstance(item, tuple) and
+                    len(item) == 2 and
+                    isinstance(item[0], int) and
+                    isinstance(item[1], int)
+                ):
+                    return False
+
+            return True            
         case _:
             raise ValueError(f"unsupported type: {type_str}")
 
