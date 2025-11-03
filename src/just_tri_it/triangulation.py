@@ -299,6 +299,14 @@ Problem:
             return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
         if hack(task="atcoder_abc393_d"):
             return SuffixInversion(1, 1, "str")
+        if hack(task="atcoder_abc393_e"):
+            return SuffixInversion(1, 1, "list")
+        if hack(task="leetcode_3743"):
+            return SuffixInversion(3, 1, "list")
+        if hack(task="leetcode_3785"):
+            return SuffixInversion(0, 1, "list")
+        if hack(task="atcoder_abc390_a"):
+            return SuffixInversion(0, 2, "list")
         if len(req.signature.params) == 1:
             if req.signature.params[0].type.lower().startswith('list'):
                 return SuffixInversion(0, 1, "list")
