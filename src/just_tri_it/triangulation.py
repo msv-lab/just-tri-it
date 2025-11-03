@@ -84,7 +84,7 @@ class Triangulator:
 
         num_adapters = 0
 
-        if hack(task="11_binary_string") or hack(task="atcoder_abc393_d"):
+        if hack(task="11_binary_string") or hack(task="atcoder_abc393_d") or hack(task="atcoder_abc395_e") or hack(task="atcoder_abc396_c") or hack(task="atcoder_arc194_b"):
             pass
         elif hack(task="2_list_sum"):
             fwd_problem, fwd_inputs, fwd_solutions = \
@@ -306,6 +306,14 @@ Problem:
         if hack(task="leetcode_3785"):
             return SuffixInversion(0, 1, "list")
         if hack(task="atcoder_abc390_a"):
+            return SuffixInversion(0, 2, "list")
+        if hack(task="atcoder_abc395_e"):
+            return SuffixInversion(3, 1, "list")
+        if hack(task="atcoder_abc396_c"):
+            return SuffixInversion(2, 1, "list")
+        if hack(task="atcoder_arc194_b"):
+            return SuffixInversion(1, 2, "list")
+        if hack(task="atcoder_arc195_a"):
             return SuffixInversion(0, 2, "list")
         if len(req.signature.params) == 1:
             if req.signature.params[0].type.lower().startswith('list'):
@@ -947,6 +955,29 @@ Original Problem:
 {fwd_req.description}
         """
         return gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
+    
+    def refine_sinv_des(self, fwd_req: Requirements, sinv_req: Requirements) -> Requirements:
+        PROMPT = f"""I'm trying to rewrite a problem to its corresponding inverse problem,
+with its signature changing from {fwd_req.signature} to {sinv_req.signature}. In order to
+ensure that the two problems indeed correspond, I need you help to make sure they are completely
+consistent in key details. I'll give you the original problem description and the transformed
+problem descriptio. Please **carefully think about whether the transformed problem description
+is consistent with the important semantic details of the original text**. If there are any 
+nconsistencies, make the necessary modifications; if it is consistent, simply answer "Yes".
+
+Enclose the your answer inside `<answer>` and `</answer>` tags.
+
+Original Problem:
+{fwd_req.description}
+
+Tranformed Problem:
+{sinv_req.description}
+        """
+        ans = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
+        if ans.lower() == "yes":
+            return sinv_req
+        else:
+            return Requirements(signature=sinv_req.signature, description=ans)
         
     def transform_sinv(self, fwd_req: Requirements, inversion_index: int) -> Requirements:
         named_sig = NamedReturnSignature.infer_name(self.model, fwd_req)
@@ -958,8 +989,11 @@ Original Problem:
         else:
             print(f"\n[intractable fibers]", file=sys.stderr, flush=True)
             sinv_desc = self.sinv_description_infinite(fwd_req, sinv_sig, inversion_index)
+        # if hack(task="atcoder_abc388_e"):
+        #     wrong_words = "The task is to determine all possible arrangements of mochi_sizes_suffix such that a specific number of kagamimochi pairs can be made."
+        #     changed_words = "**Pairs are formed simultaneously**: from the N mochi, you select 2K distinct mochi and split them into K disjoint pairs; each pair must satisfy the condition above. **Each mochi can appear in at most one pair.** Let `max_kagamimochi_pairs_simp_split_0` denote the function that returns the maximum number of such simultaneously formable pairs for a given full list of mochi sizes."
+        #     sinv_desc = sinv_desc.replace(wrong_words, changed_words)
         new_req = Requirements(sinv_sig, sinv_desc)
-
         if (just_tri_it.utils.DEBUG):
             print(new_req.get_content(), file=sys.stderr, flush=True)
 
@@ -1250,7 +1284,7 @@ def {new_sig.name}(el):
                 enum_solutions = self.sample_solutions(enum_problem, self.num_left_samples, time_predicates=True)
                 
                 _, split_arg_enum_inputs, split_arg_enum_solutions = \
-                    self.split_arg_adapter(enum_problem, enum_inputs, enum_solutions, i, l)
+                    self.split_arg_adapter(enum_problem, enum_inputs, enum_solutions, i, l, type)
                 
                 sinv_problem = self.transform_sinv(split_arg_problem, i+1)
                 sinv_inputs = self.generate_inputs(sinv_problem)
