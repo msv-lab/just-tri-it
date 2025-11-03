@@ -83,14 +83,14 @@ def parse_args():
 # to skip running some configurations:
 SKIP_SELECTORS = [
     # "Plurality",
-    "MajorityVote",
-    "MaxTest_Assert",
-    "MaxTest_IO",
-    "CodeT_Assert",
-    "CodeT_IO",
-    "Syntactic",
-    "OffByOne",
-    "Postcondition",
+    # "MajorityVote",
+    # "MaxTest_Assert",
+    # "MaxTest_IO",
+    # "CodeT_Assert",
+    # "CodeT_IO",
+    # "Syntactic",
+    # "OffByOne",
+    # "Postcondition",
     # "FWD_INV",
     # "FWD_SINV",
     # "ENUM_SINV"
