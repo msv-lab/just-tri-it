@@ -44,8 +44,10 @@ def abstention_measures(db):
     +--------------+---------+-----------+-----------+
     """
     matrix_per_method = {}
+    decisions_per_method_per_task = {}
 
     for obj in db.objects:
+        decisions_per_method_per_task[obj["task_id"]] = {}
         correct_samples = [p for p, correct, _ in obj["sample_correctness"] if correct]
         ground_truth_is_select = len(correct_samples) > 0
         for selector_data in obj["selectors"]:
@@ -58,19 +60,24 @@ def abstention_measures(db):
                     correctly_selected = selector_data["selected"] in correct_samples
                     if correctly_selected:
                         matrix_per_method[method][0] += 1
+                        decisions_per_method_per_task[obj["task_id"]][method] = "selected_correct"
                     else:
                         matrix_per_method[method][1] += 1
+                        decisions_per_method_per_task[obj["task_id"]][method] = "selected_incorrect"
                 else:
                     assert selector_data["outcome"] == "abstained"
                     matrix_per_method[method][2] += 1
+                    decisions_per_method_per_task[obj["task_id"]][method] = "incorrectly_abstained"
             else:
                 if selector_data["outcome"] == "selected":
                     matrix_per_method[method][3] += 1
+                    decisions_per_method_per_task[obj["task_id"]][method] = "selected_instead_of_abstaining"
                 else:
                     assert selector_data["outcome"] == "abstained"
                     matrix_per_method[method][4] += 1
+                    decisions_per_method_per_task[obj["task_id"]][method] = "correctly_abstained"
 
-    return {method: all_abstention_metrics(*matrix) for method, matrix in matrix_per_method.items()}
+    return {method: all_abstention_metrics(*matrix) for method, matrix in matrix_per_method.items()}, decisions_per_method_per_task
 
 
 def plot_sorted_percentages(probs, label, output_file):
@@ -369,7 +376,7 @@ def main():
     
     plot_distribution_with_separate_zero(list(corr_dist.values()), report_dir / "prob_correct_distribution.pdf")
 
-    method_to_measures = abstention_measures(db)
+    method_to_measures, decisions = abstention_measures(db)
 
     if len(method_to_measures) > 0:
         # transposing table:
@@ -392,6 +399,8 @@ def main():
         with (report_dir / "metrics.json").open("w", encoding="utf-8") as f:
             json.dump(measure_to_methods, f, indent=4)
 
+        with (report_dir / "decisions.json").open("w", encoding="utf-8") as f:
+            json.dump(decisions, f, indent=4)
 
 
 if __name__ == "__main__":
