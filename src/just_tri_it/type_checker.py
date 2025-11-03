@@ -327,6 +327,17 @@ def check_type(data, type_str):
                     isinstance(data[4], str)):
                     return True
             return False
+        case 'union[int, list[tuple[int, int]]]':
+            if isinstance(data, int):
+                return True
+            elif isinstance(data, list):
+                for item in data:
+                    if not (isinstance(item, tuple) and len(item) == 2 and 
+                            isinstance(item[0], int) and isinstance(item[1], int)):
+                        return False
+                return True
+            else:
+                return False        
         case _:
             raise ValueError(f"unsupported type: {type_str}")
 
