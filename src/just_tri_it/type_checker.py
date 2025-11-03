@@ -360,7 +360,13 @@ def check_type(data, type_str):
                 ):
                     return False
 
-            return True            
+            return True
+        case 'tuple[int, int, int]':
+            if not (isinstance(data, tuple) and len(data) == 3):
+                return False
+
+            a, b, c = data
+            return isinstance(a, int) and isinstance(b, int) and isinstance(c, int)        
         case _:
             raise ValueError(f"unsupported type: {type_str}")
 
