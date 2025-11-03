@@ -317,7 +317,16 @@ def check_type(data, type_str):
                         return False
                 return True
             else:
-                return False            
+                return False
+        case 'tuple[int, int, int, int, str]':
+            if isinstance(data, tuple) and len(data) == 5:
+                if (isinstance(data[0], int) and
+                    isinstance(data[1], int) and
+                    isinstance(data[2], int) and
+                    isinstance(data[3], int) and
+                    isinstance(data[4], str)):
+                    return True
+            return False
         case _:
             raise ValueError(f"unsupported type: {type_str}")
 
