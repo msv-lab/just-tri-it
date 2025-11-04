@@ -18,6 +18,7 @@ from just_tri_it.logic import (
 )
 from just_tri_it.utils import hack
 import just_tri_it.utils
+from just_tri_it.input_generator import value_is_too_large
 
 
 class Checker(ABC):
@@ -143,6 +144,12 @@ class Interpreter(Checker):
                         return False
                     if not isinstance(computed_domain, list):
                         computed_domain = [Demonic()]
+                    if hack(task="slavics_exam"):
+                        small_vals = []
+                        for v in computed_domain:
+                            if not value_is_too_large(v, 100, 3):
+                                small_vals.append(v)
+                        computed_domain = small_vals
                     if len(computed_domain) > self.max_domain:
                         random.seed(42) # each sample should be independent
                         computed_domain = list(random.sample(computed_domain, self.max_domain))

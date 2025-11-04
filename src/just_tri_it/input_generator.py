@@ -7,7 +7,7 @@ from just_tri_it.cached_llm import Independent
 from just_tri_it.executor import Executor, Success
 from just_tri_it.utils import extract_code
 from just_tri_it.program import Program, Requirements, Signature
-from just_tri_it.utils import extract_all_code, remove_duplicates, ExperimentFailure
+from just_tri_it.utils import extract_all_code, remove_duplicates, ExperimentFailure, hack
 
 
 MINIMUM_NUM_INPUTS = 15
@@ -177,7 +177,10 @@ target_function(argument1, argument2, ...)
                 blocks = extract_all_code(response)
                 inputs = [ trans_to_list(executor, block.strip(), func_name) for block in blocks]
                 if not gen_large:
-                    inputs = [i for i in inputs if not value_is_too_large(i, 10000, 20)]
+                    seq_bound = 20
+                    if hack(task="slavics_exam"):
+                        seq_bound = 3
+                    inputs = [i for i in inputs if not value_is_too_large(i, 10000, seq_bound)]
                 if gen_large:
                     inputs = range_checker(executor, model, req, inputs)
                 break

@@ -331,12 +331,20 @@ class PersistentWorkerExecutor(Executor):
         print("T", end="", file=sys.stderr, flush=True)
         return Timeout()
 
+    def _write_jti_log(self, p):
+        log_dir = Path(".jti_log")
+        log_dir.mkdir(exist_ok=True)
+        if p.original_hash:
+            file_path = log_dir / f"{p.display_id()}-{p.original_hash[:7]}.py"
+        else:
+            file_path = log_dir / f"{p.display_id()}.py"
+        if not file_path.exists():
+            file_path.write_text(p.get_content(), encoding="utf-8")    
+
     @cache_content_addressable
     def run(self, p: Program, inputs, add_lcb_imports=True) -> ExecutionOutcome:
         if just_tri_it.utils.DEBUG:
-            print(p.hash_id(), file=sys.stderr, flush=True)
-            print(inputs, file=sys.stderr, flush=True)
-            print(p.get_content(), file=sys.stderr, flush=True)
+           self._write_jti_log(p)
         assert isinstance(inputs, list)
         args = deepcopy(inputs)
         if add_lcb_imports:

@@ -10,7 +10,7 @@ from just_tri_it.selection import Selected, Abstained
 from just_tri_it.utils import print_annotated_hr, add_cache_options, setup_cache, print_legend, init_random
 import just_tri_it.utils
 import just_tri_it.config
-from just_tri_it.config import init_selectors, NUM_LEFT_SAMPLES
+from just_tri_it.config import init_selectors
 from just_tri_it.program import Program
 
 
@@ -88,8 +88,8 @@ def evaluate_selector(model, executor, selector, dataset):
 
 def evaluate_correctness(model, executor, task):
     just_tri_it.utils.CURRENT_TASK = task.id
-    generated = Vanilla().generate(model, task.requirements, batch=NUM_LEFT_SAMPLES)
-    generated = list(islice(generated, NUM_LEFT_SAMPLES))
+    generated = Vanilla().generate(model, task.requirements, batch=just_tri_it.config.NUM_LEFT_SAMPLES)
+    generated = list(islice(generated, just_tri_it.config.NUM_LEFT_SAMPLES))
     results = {}
     for program in generated:
         results[program.display_id()] = program.passes(executor, task.tests)

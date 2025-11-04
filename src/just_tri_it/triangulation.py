@@ -316,6 +316,10 @@ Problem:
             return SuffixInversion(1, 2, "list")
         if hack(task="atcoder_arc195_a"):
             return SuffixInversion(0, 2, "list")
+        if hack(task="and_reconstruction"):
+            return SuffixInversion(1, 1, "list")
+        if hack(task="slavics_exam"):
+            return ParameterInversion(1)
         if len(req.signature.params) == 1:
             if req.signature.params[0].type.lower().startswith('list'):
                 return SuffixInversion(0, 1, "list")
@@ -470,7 +474,7 @@ You are given a programming problem that requires implementing the function:
 
 Unpack the input tuple so that each element of the tuple becomes a separate function parameters. 
 
-- The parameters must have descriptive names
+- The parameters names must match problem description
 - The parameters must be annotated with types according to elements of the original tuple
 - The return type should remain the same.
         

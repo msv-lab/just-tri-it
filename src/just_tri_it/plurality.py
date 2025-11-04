@@ -29,9 +29,7 @@ class Plurality(Agreement):
            {
               "method": "plurality_<prob_threshold>",
               "programs": ...,
-              "inputs": ...,
               "classes": <mapping from ids of valid classes to programs>,
-              "outputs": <pairs of programs and corresponding output vectors>,
            }
         """
         inputs = generate_inputs(model, req, self.executor)
@@ -82,9 +80,9 @@ class Plurality(Agreement):
         raw_data = {
             "method": "plurality_" + str(self.prob_threshold),            
             "programs": programs,
-            "inputs": inputs,
+#            "inputs": inputs,
             "classes": valid_class_to_programs,
-            "outputs": [(programs[i], _to_serializable(outputs[i])) for i in range(len(programs))]
+#            "outputs": [(programs[i], _to_serializable(outputs[i])) for i in range(len(programs))]
         }
 
         if not valid_class_to_programs:
