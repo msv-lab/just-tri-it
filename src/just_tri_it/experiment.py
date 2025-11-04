@@ -174,7 +174,7 @@ def main():
         just_tri_it.config.NUM_RIGHT_SAMPLES = args.num_right_samples
 
     model = {
-        "gpt-4o": AI302("gpt-4o", 1.0, max_batch=NUM_LEFT_SAMPLES),
+        "gpt-4o": AI302("gpt-4o", 1.0, max_batch=just_tri_it.config.NUM_LEFT_SAMPLES),
         "deepseek-v3": AI302("deepseek-v3.1", 1.0, alias="deepseek-v3"),
         "gemini-2.5-flash": AI302("gemini-2.5-flash", 1.0)
     }[args.model]
