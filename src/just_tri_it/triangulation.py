@@ -119,7 +119,7 @@ class Triangulator:
                 self.is_stream_processing_problem(fwd_problem):
             stream_processing = True
 
-        if hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam"]):
+        if hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam", "atcoder_arc193_a"]):
             stream_processing = True
 
 
