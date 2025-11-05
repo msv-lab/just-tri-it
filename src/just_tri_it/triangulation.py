@@ -353,10 +353,40 @@ Problem:
             return SuffixInversion(1, 2, "list")
         if hack(task="atcoder_arc195_a"):
             return SuffixInversion(0, 2, "list")
+
+        # CodeElo:
+        if hack(task="absolute_zero"):
+            return SuffixInversion(1, 1, "list") # array
+        if hack(task="alices_adventures_in_cards"):
+            return SuffixInversion(1, 1, "list") # queen preferences
+        if hack(task=["alya_and_permutation", "binary_colouring", "different_string", "find_k_distinct_points", "fixing_binary_string", "generate_permutation", "gorilla_and_permutation", "grid_reset", "increasing_sequence_fixed_or", "manhattan_permutations", "medians_2032", "minimise_oneness", "perpendicular_segments", "prime_xor_coloring", "strong_password", "turtle_multiplication"]):
+            skip # default
         if hack(task="and_reconstruction"):
             return SuffixInversion(1, 1, "list")
+        if hack(task="choose_your_queries"):
+            return SuffixInversion(2, 1, "list") # this requires a more subtle approach
+        if hack(task="common_generator"):
+            return SuffixInversion(1, 1, "list") # array
+        if hack(task="concatenation_of_arrays"):
+            return SuffixInversion(1, 1, "list") # this is an optimization problem, so inversion will not help
+        if hack(task="cool_graph"):
+            return SuffixInversion(2, 1, "list")
+        if hack(task="earning_on_bets"):
+            return SuffixInversion(1, 1, "list") # array
+        if hack(task="ingenuity_2"):
+            return SuffixInversion(1, 1, "str")
+        if hack(task="manhattan_triangle"):
+            return ParameterInversion(1) # d
+        if hack(task="stardew_valley"):
+            return SuffixInversion(2, 1, "list")
+        if hack(task="turtle_and_good_pairs"):
+            return SuffixInversion(1, 1, "str")
+        if hack(task="turtle_incomplete_sequence"):
+            return SuffixInversion(1, 1, "list") # array    
         if hack(task="slavics_exam"):
             return ParameterInversion(1)
+        if hack(task="xorificator"):
+            return SuffixInversion(2, 1, "list")
         if len(req.signature.params) == 1:
             if req.signature.params[0].type.lower().startswith('list'):
                 return SuffixInversion(0, 1, "list")
