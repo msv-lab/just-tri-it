@@ -2,19 +2,21 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from itertools import islice
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Union, Callable
 from functools import partial
 from enum import Enum
 from collections import defaultdict
 import copy
 import sys
 import ast
+from math import ceil
 
 from just_tri_it.executor import Executor
 from just_tri_it.cached_llm import Model, Independent
 from just_tri_it.code_generator import Generator
 from just_tri_it.selection import Agreement, AgreementOutcome
-from just_tri_it.input_generator import generate_inputs, remove_duplicates
+from just_tri_it.input_generator import generate_inputs, remove_duplicates, MINIMUM_NUM_INPUTS, MAXIMUM_NUM_INPUTS
+
 from just_tri_it.logic import (
     Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, TolerateInvalid, TimeoutGuard, FullOrPartial, FlattenMap
 )
@@ -42,6 +44,16 @@ class SuffixInversion:
     type: str
 
 
+@dataclass
+class Decomposition:
+    signature: Signature
+    left_problem: Requirements
+    right_problem: Requirements
+    compose: Callable
+    adapt_left_input: Callable
+    adapt_right_input: Callable
+    
+    
 type InversionScheme = ParameterInversion | SuffixInversion
 
 
@@ -161,7 +173,7 @@ class Triangulator:
         return (replaced_result, raw_data)
         
 
-    def triangulate(self, prop, left_inputs, left_solutions, right_inputs, right_solutions, bijective=False, max_domain=50):
+    def triangulate(self, prop, left_inputs, left_solutions, right_inputs, right_solutions, bijective=False, max_domain=50, timeout_multiplier=1):
         programs_and_witnesses = []
 
         q_witnesses = {} # from right program to its witnesses
@@ -173,10 +185,15 @@ class Triangulator:
                 if q.hash_id() not in q_witnesses:
                     q_witnesses[q.hash_id()] = qws
 
+                print(file=sys.stderr, flush=True)
+                print(f"[checking {p.display_id()} <-> {q.display_id()}]", file=sys.stderr, flush=True, end="")
+
                 if self.checker.check({Side.LEFT: left_inputs, Side.RIGHT: right_inputs},
                                       {Side.LEFT: p, Side.RIGHT: q },
                                       prop,
-                                      max_domain):
+                                      max_domain,
+                                      timeout_multiplier):
+                    print(f"[success]", file=sys.stderr, flush=True)
 
                     if bijective and q.hash_id() in q_agreement:
                         # if the property is bijective, and q is matched with at least one program, we inherit all matches from that program
@@ -187,6 +204,8 @@ class Triangulator:
                             # this is q's first agreement with a left program
                             q_agreement[q.hash_id()] = p.hash_id()
                         p_agreements[p.hash_id()].append(q.hash_id())
+                else:
+                    print(f"[failure]", file=sys.stderr, flush=True)
 
         for (p_id, q_ids) in p_agreements.items():
             p = next(p for (p, _) in left_solutions if p.hash_id() == p_id)
@@ -210,23 +229,41 @@ class Triangulator:
 
         return list(map(lambda s: (unwrap_program(s[0]), s[1]), solutions))
 
-    def sample_solutions(self, req: Requirements, n: int, time_predicates=False):
+    def sample_solutions(self, problem: Union[Requirements, Decomposition], n: int, time_predicates=False):
         def gen_time_predicate(req, program):
             return program.gen_time_predicate(self.model, req)
         
-        programs = self.code_generator.generate(self.model, req, n)
-        programs = list(islice(programs, n))
-        if time_predicates:
-            programs = list(map(partial(gen_time_predicate, req), programs))
-        # have side effect
-        for p in programs:
-            p.original_hash = p.hash_id()
+        match problem:
+            case Requirements():
+                programs = self.code_generator.generate(self.model, problem, n)
+                programs = list(islice(programs, n))
+                # if time_predicates:
+                #     programs = list(map(partial(gen_time_predicate, req), programs))
+                for p in programs:
+                    p.original_hash = p.hash_id() #NOTE: have side effect
+                #NOTE: initially, each solution is its own witness            
+                return list(map(lambda p: (p, [p]), programs))
+                
+            case Decomposition(_, left_problem, right_problem, compose, _, _):
+                left_solutions = self.sample_solutions(left_problem, n, time_predicates=time_predicates)
+                right_solutions = self.sample_solutions(right_problem, n, time_predicates=time_predicates)
+                composed = [compose(l[0], r[0]) for (l, r) in zip(left_solutions, right_solutions)]
+                # fixme: in principle, we should also compose time predicates
+                return list(map(lambda p: (p, [p]), composed))
+        
 
-        #NOTE: initially, each solution is its own witness            
-        return list(map(lambda p: (p, [p]), programs))
-
-    def generate_inputs(self, req: Requirements):
-        return generate_inputs(self.model, req, self.executor)
+    def generate_inputs(self,
+                        problem: Union[Requirements, Decomposition],
+                        min_inputs=MINIMUM_NUM_INPUTS,
+                        max_inputs=MAXIMUM_NUM_INPUTS):
+        match problem:
+            case Requirements():
+                return generate_inputs(self.model, problem, self.executor, min_inputs=min_inputs, max_inputs=max_inputs)
+            case Decomposition(_, left_problem, right_problem, _, adapt_left_input, adapt_right_input):
+                left_inputs = self.generate_inputs(left_problem, min_inputs=ceil(min_inputs/2), max_inputs=ceil(max_inputs/2))
+                right_inputs = self.generate_inputs(right_problem, min_inputs=ceil(min_inputs/2), max_inputs=ceil(max_inputs/2))
+                combined = list(map(adapt_left_input, left_inputs)) + list(map(adapt_right_input, right_inputs))
+                return combined
  
     def is_stream_processing_problem(self, req: Requirements) -> bool:
         if not(len(req.signature.params) == 1 and
@@ -859,10 +896,11 @@ Your task is to rewrite this problem so that it instead requires implementing th
 The new function must exhaustively enumerate all correct outputs for a given input according to the original problem description.
 
 When rewriting the problem, please
-0. Minimally modify the original problem        
+0. Minimally modify the original problem
 1. Preserve all the original problem's rules, edge cases, and constraints, but avoid your own interpretation that is not mentioned in the original problem.
 2. Ensure that the problem is self-contained; it must not refer to the original function.
 3. Exclude all examples.
+4. Strictly follow signature types
 
 Enclose the rewritten problem statement inside `<answer>` and `</answer>` tags.
 
@@ -983,8 +1021,129 @@ Tranformed Problem:
             return sinv_req
         else:
             return Requirements(signature=sinv_req.signature, description=ans)
+
+    def is_yes_no_problem(self, req):
+        if hack(task="slavics_exam"):
+            return True
+        # TODO: automate this
+        return False
+
+    def sinv_description_yes(self, fwd_req: Requirements, yes_sig: Signature, inverse_index: int):
+        PROMPT = f"""
+You are given a programming problem that requires implementing the function:
+
+{fwd_req.signature.pretty_print()}
+
+Rewrite this problem so that it instead requires implementing the set-valued inverted function:
+
+{yes_sig.pretty_print()}
+
+Given the desired output value `{yes_sig.params[0].name}` (corresponding to the original function's return value marked with YES), the new function should return an exhaustive list of values for the parameter `{fwd_req.signature.params[inverse_index].name}` such that if the original function were called with any of these values (and the other parameters unchanged), it would produce `("YES", {yes_sig.params[0].name})` as the result.
+
+Important points to follow:
+0. Minimally modify the original problem
+1. Ensure a simple and natural problem formulation
+2. Clearly explain that the output must include all possible values.
+3. Specify explicitly that if no such values exist, the function should return an empty list.
+4. The problem must be self-contained, and must not refer to the original function.
+5. Exclude all examples.
+
+Enclose the rewritten problem description inside `<answer>` and `</answer>` tags.
+
+Original Problem:
+{fwd_req.description}
+        """
+        return gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
+ 
+    def sinv_description_no(self, fwd_req: Requirements, no_sig: Signature, inverse_index: int):
+        PROMPT = f"""
+You are given a programming problem that requires implementing the function:
+
+{fwd_req.signature.pretty_print()}
+
+Rewrite this problem so that it instead requires implementing the set-valued inverted function:
+
+{no_sig.pretty_print()}
+
+Given the desired output value "NO", the new function should return an exhaustive list of values within a reasonable bound (specify this bound relative to the input) the parameter `{fwd_req.signature.params[inverse_index].name}` such that if the original function were called with any of these values (and the other parameters unchanged), it would produce "NO" as the result.
+
+Important points to follow:
+0. Minimally modify the original problem
+1. Ensure a simple and natural problem formulation
+2. Clearly explain that the output must include all possible values within a reasonable bound
+3. Specify explicitly that if no such values exist, the function should return an empty list.
+4. The problem must be self-contained, and must not refer to the original function.
+5. Exclude all examples.
+
+Enclose the rewritten problem description inside `<answer>` and `</answer>` tags.
+
+Original Problem:
+{fwd_req.description}
+        """
+        return gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
+
+   
+    def transfrom_sinv_decompose_yes_no(self, fwd_req: Requirements, inversion_index: int) -> Decomposition:
+        sig = fwd_req.signature
+        ret_type = sig.return_type
+        assert ret_type.startswith("Union[str, tuple[str,")
+        answer_type = ret_type[len("Union[str, tuple[str,"):-2].strip()
+        new_return_type = "list[" + sig.params[inversion_index].type + "]"
+
+        no_params = []
+        no_params.extend(p for i, p in enumerate(sig.params) if i != inversion_index)
+        no_func_name = sig.name + "_no"
+        no_sig = Signature(no_func_name, no_params, new_return_type)
+        no_desc = self.sinv_description_no(fwd_req, no_sig, inversion_index)
+        no_req = Requirements(no_sig, no_desc)
+
+        answer_name = None #FIXME: automate this
+        if hack(task="slavics_exam"):
+            answer_name = "s_with_replaced_marks"
+        yes_params = [Parameter(answer_name, answer_type)]
+        yes_params.extend(p for i, p in enumerate(sig.params) if i != inversion_index)
+        yes_func_name = sig.name + "_yes"
+        yes_sig = Signature(yes_func_name, yes_params, new_return_type)
+        yes_desc = self.sinv_description_yes(fwd_req, yes_sig, inversion_index)
+        yes_req = Requirements(yes_sig, yes_desc)
+
         
-    def transform_sinv(self, fwd_req: Requirements, inversion_index: int) -> Requirements:
+        named_sig = NamedReturnSignature.infer_name(self.model, fwd_req)
+        sinv_sig = self.sinv_signature(named_sig, inversion_index, tractable_fibers=False)
+        
+        def compose(l, r):
+            COMPOSITION_CODE=f"""
+def {sinv_sig.name}(*args):
+    args = list(args)
+    if isinstance(args[0], str):
+        return (False, {no_sig.name}(*args[1:]))
+    else:
+        yes_args = [args[0][1]] + args[1:]
+        return (True, {yes_sig.name}(*yes_args))
+            """
+            return Program(sinv_sig, l.code + "\n" + r.code + "\n" + COMPOSITION_CODE)
+            
+        def left_input_adapter(args):
+            return ["NO"] + args
+
+        def right_input_adapter(args):
+            return [("YES", args[0] )] + args[1:]
+
+        if (just_tri_it.utils.DEBUG):
+            print(yes_req.get_content(), file=sys.stderr, flush=True)
+            print(no_req.get_content(), file=sys.stderr, flush=True)
+
+        return Decomposition(sinv_sig,
+                             no_req,
+                             yes_req,
+                             compose,
+                             left_input_adapter,
+                             right_input_adapter)
+
+
+    def transform_sinv(self, fwd_req: Requirements, inversion_index: int) -> Union[Requirements, Decomposition]:
+        if self.is_yes_no_problem(fwd_req):
+            return self.transfrom_sinv_decompose_yes_no(fwd_req, inversion_index)
         named_sig = NamedReturnSignature.infer_name(self.model, fwd_req)
         tractable_fibers = self.tractable_fibers(fwd_req, inversion_index)
         sinv_sig = self.sinv_signature(named_sig, inversion_index, tractable_fibers)
@@ -1048,7 +1207,8 @@ Original Problem:
     def adapt_pointwise(self, problem, inputs, solutions):
         adapted_problem = self.transform_pointwise(problem)
         new_sig = adapted_problem.signature
-        
+
+        #FIXME: this breaks time predicates, because they do not return list
         def adapt_program(p):
             ADAPTER_CODE=f"""
 def {new_sig.name}(el):
@@ -1145,10 +1305,10 @@ def {new_sig.name}(el):
 
         return And(ForAll(left_args, Side.LEFT,
                           ForAll(out, FullOrPartial([TolerateInvalid([p(left_args)])]),
-                                 Member([inv_arg, FullOrPartial([TimeoutGuard(q)(right_args)])]))),
+                                 Member([inv_arg, FullOrPartial([TolerateInvalid([TimeoutGuard(q)(right_args)])])]))),
                    ForAll(right_args, Side.RIGHT,
                           ForAll(inv_arg, FullOrPartial([TolerateInvalid([q(right_args)])]),
-                                 Member([out, FullOrPartial([TimeoutGuard(p)(left_args)])]))))
+                                 Member([out, FullOrPartial([TolerateInvalid([TimeoutGuard(p)(left_args)])])]))))
 
     def make_fwd_enum(self, req):
         arity = len(req.signature.params)
@@ -1280,7 +1440,8 @@ def {new_sig.name}(el):
                                      sinv_inputs,
                                      sinv_solutions,
                                      bijective=True,
-                                     max_domain=10)
+                                     max_domain=10,
+                                     timeout_multiplier=2)
             case SuffixInversion(i, l, type):
                 split_arg_problem, _, _ = \
                     self.split_arg_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l, type)
@@ -1305,7 +1466,8 @@ def {new_sig.name}(el):
                                      sinv_inputs,
                                      sinv_solutions,
                                      bijective=True,
-                                     max_domain=10)
+                                     max_domain=10,
+                                     timeout_multiplier=2)
                 
                 triangulated_enum_solutions = self.unwrap(triangulated_split_arg_enum_solutions)
 
@@ -1478,4 +1640,4 @@ def {new_sig.name}(el):
 
         print(f"\n[multi-query solutions: {len(triangulated_multiple_queries_solutions)}]", file=sys.stderr, flush=True)
 
-        return multiple_queries_problem, multiple_queries_inputs, triangulated_multiple_queries_solutions    
+        return multiple_queries_problem, multiple_queries_inputs, triangulated_multiple_queries_solutions

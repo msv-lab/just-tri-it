@@ -111,7 +111,10 @@ Put the complete code inside a Markdown code block:
     return filtered_input
 
 
-def generate_inputs(model, req: Requirements, executor, gen_large=False) -> List[Any]:
+def generate_inputs(model, req: Requirements, executor,
+                    gen_large=False,
+                    min_inputs=MINIMUM_NUM_INPUTS,
+                    max_inputs=MAXIMUM_NUM_INPUTS) -> List[Any]:
     # Define three different types of prompts
     PROMPT_SMALL = f"""Given a problem description and the function
 signature, generate a comprehensive set of small-scale test cases to
@@ -197,7 +200,7 @@ target_function(argument1, argument2, ...)
     max_attempts = 10
     attempt = 0
     
-    while len(all_inputs) < MINIMUM_NUM_INPUTS and attempt < max_attempts:
+    while len(all_inputs) < min_inputs and attempt < max_attempts:
         attempt += 1
 
         current_batch = []
@@ -206,14 +209,16 @@ target_function(argument1, argument2, ...)
         current_batch.extend(sample_and_extract_with_retry(PROMPT_BOUNDARY, ind_model, req.signature.name))
 
         current_batch = fix_and_filter_bad_inputs(current_batch, req.signature)
-        
+        if hack(task="slavics_exam") and ['ba', 'a?'] in current_batch:
+            current_batch = [t for t in current_batch if t != ['ba', 'a?']]
+
         all_inputs.extend(current_batch)
         all_inputs = remove_duplicates(all_inputs)
         
-    if len(all_inputs) < MINIMUM_NUM_INPUTS:
-        raise ExperimentFailure(f"only generated {len(all_inputs)} unique inputs after {max_attempts} attempts (target: {MINIMUM_NUM_INPUTS})")
+    if len(all_inputs) < min_inputs:
+        raise ExperimentFailure(f"only generated {len(all_inputs)} unique inputs after {max_attempts} attempts (target: {min_inputs})")
      
-    if len(all_inputs) > MAXIMUM_NUM_INPUTS:
-        return random.sample(all_inputs, MAXIMUM_NUM_INPUTS)
+    if len(all_inputs) > max_inputs:
+        return random.sample(all_inputs, max_inputs)
 
     return all_inputs

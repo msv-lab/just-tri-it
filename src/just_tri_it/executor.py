@@ -342,11 +342,11 @@ class PersistentWorkerExecutor(Executor):
             file_path.write_text(p.get_content(), encoding="utf-8")    
 
     @cache_content_addressable
-    def run(self, p: Program, inputs, add_lcb_imports=True) -> ExecutionOutcome:
+    def run(self, p: Program, inputs, add_lcb_imports=True, timeout=EXECUTION_TIMEOUT_SECONDS) -> ExecutionOutcome:
         if just_tri_it.utils.DEBUG:
            self._write_jti_log(p)
         assert isinstance(inputs, list)
         args = deepcopy(inputs)
         if add_lcb_imports:
             p = p.add_imports(LIVECODEBENCH_IMPORTS)
-        return self._execute_code(p.code, p.signature.name, args, EXECUTION_TIMEOUT_SECONDS)
+        return self._execute_code(p.code, p.signature.name, args, timeout)

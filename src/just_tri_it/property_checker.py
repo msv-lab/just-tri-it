@@ -19,6 +19,7 @@ from just_tri_it.logic import (
 from just_tri_it.utils import hack
 import just_tri_it.utils
 from just_tri_it.input_generator import value_is_too_large
+from just_tri_it.program import EXECUTION_TIMEOUT_SECONDS
 
 
 class Checker(ABC):
@@ -45,7 +46,7 @@ class Interpreter(Checker):
         self.executor = executor
 
     def _predicted_to_exceed_timeout(self, program, unchecked_input: list):
-        execution_outcome = self.executor.run(program.time_predicate, unchecked_input)
+        execution_outcome = self.executor.run(program.time_predicate, unchecked_input, EXECUTION_TIMEOUT_SECONDS*self.timeout_multiplier)
         match execution_outcome:
             case Success(v):
                 if v is True:
@@ -219,7 +220,10 @@ class Interpreter(Checker):
               inputs: Dict[Side, Any],
               programs: Dict[Side, 'Program'],
               formula: Formula,
-              max_domain):
+              max_domain,
+              timeout_multiplier=1):
+
+        self.timeout_multiplier = timeout_multiplier
 
         self.max_domain = max_domain
 
