@@ -102,6 +102,11 @@ class Triangulator:
             fwd_problem, fwd_inputs, fwd_solutions = \
                 self.add_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, 0)
             num_adapters += 1
+        elif hack(task="choose_your_queries"):
+            len_par = (0, 2)
+            fwd_problem, fwd_inputs, fwd_solutions = \
+                self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
+            num_adapters += 1
         elif hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam"]):
             len_par = (0, 1)
             fwd_problem, fwd_inputs, fwd_solutions = \
@@ -364,7 +369,7 @@ Problem:
         if hack(task="and_reconstruction"):
             return SuffixInversion(1, 1, "list")
         if hack(task="choose_your_queries"):
-            return SuffixInversion(2, 1, "list") # this requires a more subtle approach
+            return SuffixInversion(1, 1, "list") # this requires a more subtle approach
         if hack(task="common_generator"):
             return SuffixInversion(1, 1, "list") # array
         if hack(task="concatenation_of_arrays"):
