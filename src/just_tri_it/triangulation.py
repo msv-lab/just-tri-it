@@ -360,7 +360,7 @@ Problem:
         if hack(task="alices_adventures_in_cards"):
             return SuffixInversion(1, 1, "list") # queen preferences
         if hack(task=["alya_and_permutation", "binary_colouring", "different_string", "find_k_distinct_points", "fixing_binary_string", "generate_permutation", "gorilla_and_permutation", "grid_reset", "increasing_sequence_fixed_or", "manhattan_permutations", "medians_2032", "minimise_oneness", "perpendicular_segments", "prime_xor_coloring", "strong_password", "turtle_multiplication"]):
-            skip # default
+            pass # default
         if hack(task="and_reconstruction"):
             return SuffixInversion(1, 1, "list")
         if hack(task="choose_your_queries"):
