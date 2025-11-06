@@ -1339,10 +1339,10 @@ def {new_sig.name}(el):
 
         return And(ForAll(left_args, Side.LEFT,
                           ForAll(out, FullOrPartial([TolerateInvalid([p(left_args)])]),
-                                 Member([inv_arg, FullOrPartial([TolerateInvalid([TimeoutGuard(q)(right_args)])])]))),
+                                 Member([inv_arg, FullOrPartial([TimeoutGuard(q)(right_args)])]))),
                    ForAll(right_args, Side.RIGHT,
                           ForAll(inv_arg, FullOrPartial([TolerateInvalid([q(right_args)])]),
-                                 Member([out, FullOrPartial([TolerateInvalid([TimeoutGuard(p)(left_args)])])]))))
+                                 Member([out, FullOrPartial([TimeoutGuard(p)(left_args)])]))))
 
     def make_fwd_enum(self, req):
         arity = len(req.signature.params)
