@@ -4,10 +4,12 @@ import mistletoe
 import json
 from pathlib import Path
 import random
-from typing import Any
+from typing import Any, List
 import hashlib
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
+
+import typeguard
 
 from just_tri_it.cached_llm import Independent, Persistent
 
@@ -293,3 +295,24 @@ C - cached LLM call
 T - execution timeout
 c - cached execution"""
     print(l, file=sys.stderr, flush=True)
+
+
+def check_type(data, type_str):
+    try:
+        from typing import Any, Union, Tuple, List, Dict, Optional
+        t = eval(type_str)
+    except:
+        raise ExperimentFailure(f"unsupported type: {type_str}")
+    try:
+        typeguard.check_type(data, t)
+        return True
+    except typeguard.TypeCheckError:
+        return False
+
+
+def args_match_signature(args: List[Any], sig):
+    for index in range(len(sig.params)):
+        if not check_type(args[index], sig.params[index].type):
+            return False
+    return True
+

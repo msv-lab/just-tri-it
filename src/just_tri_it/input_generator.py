@@ -2,12 +2,11 @@ import copy
 import sys
 import random
 from typing import List, Any
-from just_tri_it.type_checker import args_match_signature
 from just_tri_it.cached_llm import Independent
 from just_tri_it.executor import Executor, Success
 from just_tri_it.utils import extract_code
 from just_tri_it.program import Program, Requirements, Signature
-from just_tri_it.utils import extract_all_code, remove_duplicates, ExperimentFailure, hack
+from just_tri_it.utils import extract_all_code, remove_duplicates, ExperimentFailure, hack, args_match_signature
 
 
 MINIMUM_NUM_INPUTS = 15

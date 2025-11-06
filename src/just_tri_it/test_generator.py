@@ -4,9 +4,8 @@ from typing import Iterator, List
 from abc import ABC, abstractmethod
 
 from just_tri_it.program import Test, TestFunction, InputOutput, Requirements, Signature
-from just_tri_it.utils import extract_all_code, ExperimentFailure
+from just_tri_it.utils import extract_all_code, ExperimentFailure, check_type, args_match_signature
 from just_tri_it.input_generator import value_is_too_large, MAXIMUM_NUM_INPUTS
-from just_tri_it.type_checker import check_type, args_match_signature
 
 
 MINIMUM_NUM_TESTS = 10
