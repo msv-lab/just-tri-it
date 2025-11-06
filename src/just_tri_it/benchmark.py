@@ -80,9 +80,9 @@ def evaluate_selector(model, executor, selector, dataset):
         match outcome:
             case Selected(program, _):
                 if program.passes(executor, task.tests)[0]:
-                    print("\nSELECTED: correct")
+                    print(f"\nSELECTED {program.display_id()}: correct")
                 else:
-                    print("\nSELECTED: incorrect")
+                    print(f"\nSELECTED {program.display_id()}: incorrect")
             case Abstained():
                 print("\nABSTAINED")
 

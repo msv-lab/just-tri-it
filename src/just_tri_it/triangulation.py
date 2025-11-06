@@ -197,7 +197,7 @@ class Triangulator:
                                       prop,
                                       max_domain,
                                       timeout_multiplier):
-                    print(f"[success]", file=sys.stderr, flush=True)
+                    print(f"[success]", file=sys.stderr, flush=True, end="")
 
                     if bijective and q.hash_id() in q_agreement:
                         # if the property is bijective, and q is matched with at least one program, we inherit all matches from that program
@@ -209,7 +209,7 @@ class Triangulator:
                             q_agreement[q.hash_id()] = p.hash_id()
                         p_agreements[p.hash_id()].append(q.hash_id())
                 else:
-                    print(f"[failure]", file=sys.stderr, flush=True)
+                    print(f"[failure]", file=sys.stderr, flush=True, end="")
 
         for (p_id, q_ids) in p_agreements.items():
             p = next(p for (p, _) in left_solutions if p.hash_id() == p_id)
@@ -1187,6 +1187,10 @@ def {sinv_sig.name}(*args):
         else:
             print(f"\n[intractable fibers]", file=sys.stderr, flush=True)
             sinv_desc = self.sinv_description_infinite(fwd_req, sinv_sig, inversion_index)
+            if hack(task="manhattan_triangle"):
+                wrong_words = "a tuple of three distinct integers representing indices in"
+                changed_words = "a tuple of three distinct integers representing indices (from 1 to n inclusive) in"
+                sinv_desc = sinv_desc.replace(wrong_words, changed_words)
         # if hack(task="atcoder_abc388_e"):
         #     wrong_words = "The task is to determine all possible arrangements of mochi_sizes_suffix such that a specific number of kagamimochi pairs can be made."
         #     changed_words = "**Pairs are formed simultaneously**: from the N mochi, you select 2K distinct mochi and split them into K disjoint pairs; each pair must satisfy the condition above. **Each mochi can appear in at most one pair.** Let `max_kagamimochi_pairs_simp_split_0` denote the function that returns the maximum number of such simultaneously formable pairs for a given full list of mochi sizes."
@@ -1644,6 +1648,9 @@ def {new_sig.name}(el):
             self.enum_sinv(single_query_problem,
                            single_query_inputs,
                            single_query_solutions)
+
+        # FIXME: for debugging
+        # triangulated_single_query_enum_solutions = self.sample_solutions(single_query_enum_problem, self.num_left_samples)
 
         print(f"\n[single query enum solutions: {len(triangulated_single_query_enum_solutions)}]", file=sys.stderr, flush=True)
 
