@@ -413,6 +413,24 @@ def check_type(data, type_str):
                     ):
                         return False
             return True
+        case 'list[union[int, tuple[int, list[int]]]]':
+            if not isinstance(data, list):
+                return False
+            for item in data:
+                if isinstance(item, int):
+                    continue
+                if isinstance(item, tuple) and len(item) == 2:
+                    a, lst = item
+                    if not isinstance(a, int):
+                        return False
+                    if not isinstance(lst, list):
+                        return False
+                    for x in lst:
+                        if not isinstance(x, int):
+                            return False
+                    continue
+                return False
+            return True
         case _:
             raise ExperimentFailure(f"unsupported type: {type_str}")
 
