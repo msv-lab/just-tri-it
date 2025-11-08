@@ -1560,7 +1560,7 @@ def {new_sig.name}(el):
                                              single_query_adapted_solutions)
             tuple_unpacked = True
 
-        _, _, triangulated_single_query_adapted_solutions = \
+        _, _, triangulated_single_query_adapted_solutions, _ = \
             self.fwd_inv(single_query_adapted_problem,
                          single_query_adapted_inputs,
                          single_query_adapted_solutions)
@@ -1603,7 +1603,7 @@ def {new_sig.name}(el):
                                              single_query_adapted_solutions)
             tuple_unpacked = True
 
-        _, _, triangulated_single_query_adapted_solutions = \
+        _, _, triangulated_single_query_adapted_solutions, _ = \
             self.fwd_sinv(single_query_adapted_problem,
                           single_query_adapted_inputs,
                           single_query_adapted_solutions)
@@ -1654,7 +1654,7 @@ def {new_sig.name}(el):
                                              single_query_solutions)
             tuple_unpacked = True
         
-        single_query_enum_problem, single_query_enum_inputs, triangulated_single_query_enum_solutions = \
+        single_query_enum_problem, single_query_enum_inputs, triangulated_single_query_enum_solutions, _ = \
             self.enum_sinv(single_query_problem,
                            single_query_inputs,
                            single_query_solutions)
