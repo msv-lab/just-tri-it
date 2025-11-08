@@ -136,7 +136,7 @@ class Triangulator:
                 self.is_stream_processing_problem(fwd_problem):
             stream_processing = True
 
-        if hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam", "atcoder_arc193_a", "common_generator", "cool_graph"]):
+        if hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam", "common_generator", "cool_graph"]):
             stream_processing = True
 
         match self.triangulation_mode:
@@ -501,9 +501,6 @@ Original Problem:
 {req.description}
         """
         new_desc = gen_and_extract_answer_with_retry(self.model, PROMPT, 3)
-        if hack(task="atcoder_abc388_a", model="gpt-4o"):
-            wrong_words = "- `input_string_prefix` consists of the first character of the original input string, and it is an uppercase English letter."
-            new_desc = new_desc.replace(wrong_words, "")
         new_req = Requirements(new_sig, new_desc)
 
         if (just_tri_it.utils.DEBUG):
@@ -1200,14 +1197,12 @@ def {sinv_sig.name}(*args):
         else:
             print(f"\n[intractable fibers]", file=sys.stderr, flush=True)
             sinv_desc = self.sinv_description_infinite(fwd_req, sinv_sig, inversion_index)
+
             if hack(task="manhattan_triangle"):
                 wrong_words = "a tuple of three distinct integers representing indices in"
                 changed_words = "a tuple of three distinct integers representing indices (from 1 to n inclusive) in"
                 sinv_desc = sinv_desc.replace(wrong_words, changed_words)
-        # if hack(task="atcoder_abc388_e"):
-        #     wrong_words = "The task is to determine all possible arrangements of mochi_sizes_suffix such that a specific number of kagamimochi pairs can be made."
-        #     changed_words = "**Pairs are formed simultaneously**: from the N mochi, you select 2K distinct mochi and split them into K disjoint pairs; each pair must satisfy the condition above. **Each mochi can appear in at most one pair.** Let `max_kagamimochi_pairs_simp_split_0` denote the function that returns the maximum number of such simultaneously formable pairs for a given full list of mochi sizes."
-        #     sinv_desc = sinv_desc.replace(wrong_words, changed_words)
+
         new_req = Requirements(sinv_sig, sinv_desc)
         if (just_tri_it.utils.DEBUG):
             print(new_req.get_content(), file=sys.stderr, flush=True)
