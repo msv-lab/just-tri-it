@@ -1,0 +1,73 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+import heapq
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    # Check for invalid inputs
+    if not (2 <= len(nums) <= 10**5):
+        raise ValueError("Invalid input")
+    if not (-10**6 <= num <= 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if not (2 <= x <= len(nums)):
+        raise ValueError("Invalid input")
+    if not (1 <= k <= 15):
+        raise ValueError("Invalid input")
+    if not (2 <= k * x <= len(nums)):
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    # The subarrays of size x are non-overlapping, so the starting indices are i, i+x, i+2x, etc.
+    # We need to select k such subarrays.
+    
+    # The total number of possible subarrays is (n - x + 1), but since they must be non-overlapping,
+    # the maximum possible number is (n // x). However, the problem states that k * x <= n, so it's feasible.
+    
+    # The key observation is that the optimal solution involves selecting k subarrays that are as "close" as possible
+    # in terms of the median of their elements, to minimize the operations.
+    
+    # For each possible subarray of size x, compute the cost to make all its elements equal to the median.
+    # Then, select the k subarrays with the smallest costs, ensuring they are non-overlapping.
+    
+    # Compute the cost for each subarray of size x
+    subarray_costs = []
+    # The subarrays are from i to i+x-1, for i in 0..n-x
+    for i in range(n - x + 1):
+        sub = nums[i:i+x]
+        # To minimize operations, make all elements equal to the median of the subarray
+        sub_sorted = sorted(sub)
+        median = sub_sorted[x // 2]  # For even x, the lower median is chosen
+        cost = sum(abs(num - median) for num in sub)
+        subarray_costs.append((cost, i))
+    
+    # Now, we need to select k subarrays with minimal total cost, such that they are non-overlapping.
+    # This is a classic interval selection problem with the goal of minimizing total cost.
+    # We can use a greedy approach with a priority queue to select the k smallest non-overlapping subarrays.
+    
+    # Sort the subarrays by their starting index to facilitate checking overlaps
+    subarray_costs.sort(key=lambda sc: sc[1])
+    
+    # Use a min-heap to always pick the subarray with the smallest cost that doesn't overlap with previously selected ones
+    heap = []
+    for cost, i in subarray_costs:
+        heapq.heappush(heap, (cost, i))
+    
+    selected = []
+    total_operations = 0
+    last_end = -1  # The end index of the last selected subarray
+    
+    while len(selected) < k and heap:
+        cost, i = heapq.heappop(heap)
+        if i > last_end:
+            # No overlap with the last selected subarray
+            selected.append((i, cost))
+            total_operations += cost
+            last_end = i + x - 1
+        else:
+            # Overlap, try the next smallest cost subarray
+            pass
+    
+    if len(selected) < k:
+        # This should not happen per problem constraints, but handle just in case
+        raise ValueError("Invalid input: Not enough non-overlapping subarrays")
+    
+    return total_operations

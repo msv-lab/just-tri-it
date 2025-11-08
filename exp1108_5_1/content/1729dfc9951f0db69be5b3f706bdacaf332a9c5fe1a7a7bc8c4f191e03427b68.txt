@@ -1,0 +1,93 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+from typing import List
+
+def minCost(n: int, cost: List[List[int]]) -> int:
+    if n % 2 != 0 or n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if len(cost) != n or any(len(house) != 3 for house in cost):
+        raise ValueError("Invalid input")
+    if any(not all(0 <= c <= 10**5 for c in house) for house in cost):
+        raise ValueError("Invalid input")
+
+    # For each pair of symmetric houses (i, n-1 -i), we need to choose two different colors
+    # and the choices should not conflict with adjacent pairs.
+    # We can process each pair independently, choosing the two best options for each pair.
+    total_cost = 0
+    for i in range(n // 2):
+        j = n - 1 - i
+        if i >= j:
+            break
+        # For house i and j, they must have different colors.
+        # Also, house i's color must be different from i-1 (if i > 0), and j's color must be different from j+1 (if j < n-1)
+        # However, since we process pairs in order, we can track the previous choices.
+        # But to simplify, we can precompute for each pair the best two color combinations that minimize the total cost.
+        # For each possible color of i (c_i) and color of j (c_j), where c_i != c_j.
+        min_pair_cost = float('inf')
+        for ci in range(3):
+            for cj in range(3):
+                if ci == cj:
+                    continue
+                current_cost = cost[i][ci] + cost[j][cj]
+                if i > 0:
+                    # The previous pair (i-1, j+1) must have colors different from current ci and cj respectively.
+                    # But since we process pairs in order, we need to track the previous choices.
+                    # This suggests a dynamic programming approach might be needed.
+                    pass
+                min_pair_cost = min(min_pair_cost, current_cost)
+        # This approach is too simplistic and doesn't account for dependencies between pairs.
+        # Hence, we need a better approach.
+
+    # The problem is more complex due to dependencies between pairs.
+    # We can model it as a dynamic programming problem where for each pair of symmetric houses,
+    # we track the best cost for each possible color combination of the two houses, ensuring:
+    # 1. The two colors in the pair are different.
+    # 2. The color of the first house in the pair is different from the color of the second house in the previous pair.
+    # 3. The color of the second house in the pair is different from the color of the first house in the next pair.
+    # However, implementing this efficiently is non-trivial for large n.
+
+    # Given the constraints (n up to 1e5), we need an O(n) solution.
+    # Here's an approach inspired by the realization that the problem can be split into independent pairs,
+    # but each pair's choice affects adjacent pairs.
+
+    # For each pair (i, j), the colors must be different, and also:
+    # - For i-1 (if exists), color[i] != color[i-1]
+    # - For j+1 (if exists), color[j] != color[j+1]
+    # But since i-1 and j+1 are symmetric, their colors must also be different.
+    # This creates a chain of dependencies.
+
+    # Alternative idea: The problem can be viewed as a circular constraint where the first and last houses must be different,
+    # but since the houses are symmetric, it's more like a mirror constraint.
+
+    # Given the complexity, here's a corrected approach that uses dynamic programming for pairs:
+    # We'll process each pair (i, j) and for each possible color of i and j (ci != cj),
+    # we'll keep track of the minimal cost up to that pair.
+
+    # Initialize DP for the first pair (0, n-1)
+    dp = []
+    for ci in range(3):
+        for cj in range(3):
+            if ci != cj:
+                dp.append((ci, cj, cost[0][ci] + cost[n-1][cj]))
+
+    for k in range(1, n // 2):
+        i = k
+        j = n - 1 - k
+        new_dp = []
+        for ci in range(3):
+            for cj in range(3):
+                if ci == cj:
+                    continue
+                min_prev_cost = float('inf')
+                for prev_ci, prev_cj, prev_cost in dp:
+                    if ci != prev_ci and cj != prev_cj:
+                        min_prev_cost = min(min_prev_cost, prev_cost)
+                if min_prev_cost != float('inf'):
+                    new_dp.append((ci, cj, min_prev_cost + cost[i][ci] + cost[j][cj]))
+        dp = new_dp
+        if not dp:
+            raise ValueError("No valid coloring possible")
+
+    if not dp:
+        raise ValueError("No valid coloring possible")
+    min_total_cost = min(cost for _, _, cost in dp)
+    return min_total_cost

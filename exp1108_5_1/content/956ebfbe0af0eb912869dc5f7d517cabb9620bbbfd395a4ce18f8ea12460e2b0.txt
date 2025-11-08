@@ -1,0 +1,93 @@
+# signature: def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> list[int]
+from typing import List
+import heapq
+
+def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> List[int]:
+    n = len(nums)
+    
+    # Validate inputs
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # For each possible starting position of a subarray of length x,
+    # calculate the cost to make all elements equal to the median
+    # (median minimizes the sum of absolute differences)
+    subarray_costs = []
+    
+    for i in range(n - x + 1):
+        # Extract the subarray
+        subarray = nums[i:i + x]
+        
+        # Sort to find median
+        sorted_sub = sorted(subarray)
+        
+        # For odd length, median is middle element
+        # For even length, either middle element works (same cost)
+        median = sorted_sub[x // 2]
+        
+        # Calculate cost to make all elements equal to median
+        cost = 0
+        for num in subarray:
+            cost += abs(num - median)
+        
+        subarray_costs.append((i, cost))
+    
+    # Now we need to find k non-overlapping subarrays with minimum total cost
+    # We'll check all possible k values
+    result = []
+    
+    # k must satisfy: 1 <= k <= 15 and k*x <= n
+    max_k = min(15, n // x)
+    
+    for k in range(1, max_k + 1):
+        # Use dynamic programming to find minimum cost for k non-overlapping subarrays
+        # dp[i][j] = min cost to choose j subarrays from first i available positions
+        m = len(subarray_costs)
+        
+        # Initialize DP table
+        dp = [[float('inf')] * (k + 1) for _ in range(m + 1)]
+        dp[0][0] = 0
+        
+        for i in range(1, m + 1):
+            start_i, cost_i = subarray_costs[i - 1]
+            
+            # Copy previous row (not taking current subarray)
+            for j in range(k + 1):
+                dp[i][j] = min(dp[i][j], dp[i - 1][j])
+            
+            # Try to take current subarray
+            # Find the last subarray that doesn't overlap with current one
+            prev_idx = -1
+            for p in range(i - 1, 0, -1):
+                prev_start, _ = subarray_costs[p - 1]
+                if prev_start + x <= start_i:
+                    prev_idx = p
+                    break
+            
+            if prev_idx == -1:
+                # This is the first subarray we can take
+                for j in range(1, k + 1):
+                    dp[i][j] = min(dp[i][j], cost_i)
+            else:
+                # We can build on previous results
+                for j in range(1, k + 1):
+                    dp[i][j] = min(dp[i][j], dp[prev_idx][j - 1] + cost_i)
+        
+        # Find minimum cost for exactly k subarrays
+        min_cost = min(dp[i][k] for i in range(m + 1))
+        
+        if min_cost == min_operations_for_k_equal_subarrays:
+            result.append(k)
+    
+    return result

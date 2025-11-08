@@ -1,0 +1,63 @@
+# signature: def minCost_simp_split_0_inv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> List[List[int]]
+from typing import List
+
+def minCost_simp_split_0_inv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> List[List[int]]:
+    if not cost_prefix:
+        if minimum_beautiful_painting_cost != 0:
+            raise ValueError("Invalid input")
+        return [[]]
+    
+    n = len(cost_prefix) + 1
+    if n % 2 != 0:
+        raise ValueError("Invalid input")
+    
+    if any(len(row) != 3 for row in cost_prefix):
+        raise ValueError("Invalid input")
+    
+    if any(not (0 <= cost <= 10**5) for row in cost_prefix for cost in row):
+        raise ValueError("Invalid input")
+    
+    if not (0 <= minimum_beautiful_painting_cost <= 10**5 * n):
+        raise ValueError("Invalid input")
+    
+    dp = [[0] * 3 for _ in range(3)]
+    
+    for i in range(n - 1):
+        new_dp = [[float('inf')] * 3 for _ in range(3)]
+        for first_color in range(3):
+            for last_color in range(3):
+                for current_color in range(3):
+                    if i > 0 and current_color == last_color:
+                        continue
+                    if i >= n // 2 and current_color == dp[first_color][last_color]:
+                        continue
+                    if i == n - 2 and current_color == first_color:
+                        continue
+                    
+                    cost = dp[first_color][last_color] + cost_prefix[i][current_color]
+                    if i == 0:
+                        new_dp[current_color][current_color] = min(
+                            new_dp[current_color][current_color], 
+                            cost_prefix[i][current_color]
+                        )
+                    else:
+                        new_dp[first_color][current_color] = min(
+                            new_dp[first_color][current_color], 
+                            cost
+                        )
+        
+        dp = new_dp
+    
+    min_cost = float('inf')
+    for first_color in range(3):
+        for last_color in range(3):
+            min_cost = min(min_cost, dp[first_color][last_color])
+    
+    if min_cost > minimum_beautiful_painting_cost:
+        raise ValueError("Invalid input")
+    
+    cost_suffix_val = [0, 0, 0]
+    for color in range(3):
+        cost_suffix_val[color] = minimum_beautiful_painting_cost - min_cost
+    
+    return [cost_suffix_val]

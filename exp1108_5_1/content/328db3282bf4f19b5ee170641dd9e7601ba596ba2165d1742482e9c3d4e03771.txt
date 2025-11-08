@@ -1,0 +1,76 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Find root (node 0) and build parent-child relationships
+    parent = [-1] * n
+    depth = [0] * n
+    dist_from_root = [0] * n
+    
+    # BFS to establish parent-child relationships and distances
+    queue = deque([0])
+    visited = [False] * n
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                depth[neighbor] = depth[node] + 1
+                dist_from_root[neighbor] = dist_from_root[node] + length
+                queue.append(neighbor)
+    
+    # Now we need to find all paths from ancestor to descendant with unique values
+    max_length = 0
+    min_nodes_for_max_length = float('inf')
+    
+    # For each node as potential starting point, DFS to find paths with unique values
+    def dfs(current, path_values, path_nodes, current_dist):
+        nonlocal max_length, min_nodes_for_max_length
+        
+        # Check if current path has unique values
+        if len(path_values) == len(set(path_values)):
+            path_length = current_dist - dist_from_root[path_nodes[0]]
+            
+            if path_length > max_length:
+                max_length = path_length
+                min_nodes_for_max_length = len(path_nodes)
+            elif path_length == max_length:
+                min_nodes_for_max_length = min(min_nodes_for_max_length, len(path_nodes))
+        
+        # Explore children
+        for child, length in graph[current]:
+            if child != parent[current]:  # Only go downward
+                # Check if we can add this child (value must be unique)
+                if nums[child] not in path_values:
+                    path_values.append(nums[child])
+                    path_nodes.append(child)
+                    dfs(child, path_values, path_nodes, current_dist + length)
+                    path_values.pop()
+                    path_nodes.pop()
+    
+    # Try DFS from each node as starting point
+    for start_node in range(n):
+        dfs(start_node, [nums[start_node]], [start_node], dist_from_root[start_node])
+    
+    # Handle case where no path with length > 0 was found
+    if max_length == 0:
+        # Single node paths have length 0
+        min_nodes_for_max_length = 1
+    
+    return [max_length, min_nodes_for_max_length]

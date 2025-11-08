@@ -1,0 +1,60 @@
+# signature: def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool
+from typing import List
+
+def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x < 2 or k * x > n:
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # DP state: dp[i][j] = minimum operations to get j valid subarrays using first i elements
+    # Since k <= 15, we can use bitmask DP
+    INF = float('inf')
+    dp = [INF] * (k + 1)
+    dp[0] = 0
+    
+    # For each possible starting position of a subarray
+    for start in range(n - x + 1):
+        end = start + x - 1
+        # Calculate the cost to make all elements in this subarray equal
+        # The optimal value is the median (for odd x) or average of two medians (for even x)
+        # But for simplicity, we'll try all possible target values from the subarray
+        subarray = nums[start:end + 1]
+        
+        # Sort to find median efficiently
+        sorted_sub = sorted(subarray)
+        
+        # For odd x, median is at position x//2
+        # For even x, we can use either median (both give same total cost)
+        median = sorted_sub[x // 2]
+        
+        # Calculate cost to make all elements equal to median
+        cost = 0
+        for num in subarray:
+            cost += abs(num - median)
+        
+        # Update DP table backwards to avoid reusing the same subarray
+        new_dp = dp[:]
+        for j in range(k - 1, -1, -1):
+            if dp[j] != INF and j + 1 <= k:
+                new_dp[j + 1] = min(new_dp[j + 1], dp[j] + cost)
+        dp = new_dp
+    
+    # Check if we can achieve k subarrays with <= min_operations_for_k_equal_subarrays operations
+    return dp[k] <= min_operations_for_k_equal_subarrays

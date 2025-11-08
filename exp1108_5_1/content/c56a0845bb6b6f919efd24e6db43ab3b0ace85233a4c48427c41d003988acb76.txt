@@ -1,0 +1,93 @@
+# signature: def postcondition(edges: List[List[int]], nums: List[int], longest_special_path_info: List[int]) -> bool
+from typing import List
+from collections import defaultdict, deque
+
+def postcondition(edges: List[List[int]], nums: List[int], longest_special_path_info: List[int]) -> bool:
+    n = len(nums)
+    
+    # Validate input constraints
+    if n < 2 or n > 50000:
+        raise ValueError("Invalid input")
+    
+    if len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    
+    for edge in edges:
+        if len(edge) != 3:
+            raise ValueError("Invalid input")
+        u, v, length = edge
+        if u < 0 or u >= n or v < 0 or v >= n or length < 1 or length > 1000:
+            raise ValueError("Invalid input")
+    
+    if len(nums) != n:
+        raise ValueError("Invalid input")
+    
+    for num in nums:
+        if num < 0 or num > 50000:
+            raise ValueError("Invalid input")
+    
+    if len(longest_special_path_info) != 2:
+        raise ValueError("Invalid input")
+    
+    claimed_length, claimed_min_nodes = longest_special_path_info
+    
+    # Build the tree
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Build parent-child relationships for the tree rooted at 0
+    parent = [-1] * n
+    depth = [0] * n
+    dist_from_root = [0] * n
+    
+    # BFS to establish parent-child relationships and distances
+    queue = deque([0])
+    parent[0] = -1
+    depth[0] = 0
+    dist_from_root[0] = 0
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if neighbor != parent[node]:
+                parent[neighbor] = node
+                depth[neighbor] = depth[node] + 1
+                dist_from_root[neighbor] = dist_from_root[node] + length
+                queue.append(neighbor)
+    
+    # Find actual longest special path length and minimum number of nodes
+    actual_max_length = 0
+    actual_min_nodes = float('inf')
+    
+    # Helper function to find special paths starting from a node
+    def dfs(node, path_values, path_nodes, current_length):
+        nonlocal actual_max_length, actual_min_nodes
+        
+        # Check if current path is special (all unique values)
+        if len(path_values) == len(set(path_values)):
+            # This is a valid special path
+            if current_length > actual_max_length:
+                actual_max_length = current_length
+                actual_min_nodes = len(path_nodes)
+            elif current_length == actual_max_length:
+                actual_min_nodes = min(actual_min_nodes, len(path_nodes))
+        
+        # Continue DFS to children
+        for child, edge_length in graph[node]:
+            if child != parent[node]:
+                path_values.append(nums[child])
+                path_nodes.append(child)
+                dfs(child, path_values, path_nodes, current_length + edge_length)
+                path_values.pop()
+                path_nodes.pop()
+    
+    # Try DFS from each node as starting point
+    for start_node in range(n):
+        path_values = [nums[start_node]]
+        path_nodes = [start_node]
+        dfs(start_node, path_values, path_nodes, 0)
+    
+    # Check if the claimed values match the actual values
+    return claimed_length == actual_max_length and claimed_min_nodes == actual_min_nodes

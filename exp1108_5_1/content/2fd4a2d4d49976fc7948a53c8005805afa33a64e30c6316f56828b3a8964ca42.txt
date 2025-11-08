@@ -1,0 +1,72 @@
+# signature: def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool
+from typing import List
+
+def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool:
+    if not (2 <= len(nums) <= 10**5):
+        raise ValueError("Invalid input")
+    if not all(-10**6 <= num <= 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if not (2 <= x <= len(nums)):
+        raise ValueError("Invalid input")
+    if not (1 <= k <= 15):
+        raise ValueError("Invalid input")
+    if not (2 <= k * x <= len(nums)):
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Precompute the cost for each possible subarray of length x
+    # cost[i] = minimum operations to make subarray starting at i have all equal elements
+    cost = [0] * (n - x + 1)
+    for i in range(n - x + 1):
+        # To make all elements equal with minimum operations, we should make them equal to the median
+        subarray = nums[i:i + x]
+        sorted_sub = sorted(subarray)
+        median = sorted_sub[x // 2]
+        total_cost = 0
+        for num in subarray:
+            total_cost += abs(num - median)
+        cost[i] = total_cost
+    
+    # Dynamic programming to find minimum total cost for k non-overlapping subarrays
+    # dp[i][j] = minimum cost to select j subarrays from first i positions
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(n + 1)]
+    
+    # Base case: 0 subarrays require 0 cost
+    for i in range(n + 1):
+        dp[i][0] = 0
+    
+    # Fill DP table
+    for j in range(1, k + 1):
+        for i in range(n + 1):
+            if dp[i][j - 1] == INF:
+                continue
+            # Try to place next subarray starting at position i
+            if i + x <= n:
+                # We can place a subarray starting at i
+                new_cost = dp[i][j - 1] + cost[i]
+                # Update all positions after this subarray
+                for next_pos in range(i + x, n + 1):
+                    if dp[next_pos][j] > new_cost:
+                        dp[next_pos][j] = new_cost
+    
+    # Find minimum cost to get at least k subarrays
+    min_required = INF
+    for i in range(n + 1):
+        if dp[i][k] < min_required:
+            min_required = dp[i][k]
+    
+    # If we couldn't find k subarrays, check if it's even possible
+    if min_required == INF:
+        return False
+    
+    # The given value is valid if it's >= the minimum required operations
+    return min_operations_for_k_equal_subarrays >= min_required

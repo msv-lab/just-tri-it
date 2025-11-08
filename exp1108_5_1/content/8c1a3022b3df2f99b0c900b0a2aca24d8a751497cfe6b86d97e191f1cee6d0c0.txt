@@ -1,0 +1,176 @@
+# signature: def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]:
+    if not longest_special_path_info or len(longest_special_path_info) != 2:
+        raise ValueError("Invalid input")
+    
+    target_length, target_min_nodes = longest_special_path_info
+    
+    if target_length < 1 or target_min_nodes < 1 or target_min_nodes > target_length:
+        raise ValueError("Invalid input")
+    
+    n = len(edges) + 1
+    if n < 2:
+        raise ValueError("Invalid input")
+    
+    # Build the tree
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Find the root (node 0) and build parent-child relationships
+    parent = [-1] * n
+    children = defaultdict(list)
+    visited = [False] * n
+    
+    queue = deque([0])
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                children[node].append(neighbor)
+                queue.append(neighbor)
+    
+    # Strategy: Create a path of length target_length with target_min_nodes
+    # We'll create a chain of nodes with unique values
+    
+    nums = [0] * n
+    
+    if target_length == 1:
+        # Single node path
+        for i in range(n):
+            nums[i] = i
+        return nums
+    
+    # Find a path of length target_length in the tree
+    path_nodes = []
+    
+    # Use DFS to find the deepest path
+    max_depth = 0
+    deepest_node = 0
+    
+    def dfs_depth(node, depth):
+        nonlocal max_depth, deepest_node
+        if depth > max_depth:
+            max_depth = depth
+            deepest_node = node
+        for child in children[node]:
+            dfs_depth(child, depth + 1)
+    
+    dfs_depth(0, 0)
+    
+    # Find the longest path from the deepest node
+    def dfs_path(node, path, visited_path):
+        visited_path[node] = True
+        path.append(node)
+        
+        if len(path) == target_length:
+            return True
+        
+        for child in children[node]:
+            if not visited_path[child]:
+                if dfs_path(child, path, visited_path):
+                    return True
+        
+        path.pop()
+        return False
+    
+    visited_path = [False] * n
+    path = []
+    
+    # Try to find a path of exactly target_length starting from any node
+    found = False
+    for start_node in range(n):
+        path = []
+        visited_path = [False] * n
+        if dfs_path(start_node, path, visited_path):
+            found = True
+            break
+    
+    if not found:
+        # If we can't find a path of exact length, use the longest path we can find
+        # and extend it by adding values that create the required special path
+        path = []
+        visited_path = [False] * n
+        
+        def dfs_longest(node, current_path):
+            nonlocal path
+            current_path.append(node)
+            
+            if len(current_path) > len(path):
+                path = current_path.copy()
+            
+            for child in children[node]:
+                if not visited_path[child]:
+                    visited_path[child] = True
+                    dfs_longest(child, current_path)
+            
+            current_path.pop()
+        
+        for i in range(n):
+            if not visited_path[i]:
+                visited_path[i] = True
+                dfs_longest(i, [])
+    
+    # If our found path is shorter than target_length, we need to extend it
+    while len(path) < target_length:
+        # Add nodes to the path by going up or down the tree
+        last_node = path[-1]
+        parent_node = parent[last_node]
+        
+        if parent_node != -1 and parent_node not in path:
+            path.append(parent_node)
+        else:
+            # Try to find a child not in the path
+            found_child = False
+            for child in children[last_node]:
+                if child not in path:
+                    path.append(child)
+                    found_child = True
+                    break
+            
+            if not found_child:
+                # If no child available, we need to be creative
+                # Let's find any node not in the path and connect it
+                for i in range(n):
+                    if i not in path:
+                        # Find the shortest connection from last node to i
+                        # For simplicity, just add it directly
+                        path.append(i)
+                        break
+    
+    # Trim the path to exactly target_length if it's longer
+    if len(path) > target_length:
+        path = path[:target_length]
+    
+    # Assign unique values to create the special path
+    used_values = set()
+    current_value = 0
+    
+    # First assign values to the path nodes to ensure they're unique
+    for node in path:
+        while current_value in used_values:
+            current_value += 1
+        nums[node] = current_value
+        used_values.add(current_value)
+        current_value += 1
+    
+    # Assign values to remaining nodes
+    for i in range(n):
+        if nums[i] == 0 and i not in path:
+            while current_value in used_values:
+                current_value += 1
+            nums[i] = current_value
+            used_values.add(current_value)
+            current_value += 1
+    
+    return nums

@@ -1,0 +1,67 @@
+# signature: def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int
+from typing import List
+
+def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int:
+    if not nums or x < 2 or x > len(nums):
+        raise ValueError("Invalid input")
+    
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Function to calculate operations needed for a subarray [l, r]
+    def calculate_operations(l, r):
+        length = r - l + 1
+        if length != x:
+            return float('inf')
+        
+        # Find the median element to minimize operations
+        subarray = nums[l:r + 1]
+        sorted_sub = sorted(subarray)
+        median = sorted_sub[x // 2]
+        
+        # Calculate operations to make all elements equal to median
+        operations = 0
+        for num in subarray:
+            operations += abs(num - median)
+        
+        return operations
+    
+    # Try all possible k values in the valid range
+    max_possible_k = n // x
+    
+    for k in range(max_possible_k, 0, -1):
+        # Use dynamic programming to find minimum operations for k subarrays
+        # dp[i][j] = min operations to form j subarrays using first i elements
+        dp = [[float('inf')] * (k + 1) for _ in range(n + 1)]
+        dp[0][0] = 0
+        
+        for i in range(n + 1):
+            for j in range(k + 1):
+                if dp[i][j] == float('inf'):
+                    continue
+                
+                # Skip current element
+                if i + 1 <= n:
+                    dp[i + 1][j] = min(dp[i + 1][j], dp[i][j])
+                
+                # Try to form a new subarray starting at i
+                if j < k and i + x <= n:
+                    operations = calculate_operations(i, i + x - 1)
+                    if operations != float('inf'):
+                        dp[i + x][j + 1] = min(dp[i + x][j + 1], dp[i][j] + operations)
+        
+        # Check if we found the desired number of operations
+        min_ops_for_k = min(dp[i][k] for i in range(n + 1))
+        
+        if min_ops_for_k == min_operations_for_k_equal_subarrays:
+            return k
+    
+    # If no valid k found
+    raise ValueError("Invalid input")

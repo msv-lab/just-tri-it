@@ -1,0 +1,59 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+from typing import List
+
+def minCost(n: int, cost: List[List[int]]) -> int:
+    if n <= 0 or n % 2 != 0:
+        raise ValueError("Invalid input")
+    
+    if len(cost) != n or any(len(row) != 3 for row in cost):
+        raise ValueError("Invalid input")
+    
+    if any(any(c < 0 for c in row) for row in cost):
+        raise ValueError("Invalid input")
+    
+    # For each pair of symmetric houses (i, n-1-i), we need to consider all color combinations
+    # where the two houses have different colors
+    
+    # dp[i][c1][c2] would be too expensive, so we'll use a more efficient approach
+    # We'll process pairs and maintain the best costs for different color combinations
+    
+    # Initialize DP for the first pair
+    # For each possible color combination (c1, c2) where c1 != c2, store the cost
+    dp = {}
+    for c1 in range(3):
+        for c2 in range(3):
+            if c1 != c2:
+                dp[(c1, c2)] = cost[0][c1] + cost[n-1][c2]
+    
+    # Process each subsequent pair
+    for i in range(1, n//2):
+        new_dp = {}
+        
+        # For each possible color combination for the current pair
+        for c1 in range(3):
+            for c2 in range(3):
+                if c1 != c2:  # Adjacent constraint within the pair
+                    current_cost = cost[i][c1] + cost[n-1-i][c2]
+                    
+                    # Find the minimum cost from previous state that satisfies:
+                    # - Previous house i-1 can't have color c1 (adjacent constraint)
+                    # - Previous symmetric house n-i can't have color c2 (adjacent constraint)
+                    # - The symmetric houses in previous pair (i-1, n-i) can't have same colors as current (c1, c2)
+                    min_prev = float('inf')
+                    
+                    for (prev_c1, prev_c2), prev_cost in dp.items():
+                        # Check adjacent constraints
+                        if prev_c1 != c1 and prev_c2 != c2:
+                            # Check symmetric constraint: houses at positions i-1 and n-i can't have same color
+                            # This is already handled by the fact that we're iterating over valid pairs
+                            min_prev = min(min_prev, prev_cost)
+                    
+                    if min_prev != float('inf'):
+                        new_dp[(c1, c2)] = min_prev + current_cost
+        
+        if not new_dp:
+            raise ValueError("Invalid input")
+        
+        dp = new_dp
+    
+    return min(dp.values())

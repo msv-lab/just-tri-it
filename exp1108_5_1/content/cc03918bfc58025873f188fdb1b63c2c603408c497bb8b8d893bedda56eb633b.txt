@@ -1,0 +1,65 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2 or len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length < 1 or length > 1000:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    parent = [-1] * n
+    depth = [0] * n
+    dist_from_root = [0] * n
+    
+    stack = [0]
+    parent[0] = 0
+    while stack:
+        node = stack.pop()
+        for neighbor, length in graph[node]:
+            if parent[neighbor] == -1:
+                parent[neighbor] = node
+                depth[neighbor] = depth[node] + 1
+                dist_from_root[neighbor] = dist_from_root[node] + length
+                stack.append(neighbor)
+    
+    max_length = 0
+    min_nodes_for_max_length = float('inf')
+    
+    for i in range(n):
+        seen = set()
+        current_length = 0
+        current_nodes = 0
+        
+        node = i
+        while True:
+            if nums[node] in seen:
+                break
+            seen.add(nums[node])
+            current_nodes += 1
+            
+            if current_nodes == 1:
+                current_length = 0
+            else:
+                current_length = dist_from_root[i] - dist_from_root[parent[node]]
+            
+            if current_length > max_length:
+                max_length = current_length
+                min_nodes_for_max_length = current_nodes
+            elif current_length == max_length and current_nodes < min_nodes_for_max_length:
+                min_nodes_for_max_length = current_nodes
+            
+            if node == parent[node]:
+                break
+            node = parent[node]
+    
+    if max_length == 0:
+        min_nodes_for_max_length = 1
+    
+    return [max_length, min_nodes_for_max_length]

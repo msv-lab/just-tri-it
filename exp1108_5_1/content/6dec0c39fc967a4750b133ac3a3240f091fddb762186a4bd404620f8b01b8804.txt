@@ -1,0 +1,77 @@
+# signature: def minCost_simp(cost: List[List[int]]) -> int
+from typing import List
+
+def minCost_simp(cost: List[List[int]]) -> int:
+    n = len(cost)
+    
+    # Check constraints
+    if n % 2 != 0 or n < 2 or n > 100000:
+        raise ValueError("Invalid input")
+    
+    for i in range(n):
+        if len(cost[i]) != 3:
+            raise ValueError("Invalid input")
+        for j in range(3):
+            if cost[i][j] < 0 or cost[i][j] > 100000:
+                raise ValueError("Invalid input")
+    
+    # For each pair of symmetric houses (i, n-1-i), we need to choose two different colors
+    # There are 3 colors total, so for each symmetric pair we have 3 * 2 = 6 possible color combinations
+    
+    # dp[i][c1][c2] would be too expensive, so we'll use a more efficient approach
+    # We'll process pairs and track the minimum costs for different color combinations
+    
+    # Initialize DP for the first pair
+    pair_count = n // 2
+    
+    # For each pair, we'll track the minimum cost for all valid color combinations
+    # A valid combination means the two houses in the pair have different colors
+    
+    # Process each pair sequentially
+    prev = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]  # prev[c1][c2] = min cost for previous pairs ending with colors c1, c2
+    
+    # Initialize for the first pair (houses 0 and n-1)
+    for c1 in range(3):  # color for house 0
+        for c2 in range(3):  # color for house n-1
+            if c1 != c2:  # symmetric houses must have different colors
+                prev[c1][c2] = cost[0][c1] + cost[n-1][c2]
+            else:
+                prev[c1][c2] = float('inf')
+    
+    # Process remaining pairs
+    for pair_idx in range(1, pair_count):
+        i = pair_idx
+        j = n - 1 - pair_idx
+        
+        current = [[float('inf')] * 3 for _ in range(3)]
+        
+        for prev_c1 in range(3):  # color of previous left house
+            for prev_c2 in range(3):  # color of previous right house
+                if prev[prev_c1][prev_c2] == float('inf'):
+                    continue
+                
+                # Try all valid color combinations for current pair
+                for curr_c1 in range(3):  # color for current left house
+                    for curr_c2 in range(3):  # color for current right house
+                        # Check constraints:
+                        # 1. Adjacent houses constraint: current left != previous left
+                        # 2. Adjacent houses constraint: current right != previous right  
+                        # 3. Symmetric constraint: current left != current right
+                        if (curr_c1 != prev_c1 and curr_c2 != prev_c2 and curr_c1 != curr_c2):
+                            new_cost = prev[prev_c1][prev_c2] + cost[i][curr_c1] + cost[j][curr_c2]
+                            if new_cost < current[curr_c1][curr_c2]:
+                                current[curr_c1][curr_c2] = new_cost
+        
+        prev = current
+    
+    # Find the minimum cost from the last pair
+    min_cost = float('inf')
+    for c1 in range(3):
+        for c2 in range(3):
+            if prev[c1][c2] < min_cost:
+                min_cost = prev[c1][c2]
+    
+    if min_cost == float('inf'):
+        raise ValueError("Invalid input")
+    
+    return min_cost + 1

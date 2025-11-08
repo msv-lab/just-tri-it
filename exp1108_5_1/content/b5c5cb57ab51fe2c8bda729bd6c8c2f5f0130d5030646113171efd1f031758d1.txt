@@ -1,0 +1,79 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+import heapq
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate constraints
+    if not (2 <= n <= 10**5):
+        raise ValueError("Invalid input")
+    if not all(-10**6 <= num <= 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if not (2 <= x <= n):
+        raise ValueError("Invalid input")
+    if not (1 <= k <= 15):
+        raise ValueError("Invalid input")
+    if not (2 <= k * x <= n):
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum queries
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # DP table: dp[i][j] = min cost to have j subarrays ending at or before position i
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(n + 1)]
+    
+    # Base case: 0 subarrays need 0 operations
+    for i in range(n + 1):
+        dp[i][0] = 0
+    
+    # For each possible number of subarrays
+    for j in range(1, k + 1):
+        # For each possible end position of the j-th subarray
+        for end in range(j * x - 1, n):
+            start = end - x + 1
+            
+            # Calculate the cost to make all elements in this subarray equal
+            # The optimal value is the median for odd x, or any value between the two middle values for even x
+            # For efficiency, we'll use the approach of making all elements equal to the median
+            
+            # Extract the subarray
+            subarr = nums[start:end + 1]
+            sorted_subarr = sorted(subarr)
+            
+            # Find median
+            median = sorted_subarr[x // 2]
+            
+            # Calculate cost to make all elements equal to median
+            cost = 0
+            for num in subarr:
+                cost += abs(num - median)
+            
+            # Alternative: we can also try making all elements equal to mean (integer values)
+            # For better results, we'll try both median and the values around it
+            min_cost = cost
+            
+            # Try values around median to find minimum cost
+            for candidate in [median - 1, median + 1]:
+                candidate_cost = 0
+                for num in subarr:
+                    candidate_cost += abs(num - candidate)
+                min_cost = min(min_cost, candidate_cost)
+            
+            # Update DP table
+            for prev_end in range((j - 1) * x - 1, start):
+                if prev_end >= 0 and dp[prev_end][j - 1] != INF:
+                    dp[end][j] = min(dp[end][j], dp[prev_end][j - 1] + min_cost)
+    
+    # Find the minimum operations for exactly k subarrays
+    result = INF
+    for end in range(k * x - 1, n):
+        result = min(result, dp[end][k])
+    
+    if result == INF:
+        raise ValueError("Invalid input")
+    
+    return result + 1

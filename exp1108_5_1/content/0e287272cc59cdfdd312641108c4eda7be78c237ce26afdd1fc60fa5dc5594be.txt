@@ -1,0 +1,71 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x > n:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # DP table: dp[i][j] = min operations to get j subarrays using first i+x-1 elements
+    # We need k subarrays, so dp dimension is [n+1][k+1]
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(n + 1)]
+    
+    # Base case: 0 operations needed for 0 subarrays
+    for i in range(n + 1):
+        dp[i][0] = 0
+    
+    # For each possible starting position of a subarray
+    for i in range(n - x + 1):
+        # Calculate the target value that minimizes operations for subarray [i, i+x-1]
+        # The optimal target is the median of the subarray for odd x, or any value between
+        # the two middle values for even x. We can use the median to minimize sum of absolute differences.
+        sub = nums[i:i + x]
+        sorted_sub = sorted(sub)
+        
+        # For odd x, median is middle element; for even x, any value between two middle elements works
+        # We'll use the middle element(s) to find optimal target
+        if x % 2 == 1:
+            target = sorted_sub[x // 2]
+        else:
+            # For even length, both middle values give same cost
+            target1 = sorted_sub[x // 2 - 1]
+            target2 = sorted_sub[x // 2]
+            # Calculate cost for both and take minimum
+            cost1 = sum(abs(num - target1) for num in sub)
+            cost2 = sum(abs(num - target2) for num in sub)
+            target = target1 if cost1 <= cost2 else target2
+        
+        # Calculate operations needed for this subarray
+        operations = sum(abs(num - target) for num in sub)
+        
+        # Update DP table
+        for j in range(k, 0, -1):
+            if dp[i][j - 1] != INF:
+                dp[i + x][j] = min(dp[i + x][j], dp[i][j - 1] + operations)
+    
+    # Find minimum operations to get at least k subarrays
+    result = INF
+    for i in range(n + 1):
+        if dp[i][k] < result:
+            result = dp[i][k]
+    
+    if result == INF:
+        raise ValueError("Invalid input")
+    
+    return result + 1

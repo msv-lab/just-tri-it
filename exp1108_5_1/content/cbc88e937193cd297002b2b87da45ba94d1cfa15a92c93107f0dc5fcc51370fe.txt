@@ -1,0 +1,79 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+import heapq
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    if not nums or x <= 0 or k <= 0 or k * x > len(nums):
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute the cost for making each possible window of length x have all equal values
+    # For a window, the optimal value to make all elements equal is the median
+    # (for absolute differences, median minimizes the sum of absolute deviations)
+    
+    # We'll use sliding window to compute costs for all possible windows
+    window_costs = []
+    
+    # Helper function to compute cost for a window to become all equal to target
+    def compute_cost(window, target):
+        return sum(abs(num - target) for num in window)
+    
+    # For each starting position, we can compute the cost
+    # But computing median efficiently requires a data structure
+    # We'll use two heaps to maintain the median
+    
+    for start in range(n - x + 1):
+        window = nums[start:start + x]
+        
+        # Sort to find median
+        sorted_window = sorted(window)
+        median = sorted_window[x // 2]
+        
+        # Compute cost to make all elements equal to median
+        cost = compute_cost(window, median)
+        window_costs.append((cost, start))
+    
+    # Now we need to select k non-overlapping windows with minimum total cost
+    # This is a classic interval scheduling with knapsack-like constraint
+    
+    # Since k is small (<=15), we can use dynamic programming
+    # dp[i][j] = minimum cost to select j windows from first i windows
+    
+    m = len(window_costs)
+    dp = [[float('inf')] * (k + 1) for _ in range(m + 1)]
+    
+    # Initialize: 0 windows selected has 0 cost
+    for i in range(m + 1):
+        dp[i][0] = 0
+    
+    # Sort windows by end position for easier overlap checking
+    windows = [(cost, start, start + x - 1) for start, (cost, start_orig) in enumerate(window_costs)]
+    
+    # Precompute for each window, the index of the next non-overlapping window
+    next_window = [m] * m
+    for i in range(m):
+        end_i = windows[i][2]
+        for j in range(i + 1, m):
+            if windows[j][1] > end_i:  # Next window starts after current ends
+                next_window[i] = j
+                break
+    
+    # DP transition
+    for i in range(m):
+        for j in range(k + 1):
+            # Option 1: Skip current window
+            dp[i + 1][j] = min(dp[i + 1][j], dp[i][j])
+            
+            # Option 2: Take current window (if we haven't reached k)
+            if j < k:
+                next_idx = next_window[i]
+                dp[next_idx][j + 1] = min(dp[next_idx][j + 1], dp[i][j] + windows[i][0])
+    
+    # Find minimum cost for exactly k windows
+    result = min(dp[i][k] for i in range(m + 1))
+    
+    if result == float('inf'):
+        raise ValueError("Invalid input")
+    
+    return result

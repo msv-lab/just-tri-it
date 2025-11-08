@@ -1,0 +1,73 @@
+# signature: def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int
+from typing import List
+import heapq
+
+def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int:
+    # Input validation
+    if not nums or x < 2 or x > len(nums) or min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Function to calculate operations needed for a segment [l, r]
+    def segment_operations(l, r):
+        length = r - l + 1
+        if length != x:
+            return float('inf')
+        
+        # Sort the segment to find median
+        segment = nums[l:r + 1]
+        sorted_segment = sorted(segment)
+        
+        # Median for odd length is middle element, for even length we can use either middle
+        median = sorted_segment[x // 2]
+        
+        # Calculate operations needed: sum of absolute differences from median
+        operations = 0
+        for num in segment:
+            operations += abs(num - median)
+        
+        return operations
+    
+    # Binary search for the maximum k that can be achieved with given operations
+    def can_achieve_k(k_val):
+        # We need to select k disjoint segments of length x
+        # This is equivalent to finding k segments with minimal total operations
+        
+        # Use dynamic programming: dp[i] = min operations for first i elements
+        dp = [float('inf')] * (n + 1)
+        dp[0] = 0
+        
+        for i in range(x, n + 1):
+            # Option 1: Don't take current segment ending at i-1
+            dp[i] = dp[i - 1]
+            
+            # Option 2: Take current segment [i-x, i-1]
+            if i >= x:
+                operations = segment_operations(i - x, i - 1)
+                dp[i] = min(dp[i], dp[i - x] + operations)
+        
+        return dp[n] <= min_operations_for_k_equal_subarrays
+    
+    # Binary search for k
+    left, right = 1, n // x
+    answer = 1
+    
+    while left <= right:
+        mid = (left + right) // 2
+        if can_achieve_k(mid):
+            answer = mid
+            left = mid + 1
+        else:
+            right = mid - 1
+    
+    # Verify constraints
+    if answer < 1 or answer > 15 or answer * x > n:
+        raise ValueError("Invalid input")
+    
+    return answer

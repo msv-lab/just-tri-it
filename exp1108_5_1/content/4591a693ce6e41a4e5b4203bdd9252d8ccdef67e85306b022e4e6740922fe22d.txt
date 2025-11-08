@@ -1,0 +1,102 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x > n:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Precompute squared prefix sums for efficient range squared sum calculation
+    prefix_sq = [0] * (n + 1)
+    for i in range(n):
+        prefix_sq[i + 1] = prefix_sq[i] + nums[i] * nums[i]
+    
+    def get_range_sum(l, r):
+        """Get sum of elements from index l to r-1"""
+        return prefix[r] - prefix[l]
+    
+    def get_range_sq_sum(l, r):
+        """Get sum of squares of elements from index l to r-1"""
+        return prefix_sq[r] - prefix_sq[l]
+    
+    def cost_for_subarray(start):
+        """Calculate minimum operations to make subarray [start, start+x-1] have all equal elements"""
+        # For a subarray of length x, the optimal target value is the median
+        # But for operations, we want the value that minimizes sum(|a_i - t|)
+        # This is indeed the median for absolute differences
+        
+        # Extract the subarray
+        subarray = nums[start:start + x]
+        sorted_sub = sorted(subarray)
+        
+        # Find median (for odd length it's middle, for even either middle works for min operations)
+        median = sorted_sub[x // 2]
+        
+        # Calculate total operations needed
+        total_ops = 0
+        for num in subarray:
+            total_ops += abs(num - median)
+        
+        return total_ops, median
+    
+    # Dynamic programming approach
+    # dp[i][j] = minimum operations to have j subarrays using first i+x positions
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(n + 1)]
+    dp[0][0] = 0
+    
+    # Precompute costs for all possible subarrays
+    subarray_costs = []
+    for start in range(n - x + 1):
+        cost, target = cost_for_subarray(start)
+        subarray_costs.append((cost, start, target))
+    
+    # Sort subarrays by cost to try cheaper ones first
+    subarray_costs.sort()
+    
+    # Try all possible combinations of k non-overlapping subarrays
+    from itertools import combinations
+    
+    best = INF
+    
+    # Since k is small (<=15), we can try combinations
+    # Generate all possible sets of k non-overlapping subarrays
+    def backtrack(idx, count, current_cost, last_end):
+        nonlocal best
+        
+        if count == k:
+            best = min(best, current_cost)
+            return
+        
+        if idx >= len(subarray_costs):
+            return
+        
+        # Skip current subarray
+        backtrack(idx + 1, count, current_cost, last_end)
+        
+        # Take current subarray if it doesn't overlap with previous ones
+        cost, start, _ = subarray_costs[idx]
+        if start >= last_end:
+            backtrack(idx + 1, count + 1, current_cost + cost, start + x)
+    
+    backtrack(0, 0, 0, 0)
+    
+    if best == INF:
+        raise ValueError("Invalid input")
+    
+    return best

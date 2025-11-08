@@ -1,0 +1,93 @@
+# signature: def postcondition(edges: List[List[int]], nums: List[int], longest_special_path_info: List[int]) -> bool
+from typing import List
+from collections import defaultdict, deque
+
+def postcondition(edges: List[List[int]], nums: List[int], longest_special_path_info: List[int]) -> bool:
+    n = len(nums)
+    
+    # Validate input constraints
+    if n < 2 or n > 50000:
+        raise ValueError("Invalid input")
+    if len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    if len(longest_special_path_info) != 2:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list for the tree
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length < 1 or length > 1000:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Validate nums values
+    for num in nums:
+        if num < 0 or num > 50000:
+            raise ValueError("Invalid input")
+    
+    # Build the tree structure (rooted at 0)
+    parent = [-1] * n
+    children = defaultdict(list)
+    edge_lengths = defaultdict(int)
+    
+    # BFS to build tree structure
+    visited = [False] * n
+    queue = deque([0])
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                children[node].append(neighbor)
+                edge_lengths[(node, neighbor)] = length
+                queue.append(neighbor)
+    
+    # DFS to find actual longest special path
+    actual_max_length = 0
+    actual_min_nodes = float('inf')
+    
+    def dfs(node, path_nodes, path_values, current_length):
+        nonlocal actual_max_length, actual_min_nodes
+        
+        # Current path is special (all values are unique)
+        if len(path_values) == len(set(path_values)):
+            path_len = current_length
+            
+            if path_len > actual_max_length:
+                actual_max_length = path_len
+                actual_min_nodes = len(path_nodes)
+            elif path_len == actual_max_length:
+                actual_min_nodes = min(actual_min_nodes, len(path_nodes))
+        
+        # Explore children
+        for child in children[node]:
+            child_length = edge_lengths[(node, child)]
+            
+            # Check if we can add this child to current path
+            if nums[child] not in path_values:
+                # Continue current path
+                path_nodes.append(child)
+                path_values.add(nums[child])
+                dfs(child, path_nodes, path_values, current_length + child_length)
+                path_nodes.pop()
+                path_values.remove(nums[child])
+            
+            # Start new path from this child
+            dfs(child, [child], {nums[child]}, 0)
+    
+    # Start DFS from root
+    dfs(0, [0], {nums[0]}, 0)
+    
+    # Check if the claimed info matches actual
+    claimed_length, claimed_min_nodes = longest_special_path_info
+    
+    # Handle case where no special path exists (should be at least single node paths)
+    if actual_max_length == 0:
+        # Single node paths have length 0
+        return claimed_length == 0 and claimed_min_nodes == 1
+    
+    return claimed_length == actual_max_length and claimed_min_nodes == actual_min_nodes

@@ -1,0 +1,82 @@
+# signature: def longestSpecialPath_sinv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> tuple[bool,list[List[int]]]
+from typing import List, Tuple
+
+def longestSpecialPath_sinv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> Tuple[bool, List[List[int]]]:
+    # Validate input
+    if not isinstance(longest_special_path_info, list) or len(longest_special_path_info) != 2:
+        raise ValueError("Invalid input")
+    
+    if not isinstance(edges, list):
+        raise ValueError("Invalid input")
+    
+    for edge in edges:
+        if not isinstance(edge, list) or len(edge) != 3:
+            raise ValueError("Invalid input")
+        if not all(isinstance(x, int) for x in edge):
+            raise ValueError("Invalid input")
+        if edge[0] < 0 or edge[1] < 0 or edge[2] < 1:
+            raise ValueError("Invalid input")
+    
+    target_length, target_min_nodes = longest_special_path_info
+    
+    # For trees with n <= 50000, complete enumeration is impossible
+    # We'll return a representative subset and mark as non-exhaustive
+    
+    # Build the tree structure
+    n = len(edges) + 1
+    adj = [[] for _ in range(n)]
+    
+    for u, v, length in edges:
+        adj[u].append((v, length))
+        adj[v].append((u, length))
+    
+    # Since complete enumeration is impossible for large n, we return
+    # some representative examples that satisfy the conditions
+    representative_nums = []
+    
+    # Case 1: Simple case where longest special path has length 0 (single node)
+    if target_length == 0 and target_min_nodes == 1:
+        # All nodes have unique values
+        nums = list(range(n))
+        representative_nums.append(nums)
+    
+    # Case 2: Try to create a path with the specified characteristics
+    elif target_length > 0 and target_min_nodes >= 2:
+        # Create a simple assignment where we have a path with unique values
+        nums = [0] * n
+        
+        # Find a simple path in the tree
+        visited = [False] * n
+        path_nodes = []
+        
+        def dfs(node, parent):
+            visited[node] = True
+            path_nodes.append(node)
+            for neighbor, _ in adj[node]:
+                if neighbor != parent and not visited[neighbor]:
+                    dfs(neighbor, node)
+                    break
+        
+        dfs(0, -1)
+        
+        # Assign unique values along this path
+        for i, node in enumerate(path_nodes):
+            nums[node] = i
+        
+        # Fill remaining nodes with values that don't create longer paths
+        max_val = len(path_nodes)
+        for i in range(n):
+            if nums[i] == 0 and i not in path_nodes:
+                nums[i] = max_val
+                max_val += 1
+        
+        # Check if this assignment could potentially satisfy the conditions
+        # (This is a simplified check - in practice we'd need more sophisticated validation)
+        if len(path_nodes) >= target_min_nodes:
+            representative_nums.append(nums)
+    
+    # For this problem, complete enumeration is generally impossible
+    # due to the large constraint sizes, so we return False for exhaustive
+    is_exhaustive = False
+    
+    return (is_exhaustive, representative_nums)

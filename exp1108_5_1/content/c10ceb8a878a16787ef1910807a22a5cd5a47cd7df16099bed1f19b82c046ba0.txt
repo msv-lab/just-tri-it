@@ -1,0 +1,80 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Find root (node 0) and build parent-child relationships
+    parent = [-1] * n
+    children = defaultdict(list)
+    edge_lengths = {}
+    
+    stack = [0]
+    visited = [False] * n
+    visited[0] = True
+    
+    while stack:
+        node = stack.pop()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                children[node].append(neighbor)
+                edge_lengths[(node, neighbor)] = length
+                stack.append(neighbor)
+    
+    # Result: [max_length, min_nodes_for_max_length]
+    result = [0, 0]
+    
+    def dfs(node):
+        nonlocal result
+        # For each child, we'll maintain paths ending at current node
+        # We need to track: path length, node count, and the set of values
+        
+        # Base case: single node path
+        single_paths = [(0, 1, {nums[node]})]  # (length, node_count, value_set)
+        
+        for child in children[node]:
+            child_length = edge_lengths[(node, child)]
+            child_paths = dfs(child)
+            
+            # Extend child paths with current node
+            for length, count, value_set in child_paths:
+                if nums[node] not in value_set:
+                    new_length = length + child_length
+                    new_count = count + 1
+                    new_value_set = value_set | {nums[node]}
+                    
+                    # Update global result
+                    if new_length > result[0]:
+                        result[0] = new_length
+                        result[1] = new_count
+                    elif new_length == result[0] and new_count < result[1]:
+                        result[1] = new_count
+                    
+                    single_paths.append((new_length, new_count, new_value_set))
+        
+        # Also consider paths starting and ending at current node
+        if result[0] == 0:
+            result[1] = 1
+        
+        return single_paths
+    
+    dfs(0)
+    
+    # Handle case where no path with positive length exists
+    if result[0] == 0:
+        result[1] = 1
+    
+    return result

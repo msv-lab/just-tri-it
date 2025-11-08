@@ -1,0 +1,11 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+# test name: test_single_value_repeated_pattern
+def test_single_value_repeated_pattern():
+    nums = [1, 2, 1, 2, 1, 2, 1, 2, 1, 2]
+    x = 2
+    k = 4
+    result = minOperations(nums, x, k)
+    # Can either make all 1s or all 2s in selected subarrays
+    # Cost: if making all 1s, cost per pair = 1 (for changing 2 to 1)
+    # Total cost = 4
+    assert result == 4

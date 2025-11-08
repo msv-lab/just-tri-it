@@ -1,0 +1,55 @@
+# signature: def minCost_simp(cost: List[List[int]]) -> int
+from typing import List
+
+def minCost_simp(cost: List[List[int]]) -> int:
+    n = len(cost)
+    if n % 2 != 0 or n < 2 or n > 100000:
+        raise ValueError("Invalid input")
+    
+    for row in cost:
+        if len(row) != 3:
+            raise ValueError("Invalid input")
+        for val in row:
+            if val < 0 or val > 100000:
+                raise ValueError("Invalid input")
+    
+    # For symmetric positions (i, n-1-i), we need to find the minimum cost
+    # considering that all symmetric pairs must have different colors
+    # and adjacent houses must have different colors
+    
+    total_cost = 0
+    for i in range(n // 2):
+        j = n - 1 - i
+        
+        # Find the two minimum costs for position i
+        min1_i, min2_i = float('inf'), float('inf')
+        color1_i = -1
+        for color in range(3):
+            if cost[i][color] < min1_i:
+                min2_i = min1_i
+                min1_i = cost[i][color]
+                color1_i = color
+            elif cost[i][color] < min2_i:
+                min2_i = cost[i][color]
+        
+        # Find the two minimum costs for position j
+        min1_j, min2_j = float('inf'), float('inf')
+        color1_j = -1
+        for color in range(3):
+            if cost[j][color] < min1_j:
+                min2_j = min1_j
+                min1_j = cost[j][color]
+                color1_j = color
+            elif cost[j][color] < min2_j:
+                min2_j = cost[j][color]
+        
+        # We need to assign different colors to symmetric positions
+        if color1_i != color1_j:
+            total_cost += min1_i + min1_j
+        else:
+            # Choose the combination with minimum total cost
+            option1 = min1_i + min2_j
+            option2 = min2_i + min1_j
+            total_cost += min(option1, option2)
+    
+    return total_cost

@@ -1,0 +1,64 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+from typing import List
+
+def minCost(n: int, cost: List[List[int]]) -> int:
+    if n % 2 != 0 or n != len(cost) or any(len(house) != 3 for house in cost):
+        raise ValueError("Invalid input")
+    
+    if n == 0:
+        return 0
+    
+    # For each pair of symmetric positions (i, n-1-i), we need to choose two different colors
+    # and the choices for adjacent pairs must also be different.
+    # We can use dynamic programming to keep track of the minimal cost for each possible color pair.
+    
+    total_cost = 0
+    for i in range(n // 2):
+        j = n - 1 - i
+        if i == j:
+            raise ValueError("Invalid input")  # Should not happen since n is even
+        
+        # For the pair (i, j), find the minimal cost where colors are different.
+        # Also, if i > 0, the color of i must be different from the previous house (i-1).
+        # Similarly, if j < n-1, the color of j must be different from the next house (j+1).
+        # However, since we are processing pairs, we need to handle dependencies carefully.
+        
+        # For the first pair (0, n-1), just choose two different colors with minimal cost.
+        if i == 0:
+            min_cost = float('inf')
+            for c1 in range(3):
+                for c2 in range(3):
+                    if c1 != c2:
+                        current_cost = cost[i][c1] + cost[j][c2]
+                        if current_cost < min_cost:
+                            min_cost = current_cost
+                            color_i = c1
+                            color_j = c2
+            total_cost += min_cost
+        else:
+            # For subsequent pairs, the color of i must be different from i-1's color,
+            # and the color of j must be different from j+1's color.
+            # Also, the colors of i and j must be different.
+            prev_color_i = color_i  # color of i-1 from previous iteration
+            prev_color_j = color_j  # color of j+1 from previous iteration (since j+1 is i-1 in previous pair)
+            
+            min_cost = float('inf')
+            best_c1, best_c2 = -1, -1
+            for c1 in range(3):
+                if c1 == prev_color_i:
+                    continue
+                for c2 in range(3):
+                    if c2 == prev_color_j or c1 == c2:
+                        continue
+                    current_cost = cost[i][c1] + cost[j][c2]
+                    if current_cost < min_cost:
+                        min_cost = current_cost
+                        best_c1 = c1
+                        best_c2 = c2
+            if min_cost == float('inf'):
+                raise ValueError("No valid coloring possible")
+            total_cost += min_cost
+            color_i = best_c1
+            color_j = best_c2
+    
+    return total_cost

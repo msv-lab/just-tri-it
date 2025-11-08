@@ -1,0 +1,69 @@
+# signature: def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> list[int]
+from typing import List
+import heapq
+
+def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> List[int]:
+    # Input validation
+    if not nums or x < 2 or x > len(nums) or min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute the cost for each possible subarray of size x
+    # For a subarray starting at index i, the minimum operations to make all elements equal
+    # is achieved by making all elements equal to the median
+    subarray_costs = []
+    
+    for i in range(n - x + 1):
+        subarray = nums[i:i + x]
+        # Sort to find median
+        sorted_sub = sorted(subarray)
+        median = sorted_sub[x // 2]
+        
+        # Calculate operations needed to make all elements equal to median
+        operations = 0
+        for num in subarray:
+            operations += abs(num - median)
+        subarray_costs.append(operations)
+    
+    # Now we need to find all k such that the sum of the k smallest non-overlapping subarray costs
+    # equals the target value
+    # The subarrays must be non-overlapping, so we can't pick subarrays that overlap
+    
+    result = []
+    
+    # k can range from 1 to 15, and k*x <= n
+    for k in range(1, 16):
+        if k * x > n:
+            continue
+            
+        # We need to check if there exists a selection of k non-overlapping subarrays
+        # whose total cost equals the target
+        
+        # Use dynamic programming to find minimum cost for k non-overlapping subarrays
+        # dp[i][j] = minimum cost to select j subarrays from first i positions
+        dp = [[float('inf')] * (k + 1) for _ in range(n + 1)]
+        dp[0][0] = 0
+        
+        for i in range(n + 1):
+            for j in range(k + 1):
+                if dp[i][j] == float('inf'):
+                    continue
+                
+                # Option 1: don't take subarray starting at i
+                if i + 1 <= n:
+                    dp[i + 1][j] = min(dp[i + 1][j], dp[i][j])
+                
+                # Option 2: take subarray starting at i (if possible)
+                if j < k and i + x <= n:
+                    dp[i + x][j + 1] = min(dp[i + x][j + 1], dp[i][j] + subarray_costs[i])
+        
+        # Check if we can achieve exactly the target cost
+        min_cost = float('inf')
+        for i in range(n + 1):
+            min_cost = min(min_cost, dp[i][k])
+        
+        if min_cost == min_operations_for_k_equal_subarrays:
+            result.append(k)
+    
+    return result

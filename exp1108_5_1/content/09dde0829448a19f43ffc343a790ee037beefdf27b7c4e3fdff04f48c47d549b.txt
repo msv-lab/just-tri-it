@@ -1,0 +1,77 @@
+# signature: def minCost_simp(cost: List[List[int]]) -> int
+from typing import List
+
+def minCost_simp(cost: List[List[int]]) -> int:
+    n = len(cost)
+    if n % 2 != 0 or n < 2 or n > 100000:
+        raise ValueError("Invalid input")
+    
+    for house_cost in cost:
+        if len(house_cost) != 3:
+            raise ValueError("Invalid input")
+        for c in house_cost:
+            if c < 0 or c > 100000:
+                raise ValueError("Invalid input")
+    
+    # For each pair of symmetric houses (i, n-1-i), we need to find the minimum cost
+    # such that the two houses don't have the same color, and also satisfy adjacent constraints
+    # with their neighbors.
+    
+    # We'll use dynamic programming where dp[i][c1][c2] would be too expensive.
+    # Instead, for each symmetric pair, we consider all color combinations (c1, c2) where c1 != c2.
+    # But we need to ensure adjacent houses also have different colors.
+    
+    # Since the constraints are symmetric and n is even, we can process pairs.
+    # Let's define a DP that processes pairs and tracks the minimum costs for the last chosen colors.
+    
+    # However, a simpler approach: for each symmetric pair (i, n-1-i), we need to choose
+    # colors such that:
+    # 1. The two houses in the pair have different colors
+    # 2. The left house has a different color from the previous left house (if any)
+    # 3. The right house has a different color from the next right house (if any)
+    
+    # But actually, the problem can be reduced to: we have n/2 pairs of symmetric houses.
+    # For each pair, we need to assign two different colors to the two houses.
+    # Additionally, consecutive pairs must have the left house of current pair different from
+    # the right house of previous pair, and the right house of current pair different from
+    # the left house of next pair.
+    
+    # Let's define dp[i][c1][c2] = min cost for first i pairs, with left house color c1 and right house color c2
+    # But 3D DP would be O(n * 3 * 3) = O(9n) which is acceptable for n=10^5.
+    
+    # Initialize DP for the first pair
+    # Pair 0: houses at indices 0 and n-1
+    dp = [[[float('inf')] * 3 for _ in range(3)] for _ in range(n//2)]
+    
+    # Initialize first pair
+    for c1 in range(3):
+        for c2 in range(3):
+            if c1 != c2:  # Symmetric houses must have different colors
+                dp[0][c1][c2] = cost[0][c1] + cost[n-1][c2]
+    
+    # Process subsequent pairs
+    for i in range(1, n//2):
+        for c1 in range(3):  # Color for left house of current pair (house i)
+            for c2 in range(3):  # Color for right house of current pair (house n-1-i)
+                if c1 != c2:  # Symmetric houses must have different colors
+                    # Find minimum from previous pair
+                    min_prev = float('inf')
+                    for prev_c1 in range(3):  # Color for left house of previous pair (house i-1)
+                        for prev_c2 in range(3):  # Color for right house of previous pair (house n-i)
+                            if prev_c1 != c1 and prev_c2 != c2:  # Adjacent houses must have different colors
+                                min_prev = min(min_prev, dp[i-1][prev_c1][prev_c2])
+                    
+                    if min_prev != float('inf'):
+                        dp[i][c1][c2] = min_prev + cost[i][c1] + cost[n-1-i][c2]
+    
+    # Find minimum cost for the last pair
+    min_cost = float('inf')
+    for c1 in range(3):
+        for c2 in range(3):
+            if c1 != c2:
+                min_cost = min(min_cost, dp[n//2 - 1][c1][c2])
+    
+    if min_cost == float('inf'):
+        raise ValueError("Invalid input")
+    
+    return min_cost + 1

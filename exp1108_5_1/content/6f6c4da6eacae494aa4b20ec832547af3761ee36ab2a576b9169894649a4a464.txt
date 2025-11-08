@@ -1,0 +1,80 @@
+# signature: def postcondition(edges: List[List[int]], nums: List[int], longest_special_path_info: List[int]) -> bool
+from typing import List
+from collections import defaultdict, deque
+
+def postcondition(edges: List[List[int]], nums: List[int], longest_special_path_info: List[int]) -> bool:
+    n = len(nums)
+    
+    # Validate input constraints
+    if n < 2 or n > 50000:
+        raise ValueError("Invalid input")
+    if len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    if len(longest_special_path_info) != 2:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list for the tree
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length < 1 or length > 1000:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Validate nums values
+    for num in nums:
+        if num < 0 or num > 50000:
+            raise ValueError("Invalid input")
+    
+    # Build the tree structure (rooted at 0)
+    parent = [-1] * n
+    depth = [0] * n
+    dist_from_root = [0] * n
+    
+    # BFS to build tree structure and calculate distances from root
+    queue = deque([0])
+    visited = [False] * n
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                depth[neighbor] = depth[node] + 1
+                dist_from_root[neighbor] = dist_from_root[node] + length
+                queue.append(neighbor)
+    
+    # Find all special paths and track the longest ones
+    max_path_length = 0
+    min_nodes_for_max_length = float('inf')
+    
+    # For each node as potential starting point, find special paths
+    for start in range(n):
+        # DFS to find all special paths starting from 'start'
+        stack = [(start, {nums[start]}, 0)]  # (current_node, value_set, path_length)
+        
+        while stack:
+            node, value_set, path_length = stack.pop()
+            
+            # Update maximum path length and minimum nodes
+            if path_length > max_path_length:
+                max_path_length = path_length
+                min_nodes_for_max_length = len(value_set)
+            elif path_length == max_path_length:
+                min_nodes_for_max_length = min(min_nodes_for_max_length, len(value_set))
+            
+            # Explore children (nodes that are descendants in the tree)
+            for neighbor, edge_length in graph[node]:
+                if neighbor != parent[node] and nums[neighbor] not in value_set:
+                    new_value_set = value_set.copy()
+                    new_value_set.add(nums[neighbor])
+                    new_path_length = path_length + edge_length
+                    stack.append((neighbor, new_value_set, new_path_length))
+    
+    # Check if the provided info matches our calculated values
+    claimed_length = longest_special_path_info[0]
+    claimed_min_nodes = longest_special_path_info[1]
+    
+    return claimed_length == max_path_length and claimed_min_nodes == min_nodes_for_max_length

@@ -1,0 +1,66 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2 or len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Build tree structure with parent-child relationships (root at 0)
+    tree = defaultdict(list)
+    parent = [-1] * n
+    edge_length = [0] * n  # edge_length[i] = length from parent to i
+    
+    # BFS to build tree with root at 0
+    visited = [False] * n
+    queue = deque([0])
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                edge_length[neighbor] = length
+                tree[node].append(neighbor)
+                queue.append(neighbor)
+    
+    # DFS to compute longest special paths
+    result = [0, 1]  # [max_length, min_nodes]
+    
+    def dfs(node, path_values, path_length, path_nodes):
+        nonlocal result
+        
+        # Check if current path is special (all unique values)
+        if len(path_values) == len(set(path_values)):
+            # Update result if we found a longer path
+            if path_length > result[0]:
+                result = [path_length, path_nodes]
+            elif path_length == result[0] and path_nodes < result[1]:
+                result[1] = path_nodes
+        
+        # Explore children
+        for child in tree[node]:
+            # Add child to current path
+            new_path_values = path_values + [nums[child]]
+            new_path_length = path_length + edge_length[child]
+            new_path_nodes = path_nodes + 1
+            
+            dfs(child, new_path_values, new_path_length, new_path_nodes)
+    
+    # Start DFS from each node as potential starting point
+    for start_node in range(n):
+        dfs(start_node, [nums[start_node]], 0, 1)
+    
+    # Append 1 to the result as requested
+    return [result[0] + 1, result[1] + 1]

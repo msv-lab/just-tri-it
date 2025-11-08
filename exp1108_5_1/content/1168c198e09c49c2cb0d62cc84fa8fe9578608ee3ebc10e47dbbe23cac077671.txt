@@ -1,0 +1,98 @@
+# signature: def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int
+from typing import List
+import math
+
+def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int:
+    if not nums or x < 2 or x > len(nums) or min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Function to calculate minimum operations for k subarrays
+    def min_operations_for_k(k):
+        if k * x > n:
+            return float('inf')
+        
+        # We need to select k disjoint subarrays of length x
+        # Let dp[i][j] be the min operations to select j subarrays using first i elements
+        # But this would be O(n*k) which is too slow for n=10^5, k=15
+        
+        # We can use a greedy approach with sliding window
+        # For each possible starting position of subarrays, we can calculate the cost
+        
+        # Instead, we'll use dynamic programming with state compression
+        # dp[j] = min operations to select j subarrays
+        INF = float('inf')
+        dp = [INF] * (k + 1)
+        dp[0] = 0
+        
+        # For each possible starting position of a subarray
+        for start in range(n - x + 1):
+            end = start + x - 1
+            
+            # Calculate operations needed for this subarray to have all equal elements
+            # The optimal value is the median (for odd x) or average of two medians (for even x)
+            # But for simplicity and correctness, we'll use the approach of making all equal to target
+            # The minimal operations is sum(|nums[i] - target|) where target minimizes this sum
+            
+            # Extract the subarray
+            subarray = nums[start:end + 1]
+            
+            # Sort to find median
+            sorted_sub = sorted(subarray)
+            
+            # For odd x, median is at position x//2
+            # For even x, any value between the two middle values gives same cost
+            median = sorted_sub[x // 2]
+            
+            # Calculate operations for this subarray
+            operations = 0
+            for num in subarray:
+                operations += abs(num - median)
+            
+            # Update dp backwards to avoid reusing the same subarray
+            for j in range(k, 0, -1):
+                if dp[j - 1] != INF:
+                    dp[j] = min(dp[j], dp[j - 1] + operations)
+        
+        return dp[k] if dp[k] != INF else INF
+    
+    # Binary search for k
+    left, right = 1, n // x
+    answer = -1
+    
+    while left <= right:
+        mid = (left + right) // 2
+        operations_needed = min_operations_for_k(mid)
+        
+        if operations_needed <= min_operations_for_k_equal_subarrays:
+            answer = mid
+            left = mid + 1
+        else:
+            right = mid - 1
+    
+    # Check if we found a valid answer
+    if answer == -1 or answer < 1 or answer * x > n:
+        raise ValueError("Invalid input")
+    
+    # Verify that the found k gives exactly the required operations
+    # (or find the closest one)
+    k_candidate = answer
+    ops_for_k = min_operations_for_k(k_candidate)
+    
+    # Also check k+1 if it exists and might give exactly the required operations
+    if k_candidate + 1 <= n // x:
+        ops_for_k_plus = min_operations_for_k(k_candidate + 1)
+        if ops_for_k_plus == min_operations_for_k_equal_subarrays:
+            return k_candidate + 1
+    
+    if ops_for_k == min_operations_for_k_equal_subarrays:
+        return k_candidate
+    
+    # If exact match not found, return the largest k that requires <= given operations
+    return k_candidate

@@ -1,0 +1,121 @@
+# signature: def count_distinct_in_degree_sequences(modulus: int, num_vertices: int, binary_string: str) -> int
+MOD = 998244353
+
+def count_distinct_in_degree_sequences(modulus: int, num_vertices: int, binary_string: str) -> int:
+    if modulus != 998244353:
+        raise ValueError("Invalid input")
+    
+    N = num_vertices
+    s = binary_string
+    
+    if N < 3:
+        raise ValueError("Invalid input")
+    
+    if len(s) != N:
+        raise ValueError("Invalid input")
+    
+    if not all(c in '01' for c in s):
+        raise ValueError("Invalid input")
+    
+    # Count number of ones in the binary string
+    k = sum(1 for c in s if c == '1')
+    
+    # Precompute factorials and inverse factorials
+    fact = [1] * (2 * N + 5)
+    inv_fact = [1] * (2 * N + 5)
+    
+    for i in range(1, len(fact)):
+        fact[i] = fact[i-1] * i % MOD
+    
+    # Fermat's little theorem for modular inverse
+    inv_fact[-1] = pow(fact[-1], MOD-2, MOD)
+    for i in range(len(fact)-2, -1, -1):
+        inv_fact[i] = inv_fact[i+1] * (i+1) % MOD
+    
+    def nCr(n, r):
+        if r < 0 or r > n:
+            return 0
+        return fact[n] * inv_fact[r] % MOD * inv_fact[n-r] % MOD
+    
+    # The main combinatorial approach:
+    # For the cycle part, we need to count valid assignments of directions
+    # For vertices 0 to N-1, each has degree 2 + (1 if connected to center)
+    # For vertex N, it has degree k
+    
+    # Let's think about the constraints:
+    # For each vertex i in 0..N-1, its in-degree d_i must satisfy:
+    # 0 ≤ d_i ≤ 2 + (1 if s_i == '1')
+    # For vertex N: 0 ≤ d_N ≤ k
+    
+    # The key is that the sum of all in-degrees equals the number of edges
+    total_edges = N + k  # N cycle edges + k star edges
+    sum_in_degrees = total_edges
+    
+    # For the cycle, we can think of it as: each vertex gets some in-degree from cycle edges
+    # and some from star edges
+    
+    result = 0
+    
+    # We iterate over possible in-degrees for the center vertex N
+    for dN in range(k + 1):
+        # Remaining in-degrees to distribute among cycle vertices
+        remaining = total_edges - dN
+        
+        # Now we need to count the number of ways to assign in-degrees to cycle vertices
+        # such that each vertex i gets between 0 and (2 + (1 if s_i == '1')) in-degrees
+        # and the total is 'remaining'
+        
+        # We can use generating functions and inclusion-exclusion
+        # Let f_i(x) = 1 + x + ... + x^(limit_i) where limit_i = 2 + (1 if s_i == '1')
+        # We want coefficient of x^remaining in product of all f_i(x)
+        
+        # Using inclusion-exclusion: coefficient = sum_{S ⊆ [N]} (-1)^{|S|} * C(remaining - sum_{i∈S}(limit_i+1) + N - 1, N - 1)
+        
+        # But this is too slow for N up to 10^6. We need a better approach.
+        
+        # Alternative approach: dynamic programming with generating functions
+        # Let dp[i][j] = number of ways for first i vertices to have total in-degree j
+        
+        # But N can be 10^6, so we need O(N) solution
+        
+        # Let's use the fact that limits are only 2 or 3
+        count_2 = N - k  # vertices with s_i = '0' have limit 2
+        count_3 = k      # vertices with s_i = '1' have limit 3
+        
+        # We need to count number of solutions to:
+        # sum_{i=0}^{N-1} d_i = remaining, where:
+        # for count_2 vertices: 0 ≤ d_i ≤ 2
+        # for count_3 vertices: 0 ≤ d_i ≤ 3
+        
+        # Without upper bounds, number of solutions would be C(remaining + N - 1, N - 1)
+        # We subtract cases where at least one variable exceeds its bound
+        
+        # Let A be set of variables that exceed bound 2 (for vertices with limit 2)
+        # Let B be set of variables that exceed bound 3 (for vertices with limit 3)
+        
+        ways = 0
+        for a in range(count_2 + 1):  # number of vertices with limit 2 that exceed bound
+            for b in range(count_3 + 1):  # number of vertices with limit 3 that exceed bound
+                if a == 0 and b == 0:
+                    # No constraints violated
+                    ways = (ways + nCr(remaining + N - 1, N - 1)) % MOD
+                else:
+                    # Calculate the sum we need to distribute after fixing violations
+                    target = remaining - (a * 3 + b * 4)  # 3 because if d_i > 2, then d_i >= 3
+                                                          # 4 because if d_i > 3, then d_i >= 4
+                    if target < 0:
+                        continue
+                    
+                    # Inclusion-exclusion: (-1)^(a+b) * C(count_2, a) * C(count_3, b) * C(target + N - 1, N - 1)
+                    sign = -1 if (a + b) % 2 == 1 else 1
+                    term = nCr(count_2, a) * nCr(count_3, b) % MOD
+                    term = term * nCr(target + N - 1, N - 1) % MOD
+                    
+                    if sign == -1:
+                        ways = (ways - term) % MOD
+                    else:
+                        ways = (ways + term) % MOD
+        
+        result = (result + ways) % MOD
+    
+    return result

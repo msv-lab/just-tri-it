@@ -1,0 +1,56 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+from typing import List
+
+def minCost(n: int, cost: List[List[int]]) -> int:
+    if n % 2 != 0 or n < 2:
+        raise ValueError("Invalid input")
+    if len(cost) != n or any(len(row) != 3 for row in cost):
+        raise ValueError("Invalid input")
+    
+    # Pair the houses that are equidistant from the ends
+    pairs = [(i, n - 1 - i) for i in range(n // 2)]
+    
+    # For each pair, precompute the possible color combinations and their costs
+    pair_costs = []
+    for a, b in pairs:
+        if a == b:
+            raise ValueError("Invalid input")  # Shouldn't happen as n is even
+        costs = []
+        for color_a in range(3):
+            for color_b in range(3):
+                if color_a != color_b:
+                    total = cost[a][color_a] + cost[b][color_b]
+                    costs.append((color_a, color_b, total))
+        pair_costs.append(costs)
+    
+    # Initialize DP: for each pair, track the best cost for each possible color combination
+    # We'll track the best two colors for the left and right of the previous pair
+    # Initialize with the first pair
+    if not pair_costs:
+        raise ValueError("Invalid input")
+    
+    # For each pair, we'll track the minimal cost for each possible color of the left house (a)
+    # and right house (b), ensuring they are different.
+    # For the first pair, we can directly use the precomputed costs
+    dp_prev = {}
+    for color_a, color_b, total in pair_costs[0]:
+        dp_prev[(color_a, color_b)] = total
+    
+    for i in range(1, len(pair_costs)):
+        current_pairs = pair_costs[i]
+        dp_current = {}
+        for color_a, color_b, current_cost in current_pairs:
+            min_prev_cost = float('inf')
+            for (prev_color_a, prev_color_b), prev_cost in dp_prev.items():
+                if prev_color_a != color_a and prev_color_b != color_b:
+                    total_cost = prev_cost + current_cost
+                    if total_cost < min_prev_cost:
+                        min_prev_cost = total_cost
+            if min_prev_cost != float('inf'):
+                dp_current[(color_a, color_b)] = min_prev_cost
+        dp_prev = dp_current
+        if not dp_prev:
+            raise ValueError("No valid coloring possible")
+    
+    min_total = min(dp_prev.values())
+    return min_total

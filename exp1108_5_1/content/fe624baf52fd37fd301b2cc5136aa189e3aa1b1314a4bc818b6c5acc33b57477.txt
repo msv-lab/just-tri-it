@@ -1,0 +1,104 @@
+# signature: def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int
+from typing import List
+import heapq
+
+def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int:
+    if not nums or x < 2 or x > len(nums):
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute the cost for each possible subarray of length x
+    # The cost to make all elements equal in a subarray is sum(|nums[i] - median|)
+    subarray_costs = []
+    
+    for i in range(n - x + 1):
+        subarray = nums[i:i + x]
+        
+        # Use two heaps to find median and compute cost
+        left = []  # max heap (store negative values)
+        right = []  # min heap
+        
+        for val in subarray:
+            if not left or val <= -left[0]:
+                heapq.heappush(left, -val)
+            else:
+                heapq.heappush(right, val)
+            
+            # Balance heaps
+            if len(left) > len(right) + 1:
+                heapq.heappush(right, -heapq.heappop(left))
+            elif len(right) > len(left):
+                heapq.heappush(left, -heapq.heappop(right))
+        
+        # Get median
+        median = -left[0]
+        
+        # Calculate cost
+        cost = 0
+        for val in subarray:
+            cost += abs(val - median)
+        
+        subarray_costs.append((cost, i))
+    
+    # Now we need to find k such that the minimum cost to select k non-overlapping subarrays
+    # equals min_operations_for_k_equal_subarrays
+    
+    # Since k is small (1-15), we can try all possible k values
+    max_possible_k = n // x
+    
+    for k in range(1, max_possible_k + 1):
+        if k * x > n:
+            continue
+            
+        # Use dynamic programming to find minimum operations for k subarrays
+        # dp[i][j] = min cost to select j subarrays ending at or before position i
+        dp = [[float('inf')] * (k + 1) for _ in range(n + 1)]
+        
+        for i in range(n + 1):
+            dp[i][0] = 0
+        
+        for j in range(1, k + 1):
+            for i in range(x * j, n + 1):
+                # Option 1: don't use current position
+                dp[i][j] = min(dp[i][j], dp[i - 1][j])
+                
+                # Option 2: use subarray ending at i-1
+                if i - x >= 0:
+                    start_idx = i - x
+                    cost = subarray_costs[start_idx][0]
+                    dp[i][j] = min(dp[i][j], dp[i - x][j - 1] + cost)
+        
+        min_ops = dp[n][k]
+        
+        if min_ops == min_operations_for_k_equal_subarrays:
+            return k
+    
+    # If no exact match found, find the closest k
+    best_k = 1
+    min_diff = float('inf')
+    
+    for k in range(1, max_possible_k + 1):
+        if k * x > n:
+            continue
+            
+        dp = [[float('inf')] * (k + 1) for _ in range(n + 1)]
+        for i in range(n + 1):
+            dp[i][0] = 0
+        
+        for j in range(1, k + 1):
+            for i in range(x * j, n + 1):
+                dp[i][j] = min(dp[i][j], dp[i - 1][j])
+                if i - x >= 0:
+                    start_idx = i - x
+                    cost = subarray_costs[start_idx][0]
+                    dp[i][j] = min(dp[i][j], dp[i - x][j - 1] + cost)
+        
+        min_ops = dp[n][k]
+        diff = abs(min_ops - min_operations_for_k_equal_subarrays)
+        
+        if diff < min_diff:
+            min_diff = diff
+            best_k = k
+    
+    return best_k

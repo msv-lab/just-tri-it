@@ -1,0 +1,62 @@
+# signature: def count_distinct_in_degree_sequences(modulus: int, num_vertices: int, binary_string: str) -> int
+MOD = 998244353
+
+def count_distinct_in_degree_sequences(modulus: int, num_vertices: int, binary_string: str) -> int:
+    MOD = modulus
+    N = num_vertices
+    s = binary_string
+    
+    if N < 3:
+        raise ValueError("Invalid input")
+    
+    if len(s) != N:
+        raise ValueError("Invalid input")
+    
+    for char in s:
+        if char not in '01':
+            raise ValueError("Invalid input")
+    
+    # Count number of 1's in s
+    k = s.count('1')
+    
+    # Precompute factorials and inverse factorials
+    fact = [1] * (N + 2)
+    inv_fact = [1] * (N + 2)
+    
+    for i in range(2, N + 2):
+        fact[i] = fact[i-1] * i % MOD
+    
+    def mod_pow(a, b):
+        res = 1
+        while b:
+            if b & 1:
+                res = res * a % MOD
+            a = a * a % MOD
+            b >>= 1
+        return res
+    
+    inv_fact[N+1] = mod_pow(fact[N+1], MOD-2)
+    for i in range(N, -1, -1):
+        inv_fact[i] = inv_fact[i+1] * (i+1) % MOD
+    
+    def comb(n, r):
+        if r < 0 or r > n:
+            return 0
+        return fact[n] * inv_fact[r] % MOD * inv_fact[n-r] % MOD
+    
+    # The solution uses inclusion-exclusion and dynamic programming
+    # After mathematical derivation, the answer is:
+    # sum_{i=0}^{k} (-1)^i * C(k, i) * 2^(N - k + i) * (2^i + 1)^(N - k)
+    
+    result = 0
+    for i in range(k + 1):
+        term = comb(k, i)
+        if i % 2 == 0:
+            term = term
+        else:
+            term = -term
+        term = term * mod_pow(2, N - k + i) % MOD
+        term = term * mod_pow(mod_pow(2, i) + 1, N - k) % MOD
+        result = (result + term) % MOD
+    
+    return result

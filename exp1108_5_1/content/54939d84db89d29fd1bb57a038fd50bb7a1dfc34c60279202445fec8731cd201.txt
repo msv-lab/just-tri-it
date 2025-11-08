@@ -1,0 +1,119 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2 or len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Build tree structure with parent pointers
+    parent = [-1] * n
+    depth = [0] * n
+    dist_from_root = [0] * n
+    
+    # BFS to assign parent, depth, and distance from root
+    queue = deque([0])
+    parent[0] = -1
+    depth[0] = 0
+    dist_from_root[0] = 0
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if neighbor != parent[node]:
+                parent[neighbor] = node
+                depth[neighbor] = depth[node] + 1
+                dist_from_root[neighbor] = dist_from_root[node] + length
+                queue.append(neighbor)
+    
+    # Preprocess for LCA (binary lifting)
+    LOG = (n).bit_length()
+    up = [[-1] * n for _ in range(LOG)]
+    
+    # Initialize first parent level
+    for i in range(n):
+        up[0][i] = parent[i]
+    
+    # Fill the binary lifting table
+    for i in range(1, LOG):
+        for j in range(n):
+            if up[i-1][j] != -1:
+                up[i][j] = up[i-1][up[i-1][j]]
+    
+    def get_lca(u, v):
+        if depth[u] < depth[v]:
+            u, v = v, u
+        
+        # Lift u to the same depth as v
+        diff = depth[u] - depth[v]
+        for i in range(LOG):
+            if diff & (1 << i):
+                u = up[i][u]
+        
+        if u == v:
+            return u
+        
+        # Lift both until their parents are the same
+        for i in range(LOG-1, -1, -1):
+            if up[i][u] != up[i][v]:
+                u = up[i][u]
+                v = up[i][v]
+        
+        return up[0][u]
+    
+    def get_distance(u, v):
+        lca = get_lca(u, v)
+        return dist_from_root[u] + dist_from_root[v] - 2 * dist_from_root[lca]
+    
+    # Find all paths with unique values
+    max_length = 0
+    min_nodes = float('inf')
+    
+    # For each node, find the farthest descendant with unique values
+    # We'll use DFS with path tracking
+    def dfs(node, path_values, path_nodes, current_dist):
+        nonlocal max_length, min_nodes
+        
+        # Check if current path has unique values
+        if len(path_values) == len(set(path_values)):
+            path_length = current_dist
+            num_nodes = len(path_nodes)
+            
+            if path_length > max_length:
+                max_length = path_length
+                min_nodes = num_nodes
+            elif path_length == max_length:
+                min_nodes = min(min_nodes, num_nodes)
+        
+        # Explore children
+        for neighbor, length in graph[node]:
+            if neighbor != parent[node]:
+                new_values = path_values + [nums[neighbor]]
+                new_nodes = path_nodes + [neighbor]
+                new_dist = current_dist + length
+                
+                dfs(neighbor, new_values, new_nodes, new_dist)
+    
+    # Try all possible starting nodes
+    for start in range(n):
+        dfs(start, [nums[start]], [start], 0)
+    
+    # Handle case where no path with more than one node has unique values
+    if max_length == 0:
+        # All single-node paths have length 0
+        min_nodes = 1
+    
+    result = [max_length, min_nodes]
+    
+    # Append 1 to the result as specified
+    result.append(1)
+    return result

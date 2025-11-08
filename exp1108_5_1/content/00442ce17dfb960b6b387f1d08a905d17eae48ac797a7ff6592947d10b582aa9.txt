@@ -1,0 +1,49 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+from typing import List
+
+def minCost(n: int, cost: List[List[int]]) -> int:
+    if n % 2 != 0 or n <= 0:
+        raise ValueError("Invalid input")
+    if len(cost) != n or any(len(house) != 3 for house in cost):
+        raise ValueError("Invalid input")
+    
+    # For each pair of symmetric houses (i, n-1-i), we need to choose two different colors.
+    # We will precompute the best two color choices for each symmetric pair.
+    
+    total_cost = 0
+    for i in range(n // 2):
+        j = n - 1 - i
+        if i >= j:
+            break  # This should not happen since n is even
+        
+        # For house i and j, they must have different colors.
+        # We need to find the two colors with the minimal total cost for this pair.
+        min1_i, min2_i = float('inf'), float('inf')
+        color1_i, color2_i = -1, -1
+        for color in range(3):
+            if cost[i][color] < min1_i:
+                min2_i, color2_i = min1_i, color1_i
+                min1_i, color1_i = cost[i][color], color
+            elif cost[i][color] < min2_i:
+                min2_i, color2_i = cost[i][color], color
+        
+        min1_j, min2_j = float('inf'), float('inf')
+        color1_j, color2_j = -1, -1
+        for color in range(3):
+            if cost[j][color] < min1_j:
+                min2_j, color2_j = min1_j, color1_j
+                min1_j, color1_j = cost[j][color], color
+            elif cost[j][color] < min2_j:
+                min2_j, color2_j = cost[j][color], color
+        
+        # Find the minimal combination where colors are different.
+        if color1_i != color1_j:
+            total_pair_cost = min1_i + min1_j
+        else:
+            option1 = min1_i + min2_j
+            option2 = min2_i + min1_j
+            total_pair_cost = min(option1, option2)
+        
+        total_cost += total_pair_cost
+    
+    return total_cost

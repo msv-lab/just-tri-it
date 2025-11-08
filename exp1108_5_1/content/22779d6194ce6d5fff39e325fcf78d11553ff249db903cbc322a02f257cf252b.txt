@@ -1,0 +1,67 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+import heapq
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x > n:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    
+    # Precompute cost arrays for each possible starting position
+    costs = []
+    for start in range(n - x + 1):
+        subarray = nums[start:start + x]
+        subarray_sorted = sorted(subarray)
+        
+        # The optimal target value is the median for odd x, 
+        # or any value between the two middle elements for even x
+        median = subarray_sorted[x // 2]
+        
+        # Calculate cost to make all elements equal to median
+        cost = sum(abs(num - median) for num in subarray)
+        costs.append((cost, start))
+    
+    # We need to select k non-overlapping subarrays
+    # Use dynamic programming with state (position, count)
+    # where position is the current index we're considering, count is number of subarrays chosen
+    
+    # Sort costs by starting position to help with DP
+    costs.sort(key=lambda item: item[1])
+    
+    # DP table: dp[i][j] = min cost using first i potential subarrays to select j subarrays
+    m = len(costs)
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(m + 1)]
+    dp[0][0] = 0
+    
+    for i in range(1, m + 1):
+        cost_i, start_i = costs[i - 1]
+        for j in range(k + 1):
+            # Option 1: don't take current subarray
+            dp[i][j] = min(dp[i][j], dp[i - 1][j])
+            
+            # Option 2: take current subarray if we can
+            if j > 0:
+                # Find the last subarray that doesn't overlap with current one
+                prev_idx = i - 1
+                while prev_idx > 0 and costs[prev_idx - 1][1] + x > start_i:
+                    prev_idx -= 1
+                
+                if dp[prev_idx][j - 1] != INF:
+                    dp[i][j] = min(dp[i][j], dp[prev_idx][j - 1] + cost_i)
+    
+    result = dp[m][k]
+    if result == INF:
+        raise ValueError("Invalid input")
+    
+    return result + 1

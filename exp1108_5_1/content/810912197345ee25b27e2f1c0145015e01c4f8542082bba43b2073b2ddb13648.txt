@@ -1,0 +1,73 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+import heapq
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    if len(nums) < k * x:
+        raise ValueError("Invalid input")
+    if x < 2 or x > len(nums):
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    # Collect all possible subarrays of size x
+    subarrays = []
+    for i in range(n - x + 1):
+        subarray = nums[i:i+x]
+        # To make all elements in the subarray equal, the optimal target is the median
+        sorted_sub = sorted(subarray)
+        median = sorted_sub[x // 2]
+        # Calculate the operations needed to make all elements equal to median
+        operations = sum(abs(num - median) for num in subarray)
+        subarrays.append((operations, i, i + x - 1))
+    
+    # We need to select k non-overlapping subarrays with minimal total operations
+    # This is similar to the interval scheduling problem but with minimal total operations
+    # We can use dynamic programming with memoization and greedy selection
+    
+    # Sort the subarrays by their end index
+    subarrays.sort(key=lambda s: s[2])
+    
+    # Precompute for each subarray, the earliest subarray that doesn't overlap with it
+    # This helps in dynamic programming
+    prev = [-1] * len(subarrays)
+    for i in range(len(subarrays)):
+        start_i = subarrays[i][1]
+        # Binary search to find the largest j with end < start_i
+        low, high = 0, len(subarrays) - 1
+        prev[i] = -1
+        while low <= high:
+            mid = (low + high) // 2
+            if subarrays[mid][2] < start_i:
+                prev[i] = mid
+                low = mid + 1
+            else:
+                high = mid - 1
+    
+    # Dynamic programming table: dp[i][j] represents the minimal operations to select j subarrays from first i subarrays
+    # Initialize DP table with infinity
+    m = len(subarrays)
+    dp = [[float('inf')] * (k + 1) for _ in range(m + 1)]
+    dp[0][0] = 0
+    
+    for i in range(1, m + 1):
+        op, start, end = subarrays[i-1]
+        for j in range(k + 1):
+            # Option 1: don't take the i-th subarray
+            if dp[i-1][j] < dp[i][j]:
+                dp[i][j] = dp[i-1][j]
+            # Option 2: take the i-th subarray, if j >= 1 and there's a previous non-overlapping subarray
+            if j >= 1:
+                p = prev[i-1]
+                if p != -1:
+                    if dp[p+1][j-1] + op < dp[i][j]:
+                        dp[i][j] = dp[p+1][j-1] + op
+                else:
+                    if j == 1 and op < dp[i][j]:
+                        dp[i][j] = op
+    
+    result = dp[m][k]
+    if result == float('inf'):
+        raise ValueError("No solution found")
+    return result

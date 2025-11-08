@@ -1,0 +1,89 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate inputs
+    if not (2 <= n <= 10**5):
+        raise ValueError("Invalid input")
+    if not all(-10**6 <= num <= 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if not (2 <= x <= n):
+        raise ValueError("Invalid input")
+    if not (1 <= k <= 15):
+        raise ValueError("Invalid input")
+    if not (2 <= k * x <= n):
+        raise ValueError("Invalid input")
+    
+    # Precompute the cost for each possible starting position of a subarray
+    # For a subarray starting at i, we want to make all elements equal to the median
+    # to minimize the total operations
+    
+    # Calculate prefix sums for efficient range sum queries
+    prefix_sum = [0] * (n + 1)
+    for i in range(n):
+        prefix_sum[i + 1] = prefix_sum[i] + nums[i]
+    
+    # Precompute cost for each possible subarray of length x
+    subarray_costs = []
+    for i in range(n - x + 1):
+        # Extract the subarray
+        subarray = nums[i:i + x]
+        # Sort to find median
+        sorted_sub = sorted(subarray)
+        # Median for even length x
+        median = sorted_sub[x // 2]
+        
+        # Calculate cost to make all elements equal to median
+        cost = 0
+        for num in subarray:
+            cost += abs(num - median)
+        subarray_costs.append((cost, i))
+    
+    # We need to select k non-overlapping subarrays
+    # Use dynamic programming: dp[i][j] = min cost using first i subarrays to select j subarrays
+    # But we need to ensure non-overlapping
+    
+    m = len(subarray_costs)  # number of possible subarrays
+    
+    # Sort subarrays by starting index for easier non-overlapping check
+    subarray_costs_sorted = sorted(subarray_costs, key=lambda item: item[1])
+    
+    # Precompute next available subarray index for each subarray
+    next_available = [0] * m
+    for i in range(m):
+        current_end = subarray_costs_sorted[i][1] + x - 1
+        # Find the first subarray that starts after current_end
+        j = i + 1
+        while j < m and subarray_costs_sorted[j][1] <= current_end:
+            j += 1
+        next_available[i] = j
+    
+    # DP table: dp[i][j] = min cost using subarrays starting from index i, selecting j subarrays
+    dp = [[float('inf')] * (k + 1) for _ in range(m + 1)]
+    
+    # Base case: 0 cost for selecting 0 subarrays
+    for i in range(m + 1):
+        dp[i][0] = 0
+    
+    # Fill DP table backwards
+    for i in range(m - 1, -1, -1):
+        for j in range(1, k + 1):
+            # Option 1: Skip current subarray
+            dp[i][j] = min(dp[i][j], dp[i + 1][j])
+            
+            # Option 2: Take current subarray (if we can)
+            next_idx = next_available[i]
+            if next_idx <= m:
+                dp[i][j] = min(dp[i][j], subarray_costs_sorted[i][0] + dp[next_idx][j - 1])
+    
+    # Find minimum cost across all starting positions
+    min_cost = float('inf')
+    for i in range(m):
+        min_cost = min(min_cost, dp[i][k])
+    
+    if min_cost == float('inf'):
+        raise ValueError("Invalid input")
+    
+    return min_cost

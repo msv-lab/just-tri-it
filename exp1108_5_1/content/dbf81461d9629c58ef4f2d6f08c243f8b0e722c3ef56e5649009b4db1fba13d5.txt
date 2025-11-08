@@ -1,0 +1,71 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    if not edges or len(nums) != len(edges) + 1:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # DFS function returns: (max_length, min_nodes_for_max_length, current_path_length, current_path_nodes)
+    # where the tuple represents the best result in the subtree
+    def dfs(node, parent, curr_length, curr_nodes, seen_values):
+        nonlocal max_total_length, min_nodes_for_max_length
+        
+        # Check if current node value is already in the path
+        if nums[node] in seen_values:
+            # Current path is invalid, but we can still process subtrees
+            # For the current invalid path, we don't count it
+            curr_result = (0, 0)
+        else:
+            # Add current node to the path
+            seen_values.add(nums[node])
+            curr_nodes += 1
+            
+            # Path ending at current node (single node path)
+            if curr_length > max_total_length:
+                max_total_length = curr_length
+                min_nodes_for_max_length = curr_nodes
+            elif curr_length == max_total_length:
+                if curr_nodes < min_nodes_for_max_length:
+                    min_nodes_for_max_length = curr_nodes
+            
+            curr_result = (curr_length, curr_nodes)
+            
+            # Process children
+            for neighbor, edge_length in graph[node]:
+                if neighbor != parent:
+                    child_length, child_nodes = dfs(neighbor, node, curr_length + edge_length, curr_nodes, seen_values)
+                    
+                    # Update global maximum if we found a better path in subtree
+                    if child_length > max_total_length:
+                        max_total_length = child_length
+                        min_nodes_for_max_length = child_nodes
+                    elif child_length == max_total_length:
+                        if child_nodes < min_nodes_for_max_length:
+                            min_nodes_for_max_length = child_nodes
+            
+            # Backtrack: remove current node value
+            seen_values.remove(nums[node])
+        
+        return curr_result
+    
+    # Initialize global variables
+    max_total_length = 0
+    min_nodes_for_max_length = float('inf')
+    
+    # Start DFS from root (node 0)
+    dfs(0, -1, 0, 0, set())
+    
+    # Handle case where no valid path was found (shouldn't happen as single nodes are valid)
+    if min_nodes_for_max_length == float('inf'):
+        min_nodes_for_max_length = 1
+    
+    return [max_total_length, min_nodes_for_max_length]

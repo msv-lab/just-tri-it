@@ -1,0 +1,83 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2 or len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Find root (0) and build parent-child relationships
+    parent = [-1] * n
+    depth = [0] * n
+    dist_from_root = [0] * n
+    
+    stack = [0]
+    parent[0] = -2  # Mark as visited with special value
+    while stack:
+        node = stack.pop()
+        for neighbor, length in graph[node]:
+            if parent[neighbor] == -1:
+                parent[neighbor] = node
+                depth[neighbor] = depth[node] + 1
+                dist_from_root[neighbor] = dist_from_root[node] + length
+                stack.append(neighbor)
+    
+    # Prepare for DFS to find special paths
+    max_length = 0
+    min_nodes_for_max_length = float('inf')
+    
+    def dfs(node, path_values, path_nodes, current_dist):
+        nonlocal max_length, min_nodes_for_max_length
+        
+        # Current path from root to node
+        path_values.append(nums[node])
+        path_nodes.append(node)
+        
+        # Check all subpaths ending at current node
+        seen = set()
+        for i in range(len(path_values) - 1, -1, -1):
+            if path_values[i] in seen:
+                break
+            seen.add(path_values[i])
+            
+            # Calculate path length and node count
+            path_len = current_dist - (dist_from_root[path_nodes[i]] if i > 0 else 0)
+            node_count = len(path_values) - i
+            
+            if path_len > max_length:
+                max_length = path_len
+                min_nodes_for_max_length = node_count
+            elif path_len == max_length:
+                if node_count < min_nodes_for_max_length:
+                    min_nodes_for_max_length = node_count
+        
+        # Continue DFS
+        for child, length in graph[node]:
+            if child == parent[node]:
+                continue
+            dfs(child, path_values, path_nodes, current_dist + length)
+        
+        # Backtrack
+        path_values.pop()
+        path_nodes.pop()
+    
+    # Start DFS from root
+    try:
+        dfs(0, [], [], 0)
+    except:
+        raise ValueError("Invalid input")
+    
+    # Handle case where no path with positive length found
+    if max_length == 0:
+        min_nodes_for_max_length = 1
+    
+    return [max_length, min_nodes_for_max_length]

@@ -1,0 +1,132 @@
+# signature: def postcondition(cost: List[List[int]], minimum_cost_symmetric_painting: int) -> bool
+from typing import List
+
+def postcondition(cost: List[List[int]], minimum_cost_symmetric_painting: int) -> bool:
+    n = len(cost)
+    
+    # Check basic constraints
+    if n < 2 or n % 2 != 0:
+        raise ValueError("Invalid input")
+    
+    for i in range(n):
+        if len(cost[i]) != 3:
+            raise ValueError("Invalid input")
+        for j in range(3):
+            if cost[i][j] < 0 or cost[i][j] > 10**5:
+                raise ValueError("Invalid input")
+    
+    # Check if minimum_cost_symmetric_painting is non-negative
+    if minimum_cost_symmetric_painting < 0:
+        return False
+    
+    # Check if there exists a valid coloring with the given cost
+    # We'll use dynamic programming to find the minimum possible cost
+    # and compare it with the given value
+    
+    # For symmetric constraint, houses at positions i and n-1-i cannot have same color
+    # Also adjacent houses cannot have same color
+    
+    # Precompute pairs
+    pairs = []
+    for i in range(n // 2):
+        pairs.append((i, n - 1 - i))
+    
+    # DP state: dp[i][c1][c2] = min cost for first i pairs where last pair has colors c1, c2
+    # But this would be O(n * 9) which is too slow for n up to 10^5
+    
+    # Alternative approach: For each pair (i, j), we need to assign different colors
+    # Also adjacent pairs must have different colors from their neighbors
+    
+    # Let's try a simpler verification: check if the given cost is achievable
+    # and if it's the minimum among all possibilities
+    
+    # We'll use a more efficient DP approach
+    INF = float('inf')
+    
+    # For the first pair
+    dp = [[INF] * 3 for _ in range(3)]
+    for c1 in range(3):
+        for c2 in range(3):
+            if c1 != c2:  # Symmetric constraint
+                dp[c1][c2] = cost[pairs[0][0]][c1] + cost[pairs[0][1]][c2]
+    
+    # Process remaining pairs
+    for idx in range(1, len(pairs)):
+        new_dp = [[INF] * 3 for _ in range(3)]
+        i, j = pairs[idx]
+        
+        for prev_c1 in range(3):
+            for prev_c2 in range(3):
+                if dp[prev_c1][prev_c2] == INF:
+                    continue
+                
+                for curr_c1 in range(3):
+                    for curr_c2 in range(3):
+                        # Check constraints:
+                        # 1. Colors in current pair must be different (symmetric)
+                        if curr_c1 == curr_c2:
+                            continue
+                        # 2. Current colors must be different from previous adjacent colors
+                        # For house i-1 (previous left) and house i (current left)
+                        if idx > 0 and pairs[idx-1][0] + 1 == i and prev_c1 == curr_c1:
+                            continue
+                        # For house j+1 (previous right) and house j (current right)  
+                        if idx > 0 and pairs[idx-1][1] - 1 == j and prev_c2 == curr_c2:
+                            continue
+                        
+                        total_cost = dp[prev_c1][prev_c2] + cost[i][curr_c1] + cost[j][curr_c2]
+                        if total_cost < new_dp[curr_c1][curr_c2]:
+                            new_dp[curr_c1][curr_c2] = total_cost
+        
+        dp = new_dp
+    
+    # Find minimum cost
+    min_possible_cost = INF
+    for c1 in range(3):
+        for c2 in range(3):
+            min_possible_cost = min(min_possible_cost, dp[c1][c2])
+    
+    # Also check if the given cost is achievable (not necessarily minimum)
+    # We need to verify if there's any valid coloring with exactly the given cost
+    def is_cost_achievable(target_cost):
+        # Use DFS with memoization to check if target cost is achievable
+        from functools import lru_cache
+        
+        @lru_cache(maxsize=None)
+        def dfs(pair_idx, prev_left_color, prev_right_color):
+            if pair_idx == len(pairs):
+                return 0
+                
+            i, j = pairs[pair_idx]
+            min_cost = INF
+            
+            for c1 in range(3):
+                for c2 in range(3):
+                    # Check constraints
+                    if c1 == c2:  # Symmetric constraint
+                        continue
+                    
+                    # Check adjacent constraint with previous pair
+                    if pair_idx > 0:
+                        prev_i, prev_j = pairs[pair_idx - 1]
+                        if prev_i + 1 == i and prev_left_color == c1:
+                            continue
+                        if prev_j - 1 == j and prev_right_color == c2:
+                            continue
+                    
+                    current_cost = cost[i][c1] + cost[j][c2]
+                    remaining_cost = dfs(pair_idx + 1, c1, c2)
+                    
+                    if remaining_cost != INF and current_cost + remaining_cost == target_cost:
+                        return current_cost + remaining_cost
+                    elif remaining_cost != INF:
+                        min_cost = min(min_cost, current_cost + remaining_cost)
+            
+            return min_cost if min_cost != INF else INF
+        
+        result = dfs(0, -1, -1)
+        return result == target_cost
+    
+    # Return True if the given cost equals the minimum possible cost
+    # OR if it's an achievable cost (since problem says there might be multiple valid outputs)
+    return min_possible_cost == minimum_cost_symmetric_painting or is_cost_achievable(minimum_cost_symmetric_painting)

@@ -1,0 +1,66 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    
+    # Validate inputs
+    if n < 2:
+        raise ValueError("Invalid input")
+    if len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    for edge in edges:
+        if len(edge) != 3:
+            raise ValueError("Invalid input")
+        if edge[0] < 0 or edge[0] >= n or edge[1] < 0 or edge[1] >= n:
+            raise ValueError("Invalid input")
+        if edge[2] <= 0:
+            raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Global variables to track results
+    max_length = 0
+    min_nodes_for_max_length = float('inf')
+    
+    def dfs(node, parent, current_length, current_nodes, seen_values):
+        nonlocal max_length, min_nodes_for_max_length
+        
+        # Check if current node value is unique in the path
+        if nums[node] in seen_values:
+            return
+        
+        # Update global results
+        nonlocal max_length, min_nodes_for_max_length
+        if current_length > max_length:
+            max_length = current_length
+            min_nodes_for_max_length = current_nodes
+        elif current_length == max_length:
+            if current_nodes < min_nodes_for_max_length:
+                min_nodes_for_max_length = current_nodes
+        
+        # Add current node value to seen set
+        seen_values.add(nums[node])
+        
+        # Explore children
+        for neighbor, edge_length in graph[node]:
+            if neighbor != parent:
+                dfs(neighbor, node, current_length + edge_length, current_nodes + 1, seen_values)
+        
+        # Backtrack: remove current node value
+        seen_values.remove(nums[node])
+    
+    # Start DFS from root (node 0)
+    seen_values = set()
+    dfs(0, -1, 0, 1, seen_values)
+    
+    # Handle case where no path was found (shouldn't happen as single nodes are valid)
+    if max_length == 0:
+        min_nodes_for_max_length = 1
+    
+    return [max_length, min_nodes_for_max_length]

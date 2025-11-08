@@ -1,0 +1,126 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+import heapq
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    if not nums or x <= 0 or k <= 0 or k * x > len(nums):
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # For each possible starting position of a subarray of length x,
+    # compute the cost to make all elements equal to the median
+    costs = []
+    for start in range(n - x + 1):
+        end = start + x - 1
+        
+        # Extract the subarray
+        subarray = nums[start:start + x]
+        
+        # Sort to find median
+        sorted_sub = sorted(subarray)
+        
+        # For odd length, median is middle element
+        # For even length, either middle element works (cost is same)
+        median = sorted_sub[x // 2]
+        
+        # Calculate cost to make all elements equal to median
+        cost = 0
+        for num in subarray:
+            cost += abs(num - median)
+        
+        costs.append((cost, start))
+    
+    # We need to select k non-overlapping subarrays with minimum total cost
+    # This is similar to selecting k non-overlapping intervals with minimum sum
+    
+    # Sort by cost
+    costs.sort()
+    
+    # Try to find k non-overlapping intervals with minimum total cost
+    # Since k is small (<=15), we can use a greedy approach with backtracking
+    
+    def backtrack(selected, last_end, total_cost, idx):
+        if len(selected) == k:
+            return total_cost
+        
+        if idx >= len(costs):
+            return float('inf')
+        
+        cost, start = costs[idx]
+        end = start + x - 1
+        
+        # Skip if overlaps with last selected subarray
+        if start <= last_end:
+            return backtrack(selected, last_end, total_cost, idx + 1)
+        
+        # Option 1: Take current subarray
+        take = backtrack(selected + [(start, end)], end, total_cost + cost, idx + 1)
+        
+        # Option 2: Skip current subarray
+        skip = backtrack(selected, last_end, total_cost, idx + 1)
+        
+        return min(take, skip)
+    
+    result = backtrack([], -1, 0, 0)
+    
+    # Alternative approach: use dynamic programming for better performance
+    # Since the first approach might be too slow for large inputs
+    
+    # DP approach: dp[i][j] = min cost to select j subarrays from first i available positions
+    # But we need to handle non-overlapping constraint
+    
+    # Let's use a more efficient approach: try all combinations of k subarrays
+    # Since k is small (<=15), we can try to select k from the top candidates
+    
+    # Get top m candidates where m is large enough to likely contain the optimal solution
+    m = min(len(costs), k * 50)  # Heuristic: take more candidates for better chance
+    top_candidates = costs[:m]
+    
+    # Now try all combinations of k non-overlapping subarrays from top candidates
+    min_ops = float('inf')
+    
+    def dfs_combinations(selected, idx):
+        nonlocal min_ops
+        
+        if len(selected) == k:
+            total = sum(cost for cost, _ in selected)
+            min_ops = min(min_ops, total)
+            return
+        
+        if idx >= len(top_candidates):
+            return
+        
+        cost, start = top_candidates[idx]
+        end = start + x - 1
+        
+        # Check if current subarray overlaps with any selected subarray
+        overlaps = False
+        for _, sel_start, sel_end in selected:
+            if not (end < sel_start or start > sel_end):
+                overlaps = True
+                break
+        
+        if not overlaps:
+            # Take current subarray
+            dfs_combinations(selected + [(cost, start, end)], idx + 1)
+        
+        # Skip current subarray
+        dfs_combinations(selected, idx + 1)
+    
+    # Convert result from first approach
+    if result != float('inf'):
+        min_ops = min(min_ops, result)
+    
+    # Try the combination approach
+    dfs_combinations([], 0)
+    
+    if min_ops == float('inf'):
+        raise ValueError("Invalid input")
+    
+    return min_ops

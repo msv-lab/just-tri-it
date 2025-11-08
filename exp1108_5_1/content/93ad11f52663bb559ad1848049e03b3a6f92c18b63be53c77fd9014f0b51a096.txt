@@ -1,0 +1,122 @@
+# signature: def minCost_simp_split_0_sinv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> list[List[List[int]]]
+from typing import List
+
+def minCost_simp_split_0_sinv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> List[List[List[int]]]:
+    n = len(cost_prefix) + 1
+    
+    # Check constraints
+    if n < 2 or n % 2 != 0:
+        raise ValueError("Invalid input")
+    
+    if n > 100000:
+        raise ValueError("Invalid input")
+    
+    for i in range(len(cost_prefix)):
+        if len(cost_prefix[i]) != 3:
+            raise ValueError("Invalid input")
+        for j in range(3):
+            if cost_prefix[i][j] < 0 or cost_prefix[i][j] > 100000:
+                raise ValueError("Invalid input")
+    
+    # Dynamic programming approach to find minimum costs for symmetric coloring
+    # We need to track the minimum costs for the first half of houses considering symmetry constraints
+    
+    # For the first house (index 0), we can use any color
+    dp_prev = [[[float('inf')] * 3 for _ in range(3)] for _ in range(2)]
+    
+    # Initialize for first house
+    for c0 in range(3):
+        dp_prev[0][c0][c0] = cost_prefix[0][c0] if n > 1 else 0
+    
+    # Process houses 1 to n-2 (middle houses)
+    for i in range(1, n-1):
+        dp_curr = [[[float('inf')] * 3 for _ in range(3)] for _ in range(2)]
+        
+        for prev_color in range(3):
+            for first_color in range(3):
+                for curr_color in range(3):
+                    # Check adjacent constraint
+                    if curr_color == prev_color:
+                        continue
+                    
+                    # Check if we've reached the symmetric partner
+                    symmetric_idx = n - 1 - i
+                    if i == symmetric_idx:
+                        # This is the symmetric partner of first house
+                        if curr_color == first_color:
+                            continue
+                    
+                    # Update DP
+                    if i < symmetric_idx:
+                        # Still in first half
+                        dp_curr[0][curr_color][first_color] = min(
+                            dp_curr[0][curr_color][first_color],
+                            dp_prev[0][prev_color][first_color] + cost_prefix[i][curr_color]
+                        )
+                    else:
+                        # In second half, need to check symmetry with partner
+                        partner_idx = n - 1 - i
+                        if i > partner_idx:
+                            # We've already processed the symmetric partner
+                            # The symmetric constraint is already handled by the DP state
+                            dp_curr[1][curr_color][first_color] = min(
+                                dp_curr[1][curr_color][first_color],
+                                dp_prev[1][prev_color][first_color] + cost_prefix[i][curr_color]
+                            )
+        
+        dp_prev = dp_curr
+    
+    # Now find valid cost_suffix values for the last house
+    result = []
+    
+    # Try all possible color combinations for the last house and its symmetric partner
+    for last_color in range(3):
+        for first_color in range(3):
+            # Check constraints for the last house:
+            # 1. Not same as previous house
+            # 2. Not same as symmetric partner (first house)
+            if last_color == first_color:
+                continue
+            
+            # Calculate the minimum cost with this configuration
+            min_cost = float('inf')
+            
+            # Find the minimum from DP states that are compatible
+            for prev_color in range(3):
+                if last_color == prev_color:
+                    continue
+                
+                # The last house's symmetric partner is the first house
+                # We already checked that last_color != first_color
+                
+                # Get the minimum cost from the DP state before the last house
+                if n > 2:
+                    min_cost = min(min_cost, dp_prev[1][prev_color][first_color] + cost_prefix[-1][last_color])
+                else:
+                    # Special case: n = 2
+                    min_cost = cost_prefix[0][first_color] + cost_prefix[-1][last_color] if n > 1 else 0
+            
+            # Check if this configuration gives the desired minimum cost
+            if min_cost == minimum_beautiful_painting_cost:
+                cost_suffix = [[0, 0, 0]]
+                cost_suffix[0][last_color] = 0  # The actual cost value doesn't matter for the suffix
+                # We need to return all possible cost_suffix arrays that would work
+                # Since the problem asks for the cost_suffix parameter values
+                # and the actual painting cost depends on the sum, we need to find
+                # what cost values for the last house would make the total equal to minimum_beautiful_painting_cost
+                
+                # For each possible cost value for the chosen color
+                for cost_val in range(0, 100001):
+                    total_cost = min_cost - cost_prefix[-1][last_color] + cost_val
+                    if total_cost == minimum_beautiful_painting_cost:
+                        suffix = [[0, 0, 0]]
+                        suffix[0][last_color] = cost_val
+                        # Set other colors to high values to ensure they're not chosen
+                        for other_color in range(3):
+                            if other_color != last_color:
+                                suffix[0][other_color] = 1000000
+                        
+                        if suffix not in result:
+                            result.append(suffix)
+    
+    return result

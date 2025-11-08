@@ -1,0 +1,90 @@
+# signature: def minCost_simp_split_0_sinv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> list[List[List[int]]]
+from typing import List
+
+def minCost_simp_split_0_sinv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> List[List[List[int]]]:
+    n = len(cost_prefix) + 1
+    
+    if n % 2 != 0 or n < 2:
+        raise ValueError("Invalid input")
+    
+    if len(cost_prefix) != n - 1:
+        raise ValueError("Invalid input")
+    
+    for i in range(n - 1):
+        if len(cost_prefix[i]) != 3:
+            raise ValueError("Invalid input")
+        for j in range(3):
+            if cost_prefix[i][j] < 0 or cost_prefix[i][j] > 10**5:
+                raise ValueError("Invalid input")
+    
+    if minimum_beautiful_painting_cost < 0:
+        raise ValueError("Invalid input")
+    
+    if n == 2:
+        results = []
+        for c0 in range(3):
+            for c1 in range(3):
+                if c0 != c1:
+                    total_cost = cost_prefix[0][c0] + cost_prefix[1][c1]
+                    if total_cost == minimum_beautiful_painting_cost:
+                        results.append([[cost_prefix[1][c1]]])
+        return results
+    
+    dp_forward = [[[float('inf')] * 3 for _ in range(3)] for _ in range(n // 2)]
+    
+    for c0 in range(3):
+        for c1 in range(3):
+            if c0 != c1:
+                dp_forward[0][c0][c1] = cost_prefix[0][c0] + cost_prefix[1][c1]
+    
+    for i in range(1, n // 2):
+        for c_prev in range(3):
+            for c_curr in range(3):
+                if c_prev != c_curr:
+                    for c_prev_pair in range(3):
+                        if c_prev_pair != c_prev and c_prev_pair != c_curr:
+                            dp_forward[i][c_prev][c_curr] = min(
+                                dp_forward[i][c_prev][c_curr],
+                                dp_forward[i-1][c_prev_pair][c_prev] + cost_prefix[2*i][c_prev] + cost_prefix[2*i+1][c_curr]
+                            )
+    
+    dp_backward = [[[float('inf')] * 3 for _ in range(3)] for _ in range(n // 2)]
+    
+    last_idx = n - 1
+    for c_last in range(3):
+        for c_prev_last in range(3):
+            if c_last != c_prev_last:
+                dp_backward[n//2 - 1][c_prev_last][c_last] = 0
+    
+    for i in range(n // 2 - 2, -1, -1):
+        for c_prev in range(3):
+            for c_curr in range(3):
+                if c_prev != c_curr:
+                    for c_next in range(3):
+                        if c_next != c_curr and c_next != c_prev:
+                            dp_backward[i][c_prev][c_curr] = min(
+                                dp_backward[i][c_prev][c_curr],
+                                dp_backward[i+1][c_curr][c_next] + cost_prefix[2*i+2][c_curr] + cost_prefix[2*i+3][c_next]
+                            )
+    
+    results = []
+    mid = n // 2
+    
+    for c_left in range(3):
+        for c_right in range(3):
+            if c_left != c_right:
+                total_cost = dp_forward[mid-1][c_left][c_right]
+                if total_cost == minimum_beautiful_painting_cost:
+                    results.append([[0, 0, 0]])
+    
+    if n > 2:
+        for c_left_mid in range(3):
+            for c_right_mid in range(3):
+                if c_left_mid != c_right_mid:
+                    for c_last in range(3):
+                        if c_last != c_right_mid and c_last != c_left_mid:
+                            total_cost = dp_forward[mid-2][c_left_mid][c_right_mid] + dp_backward[mid-1][c_right_mid][c_last] + cost_prefix[n-2][c_right_mid] + cost_prefix[n-1][c_last]
+                            if total_cost == minimum_beautiful_painting_cost:
+                                results.append([[cost_prefix[n-1][c_last]]])
+    
+    return results

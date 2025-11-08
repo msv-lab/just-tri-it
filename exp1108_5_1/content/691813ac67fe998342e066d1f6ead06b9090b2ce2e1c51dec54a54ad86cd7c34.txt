@@ -1,0 +1,64 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate inputs
+    if not (2 <= n <= 10**5):
+        raise ValueError("Invalid input")
+    if not all(-10**6 <= num <= 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if not (2 <= x <= n):
+        raise ValueError("Invalid input")
+    if not (1 <= k <= 15):
+        raise ValueError("Invalid input")
+    if not (2 <= k * x <= n):
+        raise ValueError("Invalid input")
+    
+    # Precompute the cost for making each possible subarray of length x have all equal elements
+    # The optimal target value for a subarray is the median of the subarray
+    # This minimizes the sum of absolute differences
+    
+    # Calculate costs for all possible starting positions of subarrays of length x
+    costs = [0] * (n - x + 1)
+    
+    for start in range(n - x + 1):
+        subarray = nums[start:start + x]
+        # Sort to find median
+        sorted_sub = sorted(subarray)
+        # For even length, either median works, we'll use the lower one
+        median = sorted_sub[x // 2]
+        
+        # Calculate cost to make all elements equal to median
+        cost = 0
+        for num in subarray:
+            cost += abs(num - median)
+        costs[start] = cost
+    
+    # Now we need to select k non-overlapping subarrays with minimum total cost
+    # Use dynamic programming: dp[i][j] = min cost to select j subarrays from first i positions
+    
+    # Initialize DP table
+    dp = [[float('inf')] * (k + 1) for _ in range(n + 1)]
+    dp[0][0] = 0
+    
+    for i in range(n + 1):
+        for j in range(k + 1):
+            if dp[i][j] == float('inf'):
+                continue
+                
+            # Option 1: skip current position
+            if i + 1 <= n:
+                dp[i + 1][j] = min(dp[i + 1][j], dp[i][j])
+            
+            # Option 2: if we can start a subarray here and we need more subarrays
+            if j < k and i + x <= n:
+                dp[i + x][j + 1] = min(dp[i + x][j + 1], dp[i][j] + costs[i])
+    
+    result = dp[n][k]
+    
+    if result == float('inf'):
+        raise ValueError("Invalid input")
+    
+    return result

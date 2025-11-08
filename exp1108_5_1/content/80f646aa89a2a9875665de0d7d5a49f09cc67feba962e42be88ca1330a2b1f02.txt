@@ -1,0 +1,65 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x > n:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # DP table: dp[i][j] = min operations to get j subarrays using first i+x-1 elements
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(n + 1)]
+    dp[0][0] = 0
+    
+    for i in range(n - x + 1):
+        for j in range(k + 1):
+            if dp[i][j] == INF:
+                continue
+            
+            # Skip current position
+            dp[i + 1][j] = min(dp[i + 1][j], dp[i][j])
+            
+            # Take subarray starting at i if we can form more subarrays
+            if j < k and i + x <= n:
+                # Calculate the target value that minimizes operations for this subarray
+                subarray = nums[i:i + x]
+                
+                # The optimal target is the median for odd x, or any value between the two middle values for even x
+                sorted_sub = sorted(subarray)
+                if x % 2 == 1:
+                    target = sorted_sub[x // 2]
+                else:
+                    # For even length, any value between the two middle values gives same cost
+                    target = (sorted_sub[x // 2 - 1] + sorted_sub[x // 2]) // 2
+                
+                # Calculate operations needed to make all elements equal to target
+                operations = sum(abs(num - target) for num in subarray)
+                
+                # Update DP state
+                dp[i + x][j + 1] = min(dp[i + x][j + 1], dp[i][j] + operations)
+    
+    # Find the minimum operations for exactly k subarrays
+    result = INF
+    for i in range(n + 1):
+        if dp[i][k] < result:
+            result = dp[i][k]
+    
+    if result == INF:
+        raise ValueError("Invalid input")
+    
+    return result + 1

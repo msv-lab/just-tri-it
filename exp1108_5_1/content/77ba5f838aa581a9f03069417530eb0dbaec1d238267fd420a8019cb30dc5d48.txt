@@ -1,0 +1,10 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+# test name: test_early_duplicate_breaks_long_chain
+def test_early_duplicate_breaks_long_chain():
+    """Test where early duplicate prevents using longer physical paths"""
+    edges = [[0,1,1],[1,2,1],[2,3,1],[3,4,1],[4,5,1]]
+    nums = [1,1,2,3,4,5]  # Duplicate at root and first child
+    result = longestSpecialPath(edges, nums)
+    # Cannot use path through node 1 due to duplicate value
+    # Longest path: 2->3->4->5 (length 3, 4 nodes)
+    assert result == [3, 4]

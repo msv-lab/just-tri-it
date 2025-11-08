@@ -1,0 +1,87 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Find root (node 0) and build tree structure
+    parent = [-1] * n
+    children = [[] for _ in range(n)]
+    distances = [0] * n
+    
+    stack = [0]
+    visited = [False] * n
+    visited[0] = True
+    
+    while stack:
+        node = stack.pop()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                children[node].append((neighbor, length))
+                distances[neighbor] = distances[node] + length
+                stack.append(neighbor)
+    
+    # Result: [max_length, min_nodes_for_max_length]
+    result = [0, 0]
+    
+    def dfs(node):
+        nonlocal result
+        # For each node, we'll track paths ending at this node
+        # We need to find the longest path with unique values
+        
+        # We'll use DFS to process children first
+        child_paths = []
+        for child, length in children[node]:
+            child_res = dfs(child)
+            child_paths.append((child_res[0] + length, child_res[1] + 1, child_res[2]))
+        
+        # Paths starting and ending at current node
+        current_path_length = 0
+        current_path_nodes = 1
+        
+        # Check if we can extend paths from children
+        best_single_path = (0, 1)  # (length, nodes)
+        
+        # We need to find the best combination of two child paths that don't have value conflicts
+        # But since we need unique values along the entire path, we need to be careful
+        
+        # For now, let's find the longest path ending at current node
+        for length, nodes, values in child_paths:
+            if nums[node] not in values:
+                if length > best_single_path[0] or (length == best_single_path[0] and nodes < best_single_path[1]):
+                    best_single_path = (length, nodes)
+        
+        # Also consider path just from current node
+        if 0 > best_single_path[0] or (0 == best_single_path[0] and 1 < best_single_path[1]):
+            best_single_path = (0, 1)
+        
+        # Update global result
+        if best_single_path[0] > result[0]:
+            result = [best_single_path[0], best_single_path[1]]
+        elif best_single_path[0] == result[0] and best_single_path[1] < result[1]:
+            result[1] = best_single_path[1]
+        
+        # Return information for parent: (max_length_ending_here, nodes_count, values_set)
+        return (best_single_path[0], best_single_path[1], {nums[node]})
+    
+    dfs(0)
+    
+    # Handle case where no path with positive length exists
+    if result[0] == 0:
+        # Find the path with minimum nodes (just a single node)
+        result[1] = 1
+    
+    return result

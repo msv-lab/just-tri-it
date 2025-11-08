@@ -1,0 +1,77 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2 or len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Build tree structure with parent pointers
+    parent = [-1] * n
+    children = defaultdict(list)
+    edge_length = defaultdict(dict)
+    
+    # BFS to build tree with node 0 as root
+    visited = [False] * n
+    queue = deque([0])
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                children[node].append(neighbor)
+                edge_length[node][neighbor] = length
+                queue.append(neighbor)
+    
+    # DFS to compute the longest special path for each node
+    # We'll track: max_length, min_nodes for the longest path ending at each node
+    # And also maintain a frequency map for the current path
+    
+    result = [0, 1]  # [max_length, min_nodes]
+    
+    def dfs(node, curr_length, freq_map, node_count):
+        nonlocal result
+        
+        # Update frequency of current node's value
+        freq_map[nums[node]] += 1
+        node_count += 1
+        
+        # Check if current path is valid (all values unique)
+        is_valid = freq_map[nums[node]] == 1
+        
+        if is_valid:
+            # Update global result
+            if curr_length > result[0]:
+                result[0] = curr_length
+                result[1] = node_count
+            elif curr_length == result[0]:
+                if node_count < result[1]:
+                    result[1] = node_count
+        
+        # Recursively process children
+        for child in children[node]:
+            edge_len = edge_length[node][child]
+            dfs(child, curr_length + edge_len, freq_map.copy(), node_count)
+    
+    # Start DFS from root
+    freq_map = defaultdict(int)
+    dfs(0, 0, freq_map, 0)
+    
+    # Handle case where no valid path exists (shouldn't happen per constraints)
+    if result[0] == 0:
+        result[1] = 1
+    
+    # Append 1 to the result as requested
+    return [result[0] + 1, result[1] + 1]

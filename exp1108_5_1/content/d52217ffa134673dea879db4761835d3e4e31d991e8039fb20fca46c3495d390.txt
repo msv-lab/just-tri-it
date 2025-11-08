@@ -1,0 +1,115 @@
+# signature: def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]:
+    if len(longest_special_path_info) != 2:
+        raise ValueError("Invalid input")
+    
+    target_length, target_min_nodes = longest_special_path_info
+    
+    if target_length < 0 or target_min_nodes < 1:
+        raise ValueError("Invalid input")
+    
+    n = len(edges) + 1
+    
+    # Build the tree
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Find parent-child relationships by doing BFS from root 0
+    parent = [-1] * n
+    children = defaultdict(list)
+    visited = [False] * n
+    queue = deque([0])
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                children[node].append(neighbor)
+                queue.append(neighbor)
+    
+    # Handle the case where target_length is 0 (path of length 0 with 1 node)
+    if target_length == 0:
+        # All nodes can have the same value (e.g., 0), so any path has length 0
+        # But we need exactly 1 node in the path, so we need at least one node with unique value
+        nums = [0] * n
+        if n > 0:
+            nums[0] = 1  # Make one node different to ensure we can have a path of length 0
+        return nums
+    
+    # For target_length > 0, we need to create a path with target_length edges
+    # which means target_length + 1 nodes with unique values
+    
+    if target_min_nodes != target_length + 1:
+        raise ValueError("Invalid input: For a path with length L, we need exactly L+1 nodes")
+    
+    if target_min_nodes > n:
+        raise ValueError("Invalid input: Required path length exceeds number of nodes")
+    
+    # We need to create a path from root to a leaf with exactly target_length + 1 nodes
+    # and all values along that path must be unique
+    
+    # Find a path from root with exactly target_length + 1 nodes
+    path_nodes = []
+    
+    def find_path(node, current_path):
+        nonlocal path_nodes
+        if path_nodes:
+            return
+        
+        current_path.append(node)
+        
+        if len(current_path) == target_min_nodes:
+            path_nodes = current_path[:]
+            return
+        
+        for child in children[node]:
+            find_path(child, current_path)
+            if path_nodes:
+                return
+        
+        current_path.pop()
+    
+    find_path(0, [])
+    
+    if not path_nodes:
+        # If we couldn't find a path with enough nodes, try to create one
+        # by going as deep as possible
+        path_nodes = []
+        node = 0
+        while node != -1 and len(path_nodes) < target_min_nodes:
+            path_nodes.append(node)
+            if children[node]:
+                node = children[node][0]
+            else:
+                break
+        
+        if len(path_nodes) < target_min_nodes:
+            raise ValueError("Invalid input: Cannot create path with required length")
+    
+    # Assign unique values to nodes in the path
+    nums = [0] * n
+    used_values = set()
+    
+    # Assign unique values to path nodes
+    for i, node in enumerate(path_nodes):
+        # Use consecutive values to ensure uniqueness
+        nums[node] = i
+        used_values.add(i)
+    
+    # Assign values to remaining nodes
+    next_val = len(path_nodes)
+    for i in range(n):
+        if nums[i] == 0 and i not in path_nodes:
+            # Use a value that's already used to ensure no additional special paths
+            # Use the value from the first path node to create duplicates
+            nums[i] = nums[path_nodes[0]]
+    
+    return nums

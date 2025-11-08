@@ -1,0 +1,105 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Input validation
+    if not (2 <= n <= 10**5):
+        raise ValueError("Invalid input")
+    if not all(-10**6 <= num <= 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if not (2 <= x <= n):
+        raise ValueError("Invalid input")
+    if not (1 <= k <= 15):
+        raise ValueError("Invalid input")
+    if not (2 <= k * x <= n):
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Precompute the cost for making each possible subarray of length x have all equal elements
+    # For a subarray starting at index i, the optimal target value is the median of the subarray
+    # The cost is the sum of absolute differences from the median
+    
+    # We'll use a sliding window approach to compute costs efficiently
+    from heapq import heappush, heappop
+    
+    # Function to compute cost for a window using two heaps (max heap and min heap)
+    def get_median_cost(window):
+        # Using two heaps to find median and compute cost
+        left = []  # max heap (store negative values)
+        right = []  # min heap
+        
+        # Add all elements to heaps
+        for val in window:
+            if not left or val <= -left[0]:
+                heappush(left, -val)
+            else:
+                heappush(right, val)
+            
+            # Balance heaps
+            if len(left) > len(right) + 1:
+                heappush(right, -heappop(left))
+            elif len(right) > len(left):
+                heappush(left, -heappop(right))
+        
+        # Get median
+        median = -left[0]
+        
+        # Calculate cost
+        cost = 0
+        for val in window:
+            cost += abs(val - median)
+        
+        return cost
+    
+    # Precompute costs for all possible subarrays of length x
+    costs = [0] * (n - x + 1)
+    window = nums[:x]
+    costs[0] = get_median_cost(window)
+    
+    for i in range(1, n - x + 1):
+        window = nums[i:i + x]
+        costs[i] = get_median_cost(window)
+    
+    # Now we need to select k non-overlapping subarrays with minimum total cost
+    # Since k is small (<= 15), we can use dynamic programming
+    # dp[i][j] = minimum cost to select j subarrays from first i positions
+    
+    # Initialize DP table
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(n + 1)]
+    
+    # Base case: 0 subarrays cost 0
+    for i in range(n + 1):
+        dp[i][0] = 0
+    
+    # Fill DP table
+    for j in range(1, k + 1):
+        for i in range(n + 1):
+            if dp[i][j - 1] == INF:
+                continue
+                
+            # Try to place next subarray starting at position i + offset
+            for start in range(i, n - x + 1):
+                if start >= i:  # Ensure non-overlapping
+                    next_pos = start + x
+                    if next_pos <= n:
+                        dp[next_pos][j] = min(dp[next_pos][j], 
+                                            dp[i][j - 1] + costs[start])
+    
+    # Find minimum cost for exactly k subarrays
+    min_cost = INF
+    for i in range(n + 1):
+        if dp[i][k] < min_cost:
+            min_cost = dp[i][k]
+    
+    if min_cost == INF:
+        raise ValueError("Invalid input")
+    
+    # Add 1 to the final answer as requested
+    return min_cost + 1

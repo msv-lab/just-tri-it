@@ -1,0 +1,79 @@
+# signature: def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> list[int]
+from typing import List
+
+def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> List[int]:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Calculate cost for each possible subarray of length x
+    costs = []
+    for i in range(n - x + 1):
+        subarray_sum = prefix[i + x] - prefix[i]
+        # The optimal target value for this subarray is the median
+        # But since we need all elements equal, we can choose any target
+        # The minimal operations = sum(|nums[j] - target| for j in range(i, i+x))
+        # The minimal occurs when target is the median
+        
+        # Extract the subarray and sort to find median
+        sub = nums[i:i + x]
+        sub_sorted = sorted(sub)
+        median = sub_sorted[x // 2]
+        
+        # Calculate operations needed
+        operations = 0
+        for num in sub:
+            operations += abs(num - median)
+        
+        costs.append(operations)
+    
+    # Now we need to find all k such that the minimum operations to select k non-overlapping
+    # subarrays equals the given min_operations_for_k_equal_subarrays
+    
+    # k constraints: 1 <= k <= 15 and 2 <= k * x <= n
+    max_k = min(15, n // x)
+    if max_k < 1:
+        return []
+    
+    # Use dynamic programming to find minimum operations for each k
+    # dp[i][j] = min operations using first i positions to get j subarrays
+    m = len(costs)
+    INF = float('inf')
+    
+    # Initialize DP table
+    dp = [[INF] * (max_k + 1) for _ in range(m + 1)]
+    for i in range(m + 1):
+        dp[i][0] = 0
+    
+    # Fill DP table
+    for i in range(1, m + 1):
+        for j in range(1, min(max_k, i) + 1):
+            # Option 1: Don't take current subarray
+            dp[i][j] = min(dp[i][j], dp[i - 1][j])
+            
+            # Option 2: Take current subarray (if we can and it doesn't overlap)
+            if i >= x:
+                prev_idx = i - x
+                if prev_idx >= 0:
+                    dp[i][j] = min(dp[i][j], dp[prev_idx][j - 1] + costs[i - 1])
+    
+    # Find all k where dp[m][k] equals the target
+    result = []
+    for k in range(1, max_k + 1):
+        if k * x <= n and dp[m][k] == min_operations_for_k_equal_subarrays:
+            result.append(k)
+    
+    return result

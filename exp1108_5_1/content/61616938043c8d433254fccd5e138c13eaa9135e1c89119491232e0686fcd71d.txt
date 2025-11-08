@@ -1,0 +1,84 @@
+# signature: def minCost_simp(cost: List[List[int]]) -> int
+from typing import List
+
+def minCost_simp(cost: List[List[int]]) -> int:
+    n = len(cost)
+    
+    # Check constraints
+    if n % 2 != 0 or n < 2 or n > 100000:
+        raise ValueError("Invalid input")
+    
+    for i in range(n):
+        if len(cost[i]) != 3:
+            raise ValueError("Invalid input")
+        for j in range(3):
+            if cost[i][j] < 0 or cost[i][j] > 100000:
+                raise ValueError("Invalid input")
+    
+    # For each pair of symmetric houses (i, n-1-i), we need to choose different colors
+    # Also, adjacent houses cannot have the same color
+    
+    # We'll use dynamic programming where dp[i][c1][c2] represents the minimum cost
+    # for the first i pairs where the left house of current pair has color c1 and 
+    # the right house has color c2. But this would be O(n * 9) which is too slow.
+    
+    # Instead, we can process pairs independently and track the best combinations
+    
+    total_cost = 0
+    
+    for i in range(n // 2):
+        left_idx = i
+        right_idx = n - 1 - i
+        
+        # For this symmetric pair, we need to choose different colors for left and right
+        # Also, the left house cannot have the same color as the previous left house (if any)
+        # and the right house cannot have the same color as the next right house (if any)
+        # But since we're processing sequentially, we'll handle the constraints
+        
+        if i == 0:
+            # First pair - no constraints from previous houses
+            min_cost = float('inf')
+            for c1 in range(3):
+                for c2 in range(3):
+                    if c1 != c2:  # Symmetric houses must have different colors
+                        current_cost = cost[left_idx][c1] + cost[right_idx][c2]
+                        min_cost = min(min_cost, current_cost)
+            total_cost += min_cost
+            left_color, right_color = -1, -1
+            # Store the colors that gave us the minimum cost
+            for c1 in range(3):
+                for c2 in range(3):
+                    if c1 != c2 and cost[left_idx][c1] + cost[right_idx][c2] == min_cost:
+                        left_color, right_color = c1, c2
+                        break
+                if left_color != -1:
+                    break
+        else:
+            # For subsequent pairs, we have constraints from previous pair
+            min_cost = float('inf')
+            best_left_color = -1
+            best_right_color = -1
+            
+            for c1 in range(3):
+                for c2 in range(3):
+                    if c1 != c2:  # Symmetric houses must have different colors
+                        # Left house cannot have same color as previous left house
+                        # Right house cannot have same color as previous right house
+                        if c1 != prev_left_color and c2 != prev_right_color:
+                            current_cost = cost[left_idx][c1] + cost[right_idx][c2]
+                            if current_cost < min_cost:
+                                min_cost = current_cost
+                                best_left_color = c1
+                                best_right_color = c2
+            
+            if min_cost == float('inf'):
+                # No valid coloring found
+                raise ValueError("Invalid input")
+            
+            total_cost += min_cost
+            left_color, right_color = best_left_color, best_right_color
+        
+        prev_left_color = left_color
+        prev_right_color = right_color
+    
+    return total_cost + 1

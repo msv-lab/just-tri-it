@@ -1,0 +1,124 @@
+# signature: def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int
+from typing import List
+
+def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int:
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    if not nums or x < 2 or x > len(nums):
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Function to calculate minimum operations for a given k
+    def min_operations_for_k(k):
+        if k * x > n:
+            return float('inf')
+        
+        # We need to select k disjoint subarrays of length x
+        # Let dp[i][j] = min operations to select j subarrays using first i elements
+        # But this would be O(n^2*k) which is too slow for n=10^5
+        
+        # Instead, we can use a greedy approach with sliding windows
+        # For each possible starting position of k subarrays, calculate the cost
+        
+        # We'll use a different approach: for each possible set of k subarrays,
+        # the cost is sum of costs for individual subarrays
+        
+        # But we need to find the minimum over all possible selections
+        
+        # Let's try a binary search on the maximum allowed cost per subarray?
+        # Actually, let's use dynamic programming with state compression
+        
+        # Since k <= 15, we can use DP with state representing which subarrays we've chosen
+        # But n is too large for this approach
+        
+        # Let's think differently: the problem is about finding k disjoint segments
+        # where we minimize the total cost of making all elements in each segment equal
+        
+        # For a segment [l, r], the minimum operations to make all elements equal
+        # is achieved when we make them all equal to the median
+        # Proof: For odd length, median minimizes sum of absolute deviations
+        # For even length, any value between the two middle values works
+        
+        def segment_cost(l, r):
+            # Cost to make all elements in [l, r] equal
+            length = r - l + 1
+            if length != x:
+                return float('inf')
+            
+            # Sort would be too slow, use quickselect for median
+            # But for now, let's use a simpler approach
+            segment = nums[l:r+1]
+            sorted_segment = sorted(segment)
+            median = sorted_segment[length // 2]
+            cost = 0
+            for num in segment:
+                cost += abs(num - median)
+            return cost
+        
+        # Precompute costs for all possible segments
+        segment_costs = []
+        for i in range(n - x + 1):
+            cost = segment_cost(i, i + x - 1)
+            segment_costs.append((i, cost))
+        
+        # Sort segments by cost
+        segment_costs.sort(key=lambda x: x[1])
+        
+        # Now we need to find k non-overlapping segments with minimum total cost
+        # This is a classic interval scheduling problem with weight = cost
+        
+        # Since k is small, we can use a greedy approach
+        # Try all possible combinations of k segments from the cheapest ones
+        
+        best_cost = float('inf')
+        
+        # We'll try a simpler approach: use the k cheapest non-overlapping segments
+        selected = []
+        total_cost = 0
+        
+        for i, cost_val in segment_costs:
+            start_idx = i
+            end_idx = i + x - 1
+            
+            # Check if this segment overlaps with any selected segment
+            valid = True
+            for sel_start, sel_cost in selected:
+                sel_end = sel_start + x - 1
+                if not (end_idx < sel_start or start_idx > sel_end):
+                    valid = False
+                    break
+            
+            if valid:
+                selected.append((start_idx, cost_val))
+                total_cost += cost_val
+                if len(selected) == k:
+                    best_cost = min(best_cost, total_cost)
+                    break
+        
+        return best_cost if best_cost != float('inf') else float('inf')
+    
+    # Binary search for k
+    left, right = 1, n // x
+    answer = -1
+    
+    while left <= right:
+        mid = (left + right) // 2
+        operations = min_operations_for_k(mid)
+        
+        if operations <= min_operations_for_k_equal_subarrays:
+            answer = mid
+            left = mid + 1
+        else:
+            right = mid - 1
+    
+    if answer == -1 or answer < 1 or answer * x > n:
+        raise ValueError("Invalid input")
+    
+    return answer

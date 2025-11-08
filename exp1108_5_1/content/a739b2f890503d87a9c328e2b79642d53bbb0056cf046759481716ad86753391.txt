@@ -1,0 +1,151 @@
+# signature: def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int
+from typing import List
+import heapq
+
+def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int:
+    # Validate inputs
+    if not nums or x < 2 or x > len(nums) or min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix_sum = [0] * (n + 1)
+    for i in range(n):
+        prefix_sum[i + 1] = prefix_sum[i] + nums[i]
+    
+    # Function to calculate operations needed for a segment [l, r]
+    def segment_operations(l, r):
+        length = r - l + 1
+        if length != x:
+            return float('inf')
+        
+        # Sort the segment to find median
+        segment = nums[l:r + 1]
+        sorted_segment = sorted(segment)
+        
+        # Median for odd length is middle element, for even length use lower median
+        median = sorted_segment[length // 2]
+        
+        # Calculate operations: sum of absolute differences from median
+        operations = 0
+        for num in segment:
+            operations += abs(num - median)
+        
+        return operations
+    
+    # Try all possible k values that satisfy constraints
+    max_possible_k = n // x
+    
+    for k in range(1, max_possible_k + 1):
+        if k * x > n:
+            continue
+            
+        # Use dynamic programming to find minimum operations for exactly k subarrays
+        # dp[i][j] = min operations to cover first i elements with j subarrays
+        dp = [[float('inf')] * (k + 1) for _ in range(n + 1)]
+        dp[0][0] = 0
+        
+        for i in range(n + 1):
+            for j in range(k + 1):
+                if dp[i][j] == float('inf'):
+                    continue
+                
+                # Skip current element
+                if i + 1 <= n:
+                    dp[i + 1][j] = min(dp[i + 1][j], dp[i][j])
+                
+                # Try to form a new subarray starting at i
+                if j < k and i + x <= n:
+                    operations = segment_operations(i, i + x - 1)
+                    if operations != float('inf'):
+                        dp[i + x][j + 1] = min(dp[i + x][j + 1], dp[i][j] + operations)
+        
+        # Check if we found the desired operations count
+        min_ops_for_current_k = float('inf')
+        for i in range(n + 1):
+            min_ops_for_current_k = min(min_ops_for_current_k, dp[i][k])
+        
+        if min_ops_for_current_k == min_operations_for_k_equal_subarrays:
+            return k
+    
+    # If no k found, try a more efficient approach using sliding window
+    # Precompute all possible segment costs
+    segment_costs = []
+    for i in range(n - x + 1):
+        segment = nums[i:i + x]
+        sorted_segment = sorted(segment)
+        median = sorted_segment[x // 2]
+        cost = sum(abs(num - median) for num in segment)
+        segment_costs.append((i, cost))
+    
+    # Sort segments by cost
+    segment_costs.sort(key=lambda x: x[1])
+    
+    # Try different k values
+    for k in range(1, max_possible_k + 1):
+        if k * x > n:
+            continue
+            
+        # Greedy approach: pick k non-overlapping segments with minimum total cost
+        used = [False] * n
+        total_ops = 0
+        segments_used = 0
+        
+        for idx, cost in segment_costs:
+            if segments_used >= k:
+                break
+                
+            # Check if this segment overlaps with any used segment
+            overlap = False
+            for j in range(idx, idx + x):
+                if used[j]:
+                    overlap = True
+                    break
+            
+            if not overlap:
+                # Use this segment
+                for j in range(idx, idx + x):
+                    used[j] = True
+                total_ops += cost
+                segments_used += 1
+        
+        if segments_used == k and total_ops == min_operations_for_k_equal_subarrays:
+            return k
+    
+    # If still not found, return the k that gives the closest operations count
+    best_k = 1
+    min_diff = float('inf')
+    
+    for k in range(1, max_possible_k + 1):
+        if k * x > n:
+            continue
+            
+        # Use greedy approach to estimate
+        used = [False] * n
+        total_ops = 0
+        segments_used = 0
+        
+        for idx, cost in segment_costs:
+            if segments_used >= k:
+                break
+                
+            overlap = False
+            for j in range(idx, idx + x):
+                if used[j]:
+                    overlap = True
+                    break
+            
+            if not overlap:
+                for j in range(idx, idx + x):
+                    used[j] = True
+                total_ops += cost
+                segments_used += 1
+        
+        if segments_used == k:
+            diff = abs(total_ops - min_operations_for_k_equal_subarrays)
+            if diff < min_diff:
+                min_diff = diff
+                best_k = k
+    
+    return best_k

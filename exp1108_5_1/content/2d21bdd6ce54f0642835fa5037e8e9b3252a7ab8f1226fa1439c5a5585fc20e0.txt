@@ -1,0 +1,89 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+import heapq
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    if not nums or x <= 0 or k <= 0 or k * x > len(nums):
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute the cost for making each possible segment of length x have all elements equal to target
+    # The optimal target for a segment is the median of the segment (for absolute differences)
+    
+    # We need to find k non-overlapping segments of length x that minimize total operations
+    
+    # Dynamic programming approach: dp[i][j] = min operations to choose j segments from first i possible segments
+    # But k is small (<=15), so we can use DP with state (position, segments_chosen)
+    
+    # First, compute all possible segments and their cost
+    segments = []
+    for i in range(n - x + 1):
+        segment = nums[i:i+x]
+        # Sort to find median
+        sorted_segment = sorted(segment)
+        median = sorted_segment[x // 2]  # For odd x, this is median; for even, either median works similarly
+        # Calculate cost to make all elements equal to median
+        cost = sum(abs(num - median) for num in segment)
+        segments.append((i, cost))
+    
+    # Now we need to select k non-overlapping segments with minimum total cost
+    # Sort segments by starting index
+    segments.sort()
+    
+    # DP: dp[i][j] = min cost to choose j segments from first i segments
+    # But we need to ensure non-overlapping, so we track the last segment's end
+    
+    # Alternative: use state (index, segments_chosen) where index is the current position in array
+    # But this is O(n*k) which is too large (n=10^5, k=15 -> 1.5M states)
+    
+    # Better: since segments are sorted by start index, we can use binary search to find next non-overlapping segment
+    
+    # Precompute for each segment, the index of next segment that doesn't overlap
+    next_segment = [0] * len(segments)
+    for i in range(len(segments)):
+        start_i, cost_i = segments[i]
+        end_i = start_i + x - 1
+        
+        # Binary search for first segment that starts after end_i
+        left, right = i + 1, len(segments) - 1
+        next_idx = len(segments)
+        while left <= right:
+            mid = (left + right) // 2
+            if segments[mid][0] > end_i:
+                next_idx = mid
+                right = mid - 1
+            else:
+                left = mid + 1
+        next_segment[i] = next_idx
+    
+    # DP with memoization
+    memo = {}
+    
+    def dfs(segment_idx, segments_chosen):
+        if segments_chosen == k:
+            return 0
+        if segment_idx >= len(segments):
+            return float('inf')
+        
+        if (segment_idx, segments_chosen) in memo:
+            return memo[(segment_idx, segments_chosen)]
+        
+        # Option 1: skip current segment
+        skip = dfs(segment_idx + 1, segments_chosen)
+        
+        # Option 2: take current segment
+        take = float('inf')
+        next_idx = next_segment[segment_idx]
+        if next_idx <= len(segments):
+            take = segments[segment_idx][1] + dfs(next_idx, segments_chosen + 1)
+        
+        memo[(segment_idx, segments_chosen)] = min(skip, take)
+        return memo[(segment_idx, segments_chosen)]
+    
+    result = dfs(0, 0)
+    
+    if result == float('inf'):
+        raise ValueError("Invalid input")
+    
+    return result

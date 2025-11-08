@@ -1,0 +1,76 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x > n:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Precompute cost for making each possible subarray of length x have all equal elements
+    # For a subarray starting at i, the optimal target is the median of nums[i:i+x]
+    # Cost = sum(|nums[j] - median| for j in range(i, i+x))
+    
+    # Since x can be large, we need an efficient way to compute median and cost
+    # We'll use a sliding window approach with two heaps (min-heap for right half, max-heap for left half)
+    # But for simplicity and given constraints, we'll use a more straightforward approach
+    
+    # Precompute costs for all possible subarrays
+    costs = [0] * (n - x + 1)
+    for i in range(n - x + 1):
+        # Extract the subarray
+        subarr = nums[i:i+x]
+        # Sort to find median
+        sorted_sub = sorted(subarr)
+        median = sorted_sub[x // 2]
+        # Calculate cost to make all elements equal to median
+        cost = 0
+        for num in subarr:
+            cost += abs(num - median)
+        costs[i] = cost
+    
+    # Now we need to select k non-overlapping subarrays with minimum total cost
+    # Subarrays are non-overlapping, so if we pick subarray at position i, 
+    # we cannot pick any subarray from i-x+1 to i+x-1
+    
+    # Use dynamic programming: dp[i][j] = min cost to select j subarrays from first i positions
+    # But k is small (<=15), so we can use a different approach
+    
+    # We'll use DP where state is (position, count of subarrays chosen)
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(n + 1)]
+    dp[0][0] = 0
+    
+    for i in range(n + 1):
+        for j in range(k + 1):
+            if dp[i][j] == INF:
+                continue
+            
+            # Option 1: Skip current position
+            if i + 1 <= n:
+                dp[i + 1][j] = min(dp[i + 1][j], dp[i][j])
+            
+            # Option 2: Start a subarray at current position (if possible)
+            if j < k and i + x <= n:
+                dp[i + x][j + 1] = min(dp[i + x][j + 1], dp[i][j] + costs[i])
+    
+    result = dp[n][k]
+    if result == INF:
+        # If it's not possible to find k non-overlapping subarrays
+        raise ValueError("Invalid input")
+    
+    return result + 1

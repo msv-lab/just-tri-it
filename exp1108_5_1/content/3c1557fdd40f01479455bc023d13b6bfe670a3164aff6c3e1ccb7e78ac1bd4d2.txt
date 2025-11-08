@@ -1,0 +1,98 @@
+# signature: def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> list[int]
+from typing import List
+
+def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> List[int]:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Calculate cost for each possible subarray of length x
+    # cost[i] = operations needed to make subarray starting at i all equal
+    # The optimal target value for making all elements equal is the median
+    # But for computational efficiency, we'll use a sliding window approach
+    
+    # For each possible starting position of a subarray of length x
+    # We need to find the cost to make all elements equal to some target value
+    # The minimal cost occurs when we choose the median of the subarray
+    
+    def get_median_cost(arr):
+        """Calculate minimal operations to make all elements equal using median"""
+        sorted_arr = sorted(arr)
+        median = sorted_arr[len(arr) // 2]
+        return sum(abs(num - median) for num in arr)
+    
+    # Precompute costs for all possible subarrays of length x
+    costs = []
+    for i in range(n - x + 1):
+        subarray = nums[i:i + x]
+        cost = get_median_cost(subarray)
+        costs.append((i, cost))
+    
+    # Now we need to find all k such that the minimum operations to select k non-overlapping subarrays
+    # equals the given min_operations_for_k_equal_subarrays
+    
+    # Since k is small (1 <= k <= 15), we can use dynamic programming
+    # But we need to find ALL possible k values that satisfy the condition
+    
+    max_k = min(15, n // x)  # Maximum possible k based on constraints
+    
+    # For each possible k, we need to find if there's a selection of k non-overlapping subarrays
+    # with total cost exactly equal to min_operations_for_k_equal_subarrays
+    
+    valid_k = []
+    
+    # For each k from 1 to max_k
+    for k in range(1, max_k + 1):
+        if k * x > n:  # Check constraint
+            continue
+            
+        # Use memoization for DP
+        from functools import lru_cache
+        
+        @lru_cache(maxsize=None)
+        def dp(idx, remaining):
+            """Find minimum operations starting from index idx with remaining subarrays"""
+            if remaining == 0:
+                return 0
+            if idx > n - x:
+                return float('inf')
+            
+            # Option 1: Skip current position
+            skip = dp(idx + 1, remaining)
+            
+            # Option 2: Take subarray starting at idx (if valid)
+            take = float('inf')
+            if idx <= n - x:
+                current_cost = costs[idx][1]
+                next_idx = idx + x  # Non-overlapping
+                if next_idx <= n - x * (remaining - 1):
+                    rest_cost = dp(next_idx, remaining - 1)
+                    if rest_cost != float('inf'):
+                        take = current_cost + rest_cost
+            
+            return min(skip, take)
+        
+        # Find minimum operations for exactly k subarrays
+        min_ops = float('inf')
+        for start in range(n - k * x + 1):
+            result = dp(start, k)
+            min_ops = min(min_ops, result)
+        
+        # Check if we found a valid configuration
+        if min_ops == min_operations_for_k_equal_subarrays:
+            valid_k.append(k)
+    
+    return valid_k

@@ -1,0 +1,98 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    
+    # Validate inputs
+    if n < 2 or len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    
+    for edge in edges:
+        if len(edge) != 3:
+            raise ValueError("Invalid input")
+        u, v, length = edge
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+    
+    if len(nums) != n:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Find root (node 0) and build parent-child relationships
+    parent = [-1] * n
+    depth = [0] * n
+    dist_from_root = [0] * n
+    
+    # BFS to assign parent and depth
+    queue = deque([0])
+    parent[0] = -1
+    depth[0] = 0
+    dist_from_root[0] = 0
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if neighbor != parent[node]:
+                parent[neighbor] = node
+                depth[neighbor] = depth[node] + 1
+                dist_from_root[neighbor] = dist_from_root[node] + length
+                queue.append(neighbor)
+    
+    # DFS to process nodes in depth order
+    max_length = 0
+    min_nodes_for_max_length = float('inf')
+    
+    # Process nodes from deepest to shallowest
+    nodes_by_depth = sorted(range(n), key=lambda x: depth[x], reverse=True)
+    
+    # For each node, store the best paths starting from it
+    # We'll store (path_length, node_count) for paths with unique values
+    node_paths = [{} for _ in range(n)]
+    
+    for node in nodes_by_depth:
+        # Start with the node itself
+        current_paths = {frozenset([nums[node]]): (0, 1)}
+        
+        # Check paths through children
+        for child, edge_length in graph[node]:
+            if child == parent[node]:
+                continue
+            
+            # Merge paths from child
+            for value_set, (child_length, child_nodes) in node_paths[child].items():
+                if nums[node] not in value_set:
+                    new_value_set = value_set | {nums[node]}
+                    total_length = child_length + edge_length
+                    total_nodes = child_nodes + 1
+                    
+                    # Update current paths
+                    if new_value_set not in current_paths:
+                        current_paths[new_value_set] = (total_length, total_nodes)
+                    else:
+                        existing_length, existing_nodes = current_paths[new_value_set]
+                        if total_length > existing_length or (total_length == existing_length and total_nodes < existing_nodes):
+                            current_paths[new_value_set] = (total_length, total_nodes)
+        
+        # Update global maximum
+        for value_set, (path_length, node_count) in current_paths.items():
+            if path_length > max_length:
+                max_length = path_length
+                min_nodes_for_max_length = node_count
+            elif path_length == max_length and node_count < min_nodes_for_max_length:
+                min_nodes_for_max_length = node_count
+        
+        node_paths[node] = current_paths
+    
+    # Handle case where no path with length > 0 was found
+    if max_length == 0:
+        # All single-node paths have length 0
+        min_nodes_for_max_length = 1
+    
+    return [max_length, min_nodes_for_max_length]

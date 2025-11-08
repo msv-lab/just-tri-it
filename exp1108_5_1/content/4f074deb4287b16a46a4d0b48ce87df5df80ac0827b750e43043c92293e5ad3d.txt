@@ -1,0 +1,70 @@
+# signature: def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool
+from typing import List
+
+def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x < 2 or k * x > n:
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # DP table: dp[i][j] = min operations to get j subarrays using first i elements
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(n + 1)]
+    dp[0][0] = 0
+    
+    for i in range(n + 1):
+        for j in range(k + 1):
+            if dp[i][j] == INF:
+                continue
+                
+            # Option 1: Skip current element
+            if i < n:
+                dp[i + 1][j] = min(dp[i + 1][j], dp[i][j])
+            
+            # Option 2: Start a new subarray of size x at position i
+            if j < k and i + x <= n:
+                # Calculate cost to make all elements in subarray [i, i+x-1] equal
+                # Optimal target is median for odd x, or average of two medians for even x
+                subarray = nums[i:i + x]
+                sorted_sub = sorted(subarray)
+                
+                # For minimum operations, we should make all elements equal to median
+                if x % 2 == 1:
+                    median = sorted_sub[x // 2]
+                    cost = sum(abs(num - median) for num in subarray)
+                else:
+                    # For even length, both medians give same total cost
+                    median1 = sorted_sub[x // 2 - 1]
+                    median2 = sorted_sub[x // 2]
+                    cost1 = sum(abs(num - median1) for num in subarray)
+                    cost2 = sum(abs(num - median2) for num in subarray)
+                    cost = min(cost1, cost2)
+                
+                dp[i + x][j + 1] = min(dp[i + x][j + 1], dp[i][j] + cost)
+    
+    # Find minimum operations needed
+    min_ops_needed = INF
+    for i in range(n + 1):
+        min_ops_needed = min(min_ops_needed, dp[i][k])
+    
+    if min_ops_needed == INF:
+        raise ValueError("Invalid input")
+    
+    # Return True if the given value is at least the minimum required
+    return min_operations_for_k_equal_subarrays >= min_ops_needed

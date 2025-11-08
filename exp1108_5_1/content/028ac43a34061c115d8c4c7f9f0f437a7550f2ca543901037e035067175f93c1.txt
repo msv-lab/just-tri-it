@@ -1,0 +1,122 @@
+# signature: def minCost_simp(cost: List[List[int]]) -> int
+from typing import List
+
+def minCost_simp(cost: List[List[int]]) -> int:
+    n = len(cost)
+    if n % 2 != 0:
+        raise ValueError("Invalid input")
+    if n < 2 or n > 100000:
+        raise ValueError("Invalid input")
+    for row in cost:
+        if len(row) != 3:
+            raise ValueError("Invalid input")
+        for val in row:
+            if val < 0 or val > 100000:
+                raise ValueError("Invalid input")
+    
+    # For symmetric positions (i, n-1-i), we need to find the minimum cost
+    # such that colors are different for symmetric pairs and adjacent pairs
+    # Since n is even, we can pair houses (i, n-1-i) for i = 0 to n/2-1
+    
+    # We'll use dynamic programming where dp[i][c1][c2] would be too expensive
+    # Instead, for each symmetric pair (i, j), we consider all color combinations
+    # and track the minimum costs for the first i pairs
+    
+    # Let's process pairs one by one
+    # For the first pair (0, n-1), we have 3*2 = 6 possible color assignments
+    # For subsequent pairs, we need to ensure they don't conflict with previous pair
+    
+    # We'll maintain two states: the minimum cost for the last pair with colors (c1, c2)
+    # But since we have symmetric constraint and adjacent constraint, we need to be careful
+    
+    # Actually, the problem can be simplified:
+    # The constraints mean that for symmetric positions i and n-1-i, they must have different colors
+    # AND for adjacent houses i and i+1, they must have different colors
+    # This creates a circular-like constraint when combined with symmetry
+    
+    # Let's define the problem differently:
+    # We have n houses arranged in a line with two constraints:
+    # 1. Adjacent houses have different colors
+    # 2. Symmetric houses (i and n-1-i) have different colors
+    
+    # Since n is even, we can think of the houses as forming a circular chain
+    # with additional cross constraints between symmetric positions
+    
+    # We'll use a DP approach that processes houses in order
+    # and tracks the colors of the last two houses (due to adjacent constraint)
+    # and also ensures symmetric constraints are satisfied
+    
+    # Initialize DP table
+    # dp[i][c1][c2] = min cost for first i+1 houses where:
+    # - house i has color c1
+    # - house i+1 has color c2 (if applicable)
+    # But we also need to track symmetric house colors
+    
+    # Alternative approach: since constraints are complex, we can use state compression
+    # For each position i, we need to track color of house i and house n-1-i
+    # But this would be O(n * 3^4) which is too expensive for n=10^5
+    
+    # Let me think about the problem structure:
+    # The constraints create a bipartite graph-like structure
+    # We can split houses into two groups: first half and second half
+    # Each house in first half is connected to its symmetric house in second half
+    # and to its adjacent houses
+    
+    # Actually, for n=4: houses 0,1,2,3
+    # Constraints: 
+    # 0≠1, 1≠2, 2≠3 (adjacent)
+    # 0≠3, 1≠2 (symmetric)
+    
+    # This is equivalent to a circular arrangement with cross constraints
+    
+    # Since the problem is complex and the constraints are tight,
+    # I'll implement a simplified version that handles the core logic
+    # but may not be optimal for the largest constraints
+    
+    # For the purpose of this implementation, I'll use a DP that processes
+    # pairs of symmetric houses and tracks the last used colors
+    
+    if n == 0:
+        return 0
+    
+    # Precompute all valid color pairs for symmetric positions
+    # For positions i and n-1-i, they must have different colors
+    valid_pairs = []
+    for c1 in range(3):
+        for c2 in range(3):
+            if c1 != c2:
+                valid_pairs.append((c1, c2))
+    
+    # Initialize DP for the first symmetric pair
+    dp = {}
+    for c1, c2 in valid_pairs:
+        total_cost = cost[0][c1] + cost[n-1][c2]
+        dp[(c1, c2)] = total_cost
+    
+    # Process remaining symmetric pairs
+    for i in range(1, n//2):
+        new_dp = {}
+        for prev_c1, prev_c2 in dp:
+            for curr_c1, curr_c2 in valid_pairs:
+                # Check adjacent constraints:
+                # House i-1 and house i must have different colors
+                if prev_c1 == curr_c1:
+                    continue
+                # House n-i and house n-i-1 must have different colors  
+                if prev_c2 == curr_c2:
+                    continue
+                # Also, for the middle pair when n is even, we need to ensure
+                # they don't have the same color if they're adjacent
+                if i == n//2 - 1 and curr_c1 == curr_c2:
+                    continue
+                
+                total_cost = dp[(prev_c1, prev_c2)] + cost[i][curr_c1] + cost[n-1-i][curr_c2]
+                key = (curr_c1, curr_c2)
+                if key not in new_dp or total_cost < new_dp[key]:
+                    new_dp[key] = total_cost
+        
+        if not new_dp:
+            raise ValueError("No valid coloring exists")
+        dp = new_dp
+    
+    return min(dp.values())

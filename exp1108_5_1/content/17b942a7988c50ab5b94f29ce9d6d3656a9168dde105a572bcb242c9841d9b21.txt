@@ -1,0 +1,94 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+# test name: test_maximum_constraints
+def test_maximum_constraints():
+    """Test with maximum n=100000 to ensure performance"""
+    n = 100000
+    cost = [[1, 2, 3] for _ in range(n)]
+    result = minCost(n, cost)
+    # All houses have same cost pattern, but must satisfy symmetry constraints
+    # Minimum should be achievable with alternating pattern
+    assert result == n * 2  # Using colors 1 and 2 alternately
+
+def test_extreme_cost_values():
+    """Test with maximum allowed cost values"""
+    n = 4
+    cost = [
+        [100000, 0, 100000],
+        [100000, 100000, 0],
+        [0, 100000, 100000],
+        [100000, 0, 100000]
+    ]
+    result = minCost(n, cost)
+    # Optimal: [2, 3, 1, 2] = 0 + 0 + 0 + 0 = 0
+    # But houses 0 and 3 both want color 2, which violates symmetry
+    # Next best: [2, 3, 1, 1] = 0 + 0 + 0 + 100000 = 100000
+    assert result == 100000
+
+def test_all_zero_costs():
+    """Test where all costs are zero"""
+    n = 4
+    cost = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]]
+    result = minCost(n, cost)
+    # Any valid coloring works, all have cost 0
+    assert result == 0
+
+def test_forced_pattern_by_symmetry():
+    """Test where symmetry forces a specific pattern regardless of costs"""
+    n = 4
+    cost = [
+        [1, 100, 100],  # House 0: prefers color 1
+        [100, 1, 100],  # House 1: prefers color 2
+        [100, 100, 1],  # House 2: prefers color 3
+        [1, 100, 100]   # House 3: prefers color 1 (same as house 0)
+    ]
+    result = minCost(n, cost)
+    # Houses 0 and 3 cannot both use color 1 due to symmetry
+    # Optimal: [1, 2, 3, 2] = 1 + 1 + 1 + 100 = 103
+    # Or [2, 1, 2, 3] = 100 + 100 + 100 + 100 = 400
+    assert result == 103
+
+def test_non_greedy_optimal():
+    """Test where greedy choice leads to suboptimal solution"""
+    n = 4
+    cost = [
+        [1, 10, 100],   # Greedy: color 1 (cost 1)
+        [10, 100, 1],   # Greedy: color 3 (cost 1)
+        [100, 1, 10],   # Greedy: color 2 (cost 1)
+        [10, 100, 1]    # Greedy: color 3 (cost 1)
+    ]
+    result = minCost(n, cost)
+    # Greedy would choose [1, 3, 2, 3] = 1 + 1 + 1 + 1 = 4
+    # But houses 1 and 2 are symmetric and both use cheapest colors
+    # Actually valid: [1, 3, 2, 1] = 1 + 1 + 1 + 10 = 13
+    # Or [2, 3, 1, 2] = 10 + 1 + 100 + 100 = 211
+    # The greedy solution [1, 3, 2, 3] is actually valid and optimal
+    assert result == 4
+
+def test_alternating_cost_pattern():
+    """Test with strongly alternating cost patterns"""
+    n = 6
+    cost = [
+        [1, 100, 100],  # Prefers color 1
+        [100, 1, 100],  # Prefers color 2
+        [100, 100, 1],  # Prefers color 3
+        [1, 100, 100],  # Prefers color 1
+        [100, 1, 100],  # Prefers color 2
+        [100, 100, 1]   # Prefers color 3
+    ]
+    result = minCost(n, cost)
+    # Symmetric pairs: (0,5), (1,4), (2,3)
+    # Each symmetric pair must use different colors
+    # Optimal: [1, 2, 3, 2, 1, 3] = 1 + 1 + 1 + 100 + 100 + 1 = 204
+    assert result == 204
+
+def test_minimal_cost_with_constraints():
+    """Test minimal n=2 with challenging cost structure"""
+    n = 2
+    cost = [
+        [1, 100, 100],  # Strongly prefers color 1
+        [1, 100, 100]   # Strongly prefers color 1 (but can't use same color)
+    ]
+    result = minCost(n, cost)
+    # Must use different colors for symmetric houses
+    # Options: [1,2]=1+100=101, [1,3]=1+100=101, [2,1]=100+1=101, [2,3]=100+100=200, etc.
+    assert result == 101

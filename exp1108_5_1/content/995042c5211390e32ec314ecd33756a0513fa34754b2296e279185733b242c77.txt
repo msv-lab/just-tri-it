@@ -1,0 +1,105 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2 or len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Build tree structure with parent-child relationships (root at 0)
+    tree = defaultdict(list)
+    parent = [-1] * n
+    dist_from_root = [0] * n
+    
+    stack = [(0, -1, 0)]  # (node, parent, distance)
+    while stack:
+        node, par, dist = stack.pop()
+        parent[node] = par
+        dist_from_root[node] = dist
+        for neighbor, length in graph[node]:
+            if neighbor != par:
+                tree[node].append((neighbor, length))
+                stack.append((neighbor, node, dist + length))
+    
+    # Global variables to track results
+    max_length = 0
+    min_nodes_for_max = float('inf')
+    
+    def dfs(node, path_values, path_lengths):
+        nonlocal max_length, min_nodes_for_max
+        
+        current_value = nums[node]
+        
+        # Check if current value already exists in path
+        if current_value in path_values:
+            # Can't extend path with this value, but the path up to parent is valid
+            # Update global results if needed
+            if path_lengths:
+                last_length = path_lengths[-1][1]
+                if last_length > max_length:
+                    max_length = last_length
+                    min_nodes_for_max = path_lengths[-1][2]
+                elif last_length == max_length:
+                    min_nodes_for_max = min(min_nodes_for_max, path_lengths[-1][2])
+            return
+        
+        # Add current node to path
+        path_values.add(current_value)
+        
+        # Calculate path info for current position
+        if not path_lengths:
+            # Starting path
+            path_lengths.append((node, 0, 1))  # (end_node, total_length, node_count)
+        else:
+            last_end, last_length, last_nodes = path_lengths[-1]
+            parent_node = parent[node]
+            
+            # Find edge length from parent to current node
+            edge_length = 0
+            for child, length in tree[parent_node]:
+                if child == node:
+                    edge_length = length
+                    break
+            
+            current_length = last_length + edge_length
+            current_nodes = last_nodes + 1
+            
+            path_lengths.append((node, current_length, current_nodes))
+            
+            # Update global results
+            if current_length > max_length:
+                max_length = current_length
+                min_nodes_for_max = current_nodes
+            elif current_length == max_length:
+                min_nodes_for_max = min(min_nodes_for_max, current_nodes)
+        
+        # Recursively process children
+        for child, _ in tree[node]:
+            dfs(child, path_values, path_lengths)
+        
+        # Backtrack
+        path_values.remove(current_value)
+        if len(path_lengths) > 1:  # Keep the root if it's the only one
+            path_lengths.pop()
+    
+    # Handle single node paths (paths that start and end at the same node)
+    for i in range(n):
+        if 0 > max_length:
+            max_length = 0
+            min_nodes_for_max = 1
+        elif 0 == max_length:
+            min_nodes_for_max = min(min_nodes_for_max, 1)
+    
+    # Start DFS from root
+    dfs(0, set(), [])
+    
+    return [max_length, min_nodes_for_max]

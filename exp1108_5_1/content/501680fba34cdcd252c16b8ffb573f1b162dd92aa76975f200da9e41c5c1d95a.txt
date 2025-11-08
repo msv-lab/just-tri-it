@@ -1,0 +1,100 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2 or len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Build tree structure with parent-child relationships (root at 0)
+    tree = defaultdict(list)
+    parent = [-1] * n
+    edge_length = [0] * n  # edge_length[i] = length from parent to i
+    
+    # BFS to build tree from root 0
+    visited = [False] * n
+    queue = deque([0])
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                edge_length[neighbor] = length
+                tree[node].append(neighbor)
+                queue.append(neighbor)
+    
+    # DFS to compute longest special paths
+    result_length = 0
+    result_nodes = float('inf')
+    
+    def dfs(node, path_values, path_lengths):
+        nonlocal result_length, result_nodes
+        
+        current_value = nums[node]
+        if current_value in path_values:
+            # Can't extend path with duplicate value
+            path_len = 0
+            node_count = 1
+            if path_len > result_length:
+                result_length = path_len
+                result_nodes = node_count
+            elif path_len == result_length:
+                result_nodes = min(result_nodes, node_count)
+            return
+        
+        # Add current node to path
+        path_values.add(current_value)
+        
+        # Calculate path info for current path ending at this node
+        if len(path_values) > 1:  # Path has at least 2 nodes
+            # Find the total length and node count for this path
+            total_length = 0
+            node_count = len(path_values)
+            
+            # We need to find the length from the deepest node to current node
+            # Since we're doing DFS, we can track the path lengths
+            if len(path_lengths) > 0:
+                total_length = path_lengths[-1]
+            
+            if total_length > result_length:
+                result_length = total_length
+                result_nodes = node_count
+            elif total_length == result_length:
+                result_nodes = min(result_nodes, node_count)
+        else:
+            # Single node path
+            if 0 > result_length:
+                result_length = 0
+                result_nodes = 1
+            elif 0 == result_length:
+                result_nodes = min(result_nodes, 1)
+        
+        # Explore children
+        for child in tree[node]:
+            new_length = path_lengths[-1] + edge_length[child] if path_lengths else edge_length[child]
+            dfs(child, path_values, path_lengths + [new_length])
+        
+        # Backtrack
+        path_values.remove(current_value)
+    
+    # Start DFS from root
+    dfs(0, set(), [])
+    
+    # Handle case where no path was found (shouldn't happen per constraints)
+    if result_length == 0 and result_nodes == float('inf'):
+        result_nodes = 1
+    
+    # Append 1 to the result as requested
+    return [result_length + 1, result_nodes + 1]

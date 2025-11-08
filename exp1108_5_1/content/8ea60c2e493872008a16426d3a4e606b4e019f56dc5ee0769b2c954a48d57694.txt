@@ -1,0 +1,72 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+import heapq
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    # Check for invalid inputs
+    if not (2 <= len(nums) <= 10**5):
+        raise ValueError("Invalid input")
+    if not (2 <= x <= len(nums)):
+        raise ValueError("Invalid input")
+    if not (1 <= k <= 15):
+        raise ValueError("Invalid input")
+    if not (2 <= k * x <= len(nums)):
+        raise ValueError("Invalid input")
+    for num in nums:
+        if not (-10**6 <= num <= 10**6):
+            raise ValueError("Invalid input")
+    
+    n = len(nums)
+    # We need to select k non-overlapping subarrays of size x
+    # The idea is to find the best possible subarrays where making all elements equal requires minimal operations
+    
+    # Precompute all possible subarrays of size x and their cost to make all elements equal
+    subarrays = []
+    for i in range(n - x + 1):
+        sub = nums[i:i+x]
+        # The minimal operations is to make all elements equal to the median (for even x, either median works)
+        sub_sorted = sorted(sub)
+        median = sub_sorted[x // 2]
+        cost = sum(abs(num - median) for num in sub)
+        subarrays.append((i, i+x-1, cost, median))
+    
+    # Now, we need to select k non-overlapping subarrays with minimal total cost
+    # This is a classic interval scheduling problem with the goal of minimal total cost
+    
+    # We will use a dynamic programming approach with memoization
+    # dp[i][j] represents the minimal cost to select j non-overlapping subarrays up to index i
+    
+    # Initialize DP table
+    m = len(subarrays)
+    # To optimize, we can process subarrays in order and keep track of the best k costs
+    
+    # Sort the subarrays by their end index
+    subarrays.sort(key=lambda s: s[1])
+    
+    # We will use a list to keep track of the best k costs up to each subarray
+    # Initialize a list of dictionaries or a DP table
+    # We can use a list where each element is a list of the minimal k costs up to that subarray
+    
+    # Initialize a list to store the best k costs for each step
+    # We'll use a min-heap to keep track of the best k costs, but it's more complex
+    
+    # Alternative approach: use dynamic programming with memoization for k steps
+    # Initialize a DP array where dp[j] represents the minimal cost to select j subarrays
+    dp = [float('inf')] * (k + 1)
+    dp[0] = 0  # 0 cost to select 0 subarrays
+    
+    # We'll also keep track of the last end index for each j in dp
+    last_end = [-1] * (k + 1)
+    
+    for start, end, cost, median in subarrays:
+        # We need to update dp in reverse order to avoid overwriting
+        for j in range(k, 0, -1):
+            if last_end[j-1] < start:
+                if dp[j] > dp[j-1] + cost:
+                    dp[j] = dp[j-1] + cost
+                    last_end[j] = end
+    
+    if dp[k] == float('inf'):
+        raise ValueError("No solution found")
+    
+    return dp[k]

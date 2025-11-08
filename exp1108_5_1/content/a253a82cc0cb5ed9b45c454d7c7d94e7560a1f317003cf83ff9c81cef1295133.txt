@@ -1,0 +1,108 @@
+# signature: def postcondition(edges: List[List[int]], nums: List[int], longest_special_path_info: List[int]) -> bool
+from typing import List
+from collections import defaultdict, deque
+
+def postcondition(edges: List[List[int]], nums: List[int], longest_special_path_info: List[int]) -> bool:
+    n = len(nums)
+    
+    # Validate input constraints
+    if n < 2 or n > 50000:
+        raise ValueError("Invalid input")
+    if len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    if len(longest_special_path_info) != 2:
+        raise ValueError("Invalid input")
+    
+    # Build the tree
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length < 1 or length > 1000:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Validate nums
+    if any(num < 0 or num > 50000 for num in nums):
+        raise ValueError("Invalid input")
+    
+    # Build parent-child relationships (root at 0)
+    parent = [-1] * n
+    depth = [0] * n
+    dist_from_root = [0] * n
+    
+    # BFS to build tree structure
+    queue = deque([0])
+    visited = [False] * n
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                depth[neighbor] = depth[node] + 1
+                dist_from_root[neighbor] = dist_from_root[node] + length
+                queue.append(neighbor)
+    
+    # Find actual longest special path info
+    max_length = 0
+    min_nodes_for_max = float('inf')
+    
+    # For each node as potential starting point of path
+    for i in range(n):
+        # DFS from node i to find all downward paths with unique values
+        stack = [(i, 0, set())]  # (current_node, current_length, visited_values)
+        
+        while stack:
+            node, path_length, visited_vals = stack.pop()
+            
+            # Check if current node's value is unique in path
+            if nums[node] in visited_vals:
+                continue
+            
+            # Update path info
+            new_visited = visited_vals | {nums[node]}
+            
+            # Check if this is a valid special path
+            if len(new_visited) >= 1:  # At least one node
+                # Calculate path length from i to current node
+                if node == i:
+                    current_path_length = 0
+                else:
+                    # Use LCA to find path length
+                    current_path_length = dist_from_root[i] + dist_from_root[node] - 2 * dist_from_root[find_lca(i, node, parent, depth)]
+                
+                # Update max_length and min_nodes_for_max
+                if current_path_length > max_length:
+                    max_length = current_path_length
+                    min_nodes_for_max = len(new_visited)
+                elif current_path_length == max_length:
+                    min_nodes_for_max = min(min_nodes_for_max, len(new_visited))
+            
+            # Continue DFS to children
+            for neighbor, length in graph[node]:
+                if neighbor != parent[node]:  # Go downward only
+                    stack.append((neighbor, path_length + length, new_visited))
+    
+    # Check if the provided info matches the actual computed info
+    provided_length = longest_special_path_info[0]
+    provided_min_nodes = longest_special_path_info[1]
+    
+    return provided_length == max_length and provided_min_nodes == min_nodes_for_max
+
+def find_lca(u: int, v: int, parent: List[int], depth: List[int]) -> int:
+    # Make u the deeper node
+    if depth[u] < depth[v]:
+        u, v = v, u
+    
+    # Lift u to same depth as v
+    while depth[u] > depth[v]:
+        u = parent[u]
+    
+    # Find LCA
+    while u != v:
+        u = parent[u]
+        v = parent[v]
+    
+    return u

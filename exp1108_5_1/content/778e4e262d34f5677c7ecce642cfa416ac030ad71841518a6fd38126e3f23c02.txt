@@ -1,0 +1,95 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x > n:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Precompute the cost to make a subarray of length x have all elements equal to target
+    # The optimal target is the median of the subarray for minimum operations
+    def cost_for_subarray(start, target):
+        # Operations needed = sum(|nums[i] - target| for i in range(start, start + x))
+        # We can compute this efficiently using prefix sums
+        total = 0
+        for i in range(start, start + x):
+            total += abs(nums[i] - target)
+        return total
+    
+    # Alternative: precompute all possible subarray costs with their optimal targets
+    # Since k is small (<=15), we can use dynamic programming
+    # dp[i][j] = min operations to have j valid subarrays considering first i subarray positions
+    
+    # First, find all possible starting positions for subarrays
+    starts = list(range(n - x + 1))
+    
+    # Precompute cost for each subarray with its optimal target (median)
+    subarray_costs = []
+    for start in starts:
+        sub = nums[start:start + x]
+        sub_sorted = sorted(sub)
+        median = sub_sorted[x // 2]  # median minimizes absolute deviations
+        cost = sum(abs(num - median) for num in sub)
+        subarray_costs.append((start, cost, median))
+    
+    # Now we need to select k non-overlapping subarrays with minimum total cost
+    # Use DP: dp[i][j] = min cost to select j subarrays from first i subarrays (by start index)
+    # But we need to ensure non-overlapping
+    
+    m = len(starts)
+    INF = float('inf')
+    
+    # Sort subarrays by start position
+    subarray_costs.sort(key=lambda sc: sc[0])
+    
+    # For DP, we need to track the minimum cost for j subarrays ending at or before position i
+    # Let dp[i][j] = min cost using j subarrays with last subarray ending at or before starts[i] + x - 1
+    
+    # Alternative approach: track the next available start after using a subarray
+    # We'll use memoization with (index, remaining_k, last_end)
+    
+    memo = {}
+    
+    def dfs(idx, remaining, last_end):
+        if remaining == 0:
+            return 0
+        if idx >= m:
+            return INF
+        
+        key = (idx, remaining, last_end)
+        if key in memo:
+            return memo[key]
+        
+        # Option 1: skip current subarray
+        skip = dfs(idx + 1, remaining, last_end)
+        
+        # Option 2: take current subarray if it doesn't overlap with last used subarray
+        start, cost, _ = subarray_costs[idx]
+        take = INF
+        if start >= last_end:
+            take = cost + dfs(idx + 1, remaining - 1, start + x)
+        
+        memo[key] = min(skip, take)
+        return memo[key]
+    
+    result = dfs(0, k, 0)
+    
+    if result == INF:
+        raise ValueError("Invalid input")
+    
+    return int(result)

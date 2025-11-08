@@ -1,0 +1,102 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+import heapq
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Input validation
+    if not (2 <= n <= 10**5):
+        raise ValueError("Invalid input")
+    if not all(-10**6 <= num <= 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if not (2 <= x <= n):
+        raise ValueError("Invalid input")
+    if not (1 <= k <= 15):
+        raise ValueError("Invalid input")
+    if not (2 <= k * x <= n):
+        raise ValueError("Invalid input")
+    
+    # Precompute the cost for each possible subarray of length x
+    # For a subarray starting at index i, we want to make all elements equal
+    # The optimal target is the median of the subarray
+    costs = []
+    
+    for i in range(n - x + 1):
+        subarray = nums[i:i + x]
+        # Find the median efficiently using quickselect or sorting
+        sorted_sub = sorted(subarray)
+        median = sorted_sub[x // 2]
+        
+        # Calculate cost to make all elements equal to median
+        cost = sum(abs(num - median) for num in subarray)
+        costs.append((cost, i))
+    
+    # We need to select k non-overlapping subarrays
+    # Subarrays starting at i and j overlap if |i - j| < x
+    
+    # Use dynamic programming: dp[i][mask] = min cost using subarrays starting at positions
+    # represented by mask, with the last subarray ending before position i
+    # But k is small (<=15), so we can use state-space search
+    
+    # Alternative approach: use DP with state (position, count)
+    # But this is O(n^2) which is too slow for n=10^5
+    
+    # Better approach: use interval scheduling with DP
+    # Sort subarrays by end position and use DP
+    
+    intervals = []
+    for i, (cost, start) in enumerate(costs):
+        end = start + x - 1
+        intervals.append((start, end, cost, i))
+    
+    # Sort intervals by end position
+    intervals.sort(key=lambda interval: interval[1])
+    
+    # Precompute for each interval, the rightmost non-overlapping interval
+    prev = [-1] * len(intervals)
+    for i in range(len(intervals)):
+        current_start = intervals[i][0]
+        # Binary search to find the rightmost interval that ends before current_start
+        left, right = 0, i - 1
+        while left <= right:
+            mid = (left + right) // 2
+            if intervals[mid][1] < current_start:
+                prev[i] = mid
+                left = mid + 1
+            else:
+                right = mid - 1
+    
+    # DP[i][j] = minimum cost to select j intervals from first i intervals
+    # But this would be O(n*k) which is 10^5 * 15 = 1.5M, acceptable
+    
+    m = len(intervals)
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(m + 1)]
+    
+    # Base case: 0 intervals selected has cost 0
+    for i in range(m + 1):
+        dp[i][0] = 0
+    
+    for i in range(1, m + 1):
+        current_cost = intervals[i-1][2]
+        prev_idx = prev[i-1]  # index in intervals array (0-based)
+        
+        for j in range(1, k + 1):
+            # Option 1: don't take current interval
+            dp[i][j] = min(dp[i][j], dp[i-1][j])
+            
+            # Option 2: take current interval
+            if prev_idx == -1:
+                # Can only take this if we're selecting exactly 1 interval
+                if j == 1:
+                    dp[i][j] = min(dp[i][j], current_cost)
+            else:
+                dp[i][j] = min(dp[i][j], dp[prev_idx + 1][j-1] + current_cost)
+    
+    result = dp[m][k]
+    
+    if result == INF:
+        raise ValueError("Invalid input")
+    
+    return int(result)

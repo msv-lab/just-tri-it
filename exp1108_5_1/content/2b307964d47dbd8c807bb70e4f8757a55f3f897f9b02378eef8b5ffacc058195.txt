@@ -1,0 +1,51 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+from typing import List
+
+def minCost(n: int, cost: List[List[int]]) -> int:
+    if n % 2 != 0 or n < 2:
+        raise ValueError("Invalid input")
+    if len(cost) != n or any(len(house) != 3 for house in cost):
+        raise ValueError("Invalid input")
+    
+    # Pair the houses that are equidistant from the ends
+    pairs = []
+    for i in range(n // 2):
+        j = n - 1 - i
+        pairs.append((i, j))
+    
+    # Precompute the possible color combinations for each pair
+    # For each pair (i, j), we need to choose colors c_i and c_j such that c_i != c_j
+    # We will store the minimal cost for each possible color combination for the current pair
+    # Initialize the DP for the first pair
+    if not pairs:
+        return 0
+    
+    # Initialize DP for the first pair
+    first_i, first_j = pairs[0]
+    dp = {}
+    for c_i in range(3):
+        for c_j in range(3):
+            if c_i != c_j:
+                dp[(c_i, c_j)] = cost[first_i][c_i] + cost[first_j][c_j]
+    
+    # Iterate over the remaining pairs
+    for idx in range(1, len(pairs)):
+        i, j = pairs[idx]
+        new_dp = {}
+        # Iterate over all possible color combinations for the current pair
+        for c_i in range(3):
+            for c_j in range(3):
+                if c_i != c_j:
+                    # For each possible previous color combination, ensure no adjacent same colors
+                    min_prev = float('inf')
+                    for (prev_c_i, prev_c_j), prev_cost in dp.items():
+                        if prev_c_i != c_i and prev_c_j != c_j:
+                            if prev_cost < min_prev:
+                                min_prev = prev_cost
+                    if min_prev != float('inf'):
+                        new_dp[(c_i, c_j)] = min_prev + cost[i][c_i] + cost[j][c_j]
+        if not new_dp:
+            raise ValueError("No valid coloring possible")
+        dp = new_dp
+    
+    return min(dp.values())

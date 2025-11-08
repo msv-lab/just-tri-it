@@ -1,0 +1,66 @@
+# signature: def minCost_simp(cost: List[List[int]]) -> int
+from typing import List
+
+def minCost_simp(cost: List[List[int]]) -> int:
+    n = len(cost)
+    if n % 2 != 0:
+        raise ValueError("Invalid input")
+    if n < 2 or n > 100000:
+        raise ValueError("Invalid input")
+    for row in cost:
+        if len(row) != 3:
+            raise ValueError("Invalid input")
+        for c in row:
+            if c < 0 or c > 100000:
+                raise ValueError("Invalid input")
+    
+    # For symmetric positions: i and n-1-i
+    # We need to assign colors such that:
+    # 1. adjacent houses have different colors
+    # 2. symmetric houses have different colors
+    
+    # Since n is even, we can think of the houses as forming pairs (i, n-1-i)
+    # For each pair, we need to assign colors that are different from each other
+    # and also different from their neighbors
+    
+    # We'll use dynamic programming where dp[i][c1][c2] represents the minimum cost
+    # for the first i pairs where the i-th pair has colors c1 and c2
+    # However, this would be O(n * 3^4) which is too slow for n up to 10^5
+    
+    # Alternative approach: since we only have 3 colors, we can precompute
+    # the cost for each possible color assignment for each pair
+    
+    # For each pair (i, n-1-i), we have 3 * 3 = 9 possible color assignments
+    # We need to ensure that consecutive pairs have different colors
+    
+    # Let's create a list of pairs
+    pairs = []
+    for i in range(n // 2):
+        pairs.append((cost[i], cost[n-1-i]))
+    
+    # dp[i][c1][c2] = min cost for first i+1 pairs where the i-th pair has colors c1, c2
+    # But we can optimize by only storing the best 3*3 states for each pair
+    
+    # Initialize DP for the first pair
+    dp = {}
+    for c1 in range(3):
+        for c2 in range(3):
+            if c1 != c2:  # Symmetric houses must have different colors
+                dp[(c1, c2)] = pairs[0][0][c1] + pairs[0][1][c2]
+    
+    # Process remaining pairs
+    for i in range(1, len(pairs)):
+        new_dp = {}
+        for prev_c1, prev_c2 in dp:
+            for curr_c1 in range(3):
+                for curr_c2 in range(3):
+                    if curr_c1 != curr_c2:  # Symmetric constraint
+                        if curr_c1 != prev_c1:  # Adjacent constraint (left side)
+                            if curr_c2 != prev_c2:  # Adjacent constraint (right side)
+                                cost_here = pairs[i][0][curr_c1] + pairs[i][1][curr_c2]
+                                total_cost = dp[(prev_c1, prev_c2)] + cost_here
+                                if (curr_c1, curr_c2) not in new_dp or total_cost < new_dp[(curr_c1, curr_c2)]:
+                                    new_dp[(curr_c1, curr_c2)] = total_cost
+        dp = new_dp
+    
+    return min(dp.values()) if dp else 0

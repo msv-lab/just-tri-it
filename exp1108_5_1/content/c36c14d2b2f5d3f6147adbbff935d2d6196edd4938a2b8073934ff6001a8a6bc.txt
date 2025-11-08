@@ -1,0 +1,11 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+# test name: test_extreme_k_small_x_large_array
+def test_extreme_k_small_x_large_array():
+    nums = list(range(100))
+    x = 2
+    k = 15  # Large k but within constraints
+    result = minOperations(nums, x, k)
+    # Should find 15 non-overlapping pairs and minimize total operations
+    # The optimal strategy is to use consecutive pairs and make each pair equal to their average
+    assert result >= 0
+    assert result <= 15  # Maximum cost per pair is 1 when values differ by 1

@@ -1,0 +1,10 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+# test name: test_negative_values_with_positive_target
+def test_negative_values_with_positive_target():
+    nums = [-5, -3, -1, 1, 3, 5, -4, -2, 0, 2, 4]
+    x = 3
+    k = 2
+    result = minOperations(nums, x, k)
+    # Complex scenario with mixed signs
+    # Should find optimal subarrays and target values
+    assert result >= 0

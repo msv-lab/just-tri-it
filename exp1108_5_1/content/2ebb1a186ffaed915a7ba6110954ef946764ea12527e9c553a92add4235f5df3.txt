@@ -1,0 +1,82 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+import heapq
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x > n:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    
+    # Precompute the cost for making each possible subarray of length x have all equal elements
+    # For a subarray starting at index i, the optimal target value is the median of nums[i:i+x]
+    # This minimizes the sum of absolute differences
+    
+    # We'll use sliding window median to efficiently compute costs
+    costs = []
+    
+    # Helper function to compute cost for a window to have all elements equal to median
+    def compute_cost(window):
+        sorted_window = sorted(window)
+        median = sorted_window[len(window) // 2]
+        return sum(abs(num - median) for num in window)
+    
+    # Compute costs for all possible subarrays of length x
+    for i in range(n - x + 1):
+        window = nums[i:i + x]
+        cost = compute_cost(window)
+        costs.append((cost, i))
+    
+    # We need to select k non-overlapping subarrays
+    # This is a dynamic programming problem where dp[i][j] = min operations using first i windows to get j subarrays
+    
+    # Sort windows by starting index for DP
+    windows = [(start, cost) for cost, start in costs]
+    windows.sort()
+    
+    m = len(windows)
+    
+    # DP[i][j] = minimum cost to select j subarrays from first i windows
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(m + 1)]
+    dp[0][0] = 0
+    
+    for i in range(1, m + 1):
+        start_i, cost_i = windows[i - 1]
+        end_i = start_i + x - 1
+        
+        for j in range(k + 1):
+            # Option 1: don't take current window
+            dp[i][j] = min(dp[i][j], dp[i - 1][j])
+            
+            # Option 2: take current window (if we can)
+            if j > 0:
+                # Find the last window that doesn't overlap with current window
+                prev_idx = i - 1
+                while prev_idx > 0:
+                    start_prev, _ = windows[prev_idx - 1]
+                    end_prev = start_prev + x - 1
+                    if end_prev < start_i:  # No overlap
+                        dp[i][j] = min(dp[i][j], dp[prev_idx][j - 1] + cost_i)
+                        break
+                    prev_idx -= 1
+                else:
+                    # No previous non-overlapping window found
+                    if j == 1:
+                        dp[i][j] = min(dp[i][j], cost_i)
+    
+    result = dp[m][k]
+    
+    if result == INF:
+        raise ValueError("Invalid input")
+    
+    return int(result)

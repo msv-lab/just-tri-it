@@ -1,0 +1,74 @@
+# signature: def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int
+from typing import List
+import math
+
+def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int:
+    if not nums or x < 2 or x > len(nums):
+        raise ValueError("Invalid input")
+    
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Function to calculate minimum operations for k subarrays
+    def calculate_min_operations(k):
+        if k * x > n or k < 1:
+            return float('inf')
+        
+        # DP table: dp[i][j] = min operations for first i elements to form j subarrays
+        dp = [[float('inf')] * (k + 1) for _ in range(n + 1)]
+        dp[0][0] = 0
+        
+        for i in range(1, n + 1):
+            dp[i][0] = 0
+            for j in range(1, min(k, i // x) + 1):
+                # Option 1: Don't use current element in a subarray
+                dp[i][j] = min(dp[i][j], dp[i - 1][j])
+                
+                # Option 2: Use current element as the end of j-th subarray
+                if i >= x:
+                    # Calculate operations needed for subarray ending at i
+                    start = i - x
+                    subarray_sum = prefix[i] - prefix[start]
+                    
+                    # Find target value that minimizes operations
+                    # The optimal target is the median of nums[start:i]
+                    segment = nums[start:i]
+                    segment_sorted = sorted(segment)
+                    
+                    # For odd length, median is middle element
+                    # For even length, either middle element works
+                    median = segment_sorted[x // 2]
+                    
+                    # Calculate operations needed
+                    operations = 0
+                    for num in segment:
+                        operations += abs(num - median)
+                    
+                    if dp[start][j - 1] != float('inf'):
+                        dp[i][j] = min(dp[i][j], dp[start][j - 1] + operations)
+        
+        return dp[n][k]
+    
+    # Binary search for k that gives exactly min_operations_for_k_equal_subarrays
+    left, right = 1, n // x
+    
+    result = -1
+    for k in range(right, 0, -1):
+        if k * x > n:
+            continue
+        operations = calculate_min_operations(k)
+        if operations == min_operations_for_k_equal_subarrays:
+            result = k
+            break
+    
+    if result == -1:
+        raise ValueError("Invalid input")
+    
+    return result

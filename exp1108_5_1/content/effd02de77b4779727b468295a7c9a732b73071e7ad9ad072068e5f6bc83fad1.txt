@@ -1,0 +1,79 @@
+# signature: def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> list[int]
+from typing import List
+import heapq
+
+def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> List[int]:
+    # Input validation
+    if not nums or len(nums) < 2:
+        raise ValueError("Invalid input")
+    if x < 2 or x > len(nums):
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    max_k = min(15, n // x)  # k must satisfy k*x <= n
+    
+    # Precompute operations for all possible subarrays
+    subarray_ops = []
+    
+    for i in range(n - x + 1):
+        # Extract subarray and sort to find median
+        subarray = nums[i:i + x]
+        sorted_sub = sorted(subarray)
+        
+        # Median for even length is the average of two middle elements
+        # But since we need integer operations, we'll consider both possible medians
+        if x % 2 == 1:
+            median = sorted_sub[x // 2]
+            operations = sum(abs(num - median) for num in subarray)
+            subarray_ops.append((operations, i))
+        else:
+            # For even length, try both middle elements and take minimum
+            median1 = sorted_sub[x // 2 - 1]
+            median2 = sorted_sub[x // 2]
+            ops1 = sum(abs(num - median1) for num in subarray)
+            ops2 = sum(abs(num - median2) for num in subarray)
+            subarray_ops.append((min(ops1, ops2), i))
+    
+    # Sort subarrays by operations cost
+    subarray_ops.sort()
+    
+    result = []
+    
+    # Check each possible k value
+    for k in range(1, max_k + 1):
+        if k * x > n:
+            continue
+            
+        # Use dynamic programming to find minimum operations for k non-overlapping subarrays
+        # dp[i][j] = min operations using first i subarrays to get j subarrays
+        # But with constraints, we need a smarter approach
+        
+        # Alternative: use greedy selection with non-overlapping constraint
+        selected = []
+        total_ops = 0
+        used_indices = set()
+        
+        # Try to select k subarrays with minimum total operations that don't overlap
+        for ops, idx in subarray_ops:
+            if len(selected) >= k:
+                break
+                
+            # Check if this subarray overlaps with any selected subarray
+            overlaps = False
+            for sel_idx in used_indices:
+                if not (idx + x <= sel_idx or sel_idx + x <= idx):
+                    overlaps = True
+                    break
+            
+            if not overlaps:
+                selected.append((ops, idx))
+                used_indices.add(idx)
+                total_ops += ops
+        
+        # If we found k non-overlapping subarrays and total operations match
+        if len(selected) == k and total_ops == min_operations_for_k_equal_subarrays:
+            result.append(k)
+    
+    return result

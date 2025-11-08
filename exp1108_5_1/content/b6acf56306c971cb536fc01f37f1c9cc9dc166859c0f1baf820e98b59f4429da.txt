@@ -1,0 +1,76 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate inputs
+    if not (2 <= n <= 10**5):
+        raise ValueError("Invalid input")
+    if not all(-10**6 <= num <= 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if not (2 <= x <= n):
+        raise ValueError("Invalid input")
+    if not (1 <= k <= 15):
+        raise ValueError("Invalid input")
+    if not (2 <= k * x <= n):
+        raise ValueError("Invalid input")
+    
+    # Precompute the cost for making each possible segment of length x equal to a target value
+    # We'll use dynamic programming to find the minimum operations needed
+    
+    # The key insight: we need to select k non-overlapping segments of length x
+    # For each segment, the optimal target value is the median of that segment
+    # (for absolute differences, median minimizes the sum of absolute deviations)
+    
+    # Precompute all possible segments and their costs
+    segments = []
+    for i in range(n - x + 1):
+        segment = nums[i:i + x]
+        sorted_segment = sorted(segment)
+        median = sorted_segment[x // 2]  # median for odd length, or lower median for even
+        cost = sum(abs(num - median) for num in segment)
+        segments.append((i, cost, median))
+    
+    # Now we need to select k non-overlapping segments with minimum total cost
+    # Since k is small (<=15), we can use dynamic programming
+    # dp[i][j] = min cost to select j segments ending at or before position i
+    
+    # But first, let's find all valid combinations of k non-overlapping segments
+    # Since the segments have fixed length x, we can't have overlapping segments
+    
+    # Sort segments by starting index
+    segments.sort(key=lambda seg: seg[0])
+    
+    # Use memoization for DP
+    from functools import lru_cache
+    
+    @lru_cache(maxsize=None)
+    def dfs(idx, remaining):
+        if remaining == 0:
+            return 0
+        if idx >= len(segments):
+            return float('inf')
+        
+        # Option 1: skip current segment
+        skip = dfs(idx + 1, remaining)
+        
+        # Option 2: take current segment (if we can)
+        current_start = segments[idx][0]
+        current_end = current_start + x - 1
+        
+        # Find next segment that doesn't overlap
+        next_idx = idx + 1
+        while next_idx < len(segments) and segments[next_idx][0] <= current_end:
+            next_idx += 1
+        
+        take = segments[idx][1] + dfs(next_idx, remaining - 1)
+        
+        return min(skip, take)
+    
+    result = dfs(0, k)
+    
+    if result == float('inf'):
+        raise ValueError("Invalid input")
+    
+    return result

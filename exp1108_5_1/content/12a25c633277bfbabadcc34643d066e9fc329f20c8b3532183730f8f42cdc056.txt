@@ -1,0 +1,149 @@
+# signature: def minCost_simp_split_0_inv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> List[List[int]]
+from typing import List
+
+def minCost_simp_split_0_inv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> List[List[int]]:
+    n = len(cost_prefix) + 1
+    
+    # Check constraints
+    if n < 2 or n % 2 != 0:
+        raise ValueError("Invalid input")
+    
+    if n == 0:
+        if minimum_beautiful_painting_cost == 0:
+            return []
+        else:
+            raise ValueError("Invalid input")
+    
+    # Check cost_prefix dimensions
+    if len(cost_prefix) != n - 1:
+        raise ValueError("Invalid input")
+    
+    for i in range(n - 1):
+        if len(cost_prefix[i]) != 3:
+            raise ValueError("Invalid input")
+    
+    # We need to find cost_suffix such that the minimum beautiful painting cost equals the given value
+    # The problem reduces to finding cost_suffix[0] = [x, y, z] that satisfies the condition
+    
+    # For the last house (index n-1), we need to consider constraints:
+    # 1. It cannot have the same color as house n-2 (adjacent constraint)
+    # 2. It cannot have the same color as house 0 (symmetry constraint since n-1 and 0 are equidistant)
+    
+    # Let's compute the minimum cost for painting first n-1 houses with beautiful constraints
+    # We'll use dynamic programming
+    
+    # DP[i][c] = minimum cost to paint first i+1 houses ending with color c
+    # But we need to track both first and last colors for symmetry constraints
+    
+    # Since n can be up to 10^5, we need an efficient approach
+    # Let's compute for first n-1 houses with different first and last color combinations
+    
+    # Initialize DP for first house
+    # For first house, we can use any color
+    dp_first = cost_prefix[0][:]  # Cost for first house with each color
+    
+    # Propagate DP for houses 1 to n-2
+    for i in range(1, n - 1):
+        new_dp = [0] * 3
+        for c in range(3):
+            # Find minimum cost from previous house with different color
+            min_cost = float('inf')
+            for prev_c in range(3):
+                if prev_c != c:
+                    min_cost = min(min_cost, dp_first[prev_c])
+            new_dp[c] = min_cost + cost_prefix[i][c]
+        dp_first = new_dp
+    
+    # Now dp_first[c] = minimum cost to paint first n-1 houses ending with color c
+    
+    # For the beautiful painting with all n houses, we need to add the last house
+    # The last house has constraints:
+    # - Cannot have same color as house n-2 (adjacent constraint)
+    # - Cannot have same color as house 0 (symmetry constraint)
+    
+    # But we don't know the color of house 0 in our current DP state
+    # We need to track the first house color as well
+    
+    # Let's recompute with tracking first color
+    # DP[i][first_c][last_c] = minimum cost for first i+1 houses with first color first_c and last color last_c
+    # But this would be O(n * 9) which is acceptable for n=10^5 (900,000 operations)
+    
+    # Initialize for first house
+    dp = [[[float('inf')] * 3 for _ in range(3)] for _ in range(n)]
+    
+    for first_c in range(3):
+        dp[0][first_c][first_c] = cost_prefix[0][first_c]
+    
+    # Fill DP table for houses 1 to n-2
+    for i in range(1, n - 1):
+        for first_c in range(3):
+            for last_c in range(3):
+                if dp[i-1][first_c][last_c] == float('inf'):
+                    continue
+                
+                # Try all colors for current house
+                for c in range(3):
+                    if c != last_c:  # Adjacent constraint
+                        new_cost = dp[i-1][first_c][last_c] + cost_prefix[i][c]
+                        if new_cost < dp[i][first_c][c]:
+                            dp[i][first_c][c] = new_cost
+    
+    # Now we have dp[n-2][first_c][last_c] = min cost for first n-1 houses
+    
+    # For the complete painting with n houses, we need to add the last house (cost_suffix)
+    # The last house (index n-1) has color c_last and cost cost_suffix[0][c_last]
+    # Constraints:
+    # 1. c_last != color of house n-2 (adjacent)
+    # 2. c_last != color of house 0 (symmetry)
+    
+    # We need to find cost_suffix such that:
+    # min over first_c, penultimate_c, last_c of [dp[n-2][first_c][penultimate_c] + cost_suffix[0][last_c]]
+    # with constraints: last_c != penultimate_c and last_c != first_c
+    # equals minimum_beautiful_painting_cost
+    
+    # Let's find the minimum possible cost without cost_suffix constraints
+    min_possible = float('inf')
+    for first_c in range(3):
+        for penultimate_c in range(3):
+            for last_c in range(3):
+                if last_c != penultimate_c and last_c != first_c:
+                    min_possible = min(min_possible, dp[n-2][first_c][penultimate_c])
+    
+    # If the minimum possible cost (without adding cost_suffix) is already greater than
+    # minimum_beautiful_painting_cost, it's impossible
+    if min_possible > minimum_beautiful_painting_cost:
+        raise ValueError("Invalid input")
+    
+    # We need to find cost_suffix values that make the equation work
+    # Let's try to find one valid assignment
+    
+    # Strategy: For each possible color assignment for the last house,
+    # check if we can achieve the target cost
+    
+    for last_color in range(3):
+        # We need to find if there exists first_c and penultimate_c such that:
+        # dp[n-2][first_c][penultimate_c] + cost_suffix_val = minimum_beautiful_painting_cost
+        # with constraints: last_color != penultimate_c and last_color != first_c
+        
+        # So cost_suffix_val = minimum_beautiful_painting_cost - dp[n-2][first_c][penultimate_c]
+        # for some valid first_c, penultimate_c
+        
+        # Let's find all possible cost_suffix_val for this last_color
+        possible_vals = set()
+        for first_c in range(3):
+            for penultimate_c in range(3):
+                if last_color != penultimate_c and last_color != first_c:
+                    if dp[n-2][first_c][penultimate_c] != float('inf'):
+                        needed = minimum_beautiful_painting_cost - dp[n-2][first_c][penultimate_c]
+                        if 0 <= needed <= 10**5:
+                            possible_vals.add(needed)
+        
+        if possible_vals:
+            # Take any valid value
+            cost_suffix_val = min(possible_vals)
+            cost_suffix = [[0, 0, 0]]
+            cost_suffix[0][last_color] = cost_suffix_val
+            return cost_suffix
+    
+    # If we reach here, no solution found
+    raise ValueError("Invalid input")

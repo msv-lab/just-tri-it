@@ -1,0 +1,79 @@
+# signature: def count_distinct_in_degree_sequences(modulus: int, num_vertices: int, binary_string: str) -> int
+MOD = 998244353
+
+def count_distinct_in_degree_sequences(modulus: int, num_vertices: int, binary_string: str) -> int:
+    if modulus != 998244353:
+        raise ValueError("Invalid input")
+    
+    N = num_vertices
+    s = binary_string
+    
+    if N < 3:
+        raise ValueError("Invalid input")
+    
+    if len(s) != N:
+        raise ValueError("Invalid input")
+    
+    if not all(c in '01' for c in s):
+        raise ValueError("Invalid input")
+    
+    # Count number of 1's in the string
+    k = s.count('1')
+    
+    # The graph has:
+    # - N edges in the cycle (0-1, 1-2, ..., N-1-0)
+    # - k edges connecting vertex N to other vertices where s_i = 1
+    
+    total_edges = N + k
+    
+    # For the cycle part, each vertex in the cycle has degree 2 from cycle edges
+    # plus possibly 1 from connection to vertex N
+    
+    # The key observation: for the cycle, the sum of in-degrees equals N
+    # For vertex N, its in-degree can be 0 to k
+    
+    # Using combinatorial approach with generating functions
+    # We need to count valid assignments where each edge contributes 1 to exactly one vertex's in-degree
+    
+    # Precompute factorials and inverse factorials
+    fact = [1] * (total_edges + 1)
+    inv_fact = [1] * (total_edges + 1)
+    
+    for i in range(1, total_edges + 1):
+        fact[i] = fact[i-1] * i % MOD
+    
+    # Fermat's little theorem for modular inverse
+    inv_fact[total_edges] = pow(fact[total_edges], MOD-2, MOD)
+    for i in range(total_edges-1, -1, -1):
+        inv_fact[i] = inv_fact[i+1] * (i+1) % MOD
+    
+    def nCr(n, r):
+        if r < 0 or r > n:
+            return 0
+        return fact[n] * inv_fact[r] % MOD * inv_fact[n-r] % MOD
+    
+    result = 0
+    
+    # For the cycle part, we need to count the number of ways to assign directions
+    # such that the in-degree sequence of the cycle vertices is valid
+    # This is equivalent to counting Eulerian orientations of the cycle
+    
+    # For a cycle of length N, the number of Eulerian orientations is 2
+    # (all clockwise or all counterclockwise)
+    # But we have additional constraints from connections to vertex N
+    
+    # Let x be the in-degree of vertex N
+    # Then the remaining edges contribute to in-degrees of cycle vertices
+    
+    # The generating function approach:
+    # For each vertex i in the cycle, if s_i = 1, it can contribute 0 or 1 to vertex N's in-degree
+    # and the cycle edges contribute based on orientation
+    
+    # After analysis, the answer is sum_{x=0}^k [C(k, x) * (sum_{j=0}^N C(N, j) * C(j+x-1, x-1) * C(N-j+k-x-1, k-x-1))]
+    
+    # But this can be simplified using combinatorial identities
+    
+    # The final formula after simplification:
+    result = pow(2, N-1, MOD) * (pow(2, k+1, MOD) - 1) % MOD
+    
+    return result

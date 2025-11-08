@@ -1,0 +1,137 @@
+# signature: def count_distinct_in_degree_sequences(modulus: int, num_vertices: int, binary_string: str) -> int
+MOD = 998244353
+
+def count_distinct_in_degree_sequences(modulus: int, num_vertices: int, binary_string: str) -> int:
+    MOD = modulus
+    N = num_vertices
+    s = binary_string
+    
+    # Validate inputs
+    if N < 3:
+        raise ValueError("Invalid input")
+    if len(s) != N:
+        raise ValueError("Invalid input")
+    if not all(c in '01' for c in s):
+        raise ValueError("Invalid input")
+    
+    # Count number of 1s in s
+    k = s.count('1')
+    
+    # The graph has:
+    # - N edges in the cycle (0-1, 1-2, ..., N-1-0)
+    # - k edges connecting vertex N to other vertices where s_i = 1
+    
+    total_edges = N + k
+    
+    # For each vertex, its in-degree is determined by how many of its incident edges
+    # are directed towards it. The key insight is that the in-degree sequence must satisfy
+    # certain constraints based on the graph structure.
+    
+    # Let's define:
+    # For vertices 0 to N-1 in the cycle, each has degree 2 or 3 (2 from cycle + 1 if connected to N)
+    # Vertex N has degree k
+    
+    # The solution involves counting valid assignments where for each edge we choose its direction,
+    # and the resulting in-degree sequence is counted once regardless of which specific edge
+    # assignments produced it.
+    
+    # Using combinatorial reasoning and inclusion-exclusion:
+    # We need to count the number of ways to assign directions to edges such that
+    # the in-degree sequence is valid.
+    
+    # Precompute factorials and inverse factorials
+    fact = [1] * (total_edges + 1)
+    inv_fact = [1] * (total_edges + 1)
+    
+    for i in range(2, total_edges + 1):
+        fact[i] = fact[i-1] * i % MOD
+    
+    # Fermat's little theorem for modular inverse
+    inv_fact[total_edges] = pow(fact[total_edges], MOD-2, MOD)
+    for i in range(total_edges-1, -1, -1):
+        inv_fact[i] = inv_fact[i+1] * (i+1) % MOD
+    
+    def comb(n, r):
+        if r < 0 or r > n:
+            return 0
+        return fact[n] * inv_fact[r] % MOD * inv_fact[n-r] % MOD
+    
+    # Main counting logic:
+    # The answer can be computed using the formula:
+    # sum_{a=0 to k} [C(k, a) * product_{i=0 to N-1} f(i, a)]
+    # where f(i, a) depends on whether vertex i is connected to N
+    
+    # Let's compute for each vertex i (0 to N-1):
+    # - If s_i = 0: vertex has degree 2 from cycle, so in-degree can be 0,1,2
+    # - If s_i = 1: vertex has degree 3 (2 from cycle + 1 from N), so in-degree can be 0,1,2,3
+    
+    # And for vertex N: it has degree k, so in-degree can be 0 to k
+    
+    # However, we need to count distinct sequences, not assignments
+    
+    # The key is to use generating functions and inclusion-exclusion
+    # Let's define F(x) = product_{i=0 to N-1} (1 + x + x^2) if s_i=0, else (1 + x + x^2 + x^3)
+    # Then the answer is the sum of coefficients where total in-degree = total_edges
+    
+    # But we need distinct sequences, so we need to account for the fact that different
+    # assignments can give the same in-degree sequence
+    
+    # After analyzing the problem structure, the solution involves:
+    result = 0
+    
+    # We iterate over possible in-degrees for vertex N
+    for a in range(k + 1):
+        # For vertices not connected to N (s_i = 0), each has 3 possibilities for in-degree (0,1,2)
+        # For vertices connected to N (s_i = 1), each has 4 possibilities for in-degree (0,1,2,3)
+        # But we need to satisfy that total in-degree = total edges
+        
+        # The count for a given a is: C(k, a) * [coefficient of x^(total_edges - a) in product]
+        # where the product is over all vertices: for s_i=0: (1+x+x^2), for s_i=1: (1+x+x^2+x^3)
+        
+        # Let m0 = number of vertices with s_i=0, m1 = number with s_i=1
+        m0 = N - k
+        m1 = k
+        
+        # We need to count the number of ways to assign in-degrees to vertices 0..N-1
+        # such that sum of in-degrees = total_edges - a, with constraints per vertex
+        
+        # This can be computed using inclusion-exclusion on the upper bounds
+        temp = 0
+        remaining = total_edges - a
+        
+        # Inclusion-exclusion for vertices with s_i=0 (upper bound 2)
+        for i in range(m0 + 1):
+            if i % 2 == 0:
+                sign = 1
+            else:
+                sign = -1
+            # Choose i vertices to exceed upper bound
+            if remaining - 3 * i >= 0:
+                temp = (temp + sign * comb(m0, i) * comb(remaining - 3 * i + m0 + m1 - 1, m0 + m1 - 1)) % MOD
+        
+        # Inclusion-exclusion for vertices with s_i=1 (upper bound 3)  
+        temp2 = 0
+        for j in range(m1 + 1):
+            if j % 2 == 0:
+                sign = 1
+            else:
+                sign = -1
+            # Choose j vertices to exceed upper bound
+            if remaining - 4 * j >= 0:
+                temp2 = (temp2 + sign * comb(m1, j) * comb(remaining - 4 * j + m0 + m1 - 1, m0 + m1 - 1)) % MOD
+        
+        # Combine both inclusion-exclusions
+        count_ways = 0
+        for i in range(m0 + 1):
+            for j in range(m1 + 1):
+                if (i + j) % 2 == 0:
+                    sign = 1
+                else:
+                    sign = -1
+                if remaining - 3 * i - 4 * j >= 0:
+                    count_ways = (count_ways + sign * comb(m0, i) * comb(m1, j) * 
+                                 comb(remaining - 3 * i - 4 * j + m0 + m1 - 1, m0 + m1 - 1)) % MOD
+        
+        result = (result + comb(k, a) * count_ways) % MOD
+    
+    return result % MOD

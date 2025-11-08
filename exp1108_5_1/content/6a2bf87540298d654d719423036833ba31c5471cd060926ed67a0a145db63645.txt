@@ -1,0 +1,94 @@
+# signature: def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool
+from typing import List
+
+def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x < 2 or k * x > n:
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Helper function to calculate cost for making a subarray of length x equal to target value
+    def cost_for_subarray(start, target):
+        end = start + x - 1
+        current_sum = prefix[end + 1] - prefix[start]
+        return abs(current_sum - target * x)
+    
+    # DP approach: dp[i][j] = minimum operations to get j valid subarrays considering first i elements
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(n + 1)]
+    dp[0][0] = 0
+    
+    for i in range(n + 1):
+        for j in range(k + 1):
+            if dp[i][j] == INF:
+                continue
+                
+            # Option 1: Skip current position
+            if i + 1 <= n:
+                dp[i + 1][j] = min(dp[i + 1][j], dp[i][j])
+            
+            # Option 2: Start a new subarray at position i (if we have enough remaining elements)
+            if j < k and i + x <= n:
+                # Try all possible target values for this subarray
+                # We can optimize by trying only the values that appear in the subarray or nearby values
+                start = i
+                end = i + x - 1
+                subarray = nums[start:end + 1]
+                
+                # Sort and try median and nearby values (median minimizes absolute deviations)
+                sorted_sub = sorted(subarray)
+                median_candidates = set()
+                
+                # Try median(s)
+                if x % 2 == 1:
+                    median_candidates.add(sorted_sub[x // 2])
+                else:
+                    median_candidates.add(sorted_sub[x // 2 - 1])
+                    median_candidates.add(sorted_sub[x // 2])
+                
+                # Also try the mean (rounded to nearest integers) as it minimizes squared error
+                mean_val = round(sum(subarray) / x)
+                median_candidates.add(mean_val)
+                median_candidates.add(mean_val - 1)
+                median_candidates.add(mean_val + 1)
+                
+                # Try a few more values around the candidates to be safe
+                additional_candidates = set()
+                for cand in median_candidates:
+                    for offset in range(-2, 3):
+                        additional_candidates.add(cand + offset)
+                median_candidates.update(additional_candidates)
+                
+                # Calculate minimum cost for this subarray
+                min_cost = INF
+                for target in median_candidates:
+                    current_cost = cost_for_subarray(start, target)
+                    min_cost = min(min_cost, current_cost)
+                
+                # Update DP
+                dp[i + x][j + 1] = min(dp[i + x][j + 1], dp[i][j] + min_cost)
+    
+    # Find the minimum operations needed to get at least k subarrays
+    min_required = INF
+    for i in range(n + 1):
+        if dp[i][k] < min_required:
+            min_required = dp[i][k]
+    
+    # Return True if the given value is at least the minimum required operations
+    return min_operations_for_k_equal_subarrays >= min_required

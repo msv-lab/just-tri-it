@@ -1,0 +1,70 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2 or len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    parent = [-1] * n
+    depth = [0] * n
+    dist_from_root = [0] * n
+    
+    stack = [0]
+    parent[0] = 0
+    while stack:
+        node = stack.pop()
+        for neighbor, length in graph[node]:
+            if parent[neighbor] == -1:
+                parent[neighbor] = node
+                depth[neighbor] = depth[node] + 1
+                dist_from_root[neighbor] = dist_from_root[node] + length
+                stack.append(neighbor)
+    
+    def get_path(u, v):
+        path_u, path_v = [], []
+        while u != v:
+            if depth[u] > depth[v]:
+                path_u.append(u)
+                u = parent[u]
+            elif depth[v] > depth[u]:
+                path_v.append(v)
+                v = parent[v]
+            else:
+                path_u.append(u)
+                path_v.append(v)
+                u = parent[u]
+                v = parent[v]
+        path_u.append(u)
+        return path_u + path_v[::-1]
+    
+    max_length = 0
+    min_nodes = float('inf')
+    
+    for i in range(n):
+        for j in range(i, n):
+            path = get_path(i, j)
+            values = [nums[node] for node in path]
+            if len(values) == len(set(values)):
+                length = dist_from_root[i] + dist_from_root[j] - 2 * dist_from_root[path[-1]]
+                if length > max_length:
+                    max_length = length
+                    min_nodes = len(path)
+                elif length == max_length:
+                    min_nodes = min(min_nodes, len(path))
+    
+    if max_length == 0:
+        min_nodes = 1
+    
+    result = [max_length, min_nodes]
+    result[0] += 1
+    result[1] += 1
+    return result

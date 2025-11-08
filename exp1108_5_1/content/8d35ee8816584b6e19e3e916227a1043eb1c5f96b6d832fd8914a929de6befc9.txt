@@ -1,0 +1,98 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2 or len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    parent = [-1] * n
+    depth = [0] * n
+    dist_from_root = [0] * n
+    
+    stack = [0]
+    parent[0] = 0
+    while stack:
+        node = stack.pop()
+        for neighbor, length in graph[node]:
+            if parent[neighbor] == -1:
+                parent[neighbor] = node
+                depth[neighbor] = depth[node] + 1
+                dist_from_root[neighbor] = dist_from_root[node] + length
+                stack.append(neighbor)
+    
+    max_length = 0
+    min_nodes = float('inf')
+    
+    for start in range(n):
+        for end in range(start, n):
+            if start == end:
+                path_length = 0
+                num_nodes = 1
+                if path_length > max_length:
+                    max_length = path_length
+                    min_nodes = num_nodes
+                elif path_length == max_length:
+                    min_nodes = min(min_nodes, num_nodes)
+                continue
+            
+            path_nodes = set()
+            unique_values = set()
+            is_unique = True
+            
+            u, v = start, end
+            while u != v:
+                if depth[u] > depth[v]:
+                    if nums[u] in unique_values:
+                        is_unique = False
+                        break
+                    unique_values.add(nums[u])
+                    path_nodes.add(u)
+                    u = parent[u]
+                elif depth[v] > depth[u]:
+                    if nums[v] in unique_values:
+                        is_unique = False
+                        break
+                    unique_values.add(nums[v])
+                    path_nodes.add(v)
+                    v = parent[v]
+                else:
+                    if nums[u] in unique_values or nums[v] in unique_values:
+                        is_unique = False
+                        break
+                    unique_values.add(nums[u])
+                    unique_values.add(nums[v])
+                    path_nodes.add(u)
+                    path_nodes.add(v)
+                    u = parent[u]
+                    v = parent[v]
+            
+            if not is_unique:
+                continue
+            
+            if nums[u] in unique_values:
+                continue
+            unique_values.add(nums[u])
+            path_nodes.add(u)
+            
+            path_length = dist_from_root[start] + dist_from_root[end] - 2 * dist_from_root[u]
+            num_nodes = len(path_nodes)
+            
+            if path_length > max_length:
+                max_length = path_length
+                min_nodes = num_nodes
+            elif path_length == max_length:
+                min_nodes = min(min_nodes, num_nodes)
+    
+    if max_length == 0:
+        min_nodes = 1
+    
+    return [max_length, min_nodes]

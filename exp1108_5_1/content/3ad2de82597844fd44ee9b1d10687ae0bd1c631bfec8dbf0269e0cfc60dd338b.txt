@@ -1,0 +1,93 @@
+# signature: def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int
+from typing import List
+import heapq
+
+def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int:
+    n = len(nums)
+    
+    # Validate inputs
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    # Calculate cost for each window of size x
+    window_costs = []
+    for i in range(n - x + 1):
+        window = nums[i:i + x]
+        # To make all elements equal with minimum operations, we should make them equal to the median
+        sorted_window = sorted(window)
+        median = sorted_window[x // 2]
+        cost = sum(abs(num - median) for num in window)
+        window_costs.append((cost, i))
+    
+    # Function to check if we can achieve at least k subarrays with given operations
+    def can_achieve_k(k_target):
+        if k_target * x > n:
+            return float('inf')
+        
+        # Use dynamic programming to find minimum operations for k_target non-overlapping subarrays
+        # dp[i][j] = min operations using first i windows for j subarrays
+        m = len(window_costs)
+        dp = [[float('inf')] * (k_target + 1) for _ in range(m + 1)]
+        dp[0][0] = 0
+        
+        for i in range(1, m + 1):
+            cost, idx = window_costs[i - 1]
+            # Copy previous state
+            for j in range(k_target + 1):
+                dp[i][j] = min(dp[i][j], dp[i - 1][j])
+            
+            # Try to use current window
+            for j in range(1, k_target + 1):
+                # Find the last window we can use that doesn't overlap with current one
+                prev_idx = i - 1
+                while prev_idx > 0:
+                    _, prev_window_idx = window_costs[prev_idx - 1]
+                    if prev_window_idx + x <= idx:
+                        dp[i][j] = min(dp[i][j], dp[prev_idx][j - 1] + cost)
+                        break
+                    prev_idx -= 1
+                else:
+                    # No previous non-overlapping window found, start new sequence
+                    dp[i][j] = min(dp[i][j], cost)
+        
+        return min(dp[i][k_target] for i in range(m + 1))
+    
+    # Binary search for k
+    left, right = 1, n // x
+    result = -1
+    
+    for k_candidate in range(right, left - 1, -1):
+        if k_candidate * x > n:
+            continue
+        operations = can_achieve_k(k_candidate)
+        if operations <= min_operations_for_k_equal_subarrays:
+            # Check if this is the exact match or we need to find the maximum k that satisfies
+            # Since we want exactly min_operations_for_k_equal_subarrays, we need to be careful
+            if operations == min_operations_for_k_equal_subarrays:
+                result = k_candidate
+                break
+            # Also check if k_candidate+1 requires more operations
+            if k_candidate < right:
+                next_ops = can_achieve_k(k_candidate + 1)
+                if next_ops > min_operations_for_k_equal_subarrays:
+                    result = k_candidate
+                    break
+    
+    # If we didn't find an exact match, try the reverse search
+    if result == -1:
+        for k_candidate in range(left, right + 1):
+            if k_candidate * x > n:
+                continue
+            operations = can_achieve_k(k_candidate)
+            if operations == min_operations_for_k_equal_subarrays:
+                result = k_candidate
+                break
+    
+    if result == -1:
+        raise ValueError("Invalid input")
+    
+    return result

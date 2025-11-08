@@ -1,0 +1,97 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2 or len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # DFS to find parent-child relationships and build tree
+    parent = [-1] * n
+    depth = [0] * n
+    dist_from_root = [0] * n
+    
+    stack = [(0, -1, 0, 0)]  # node, parent, depth, distance
+    while stack:
+        node, par, d, dist = stack.pop()
+        parent[node] = par
+        depth[node] = d
+        dist_from_root[node] = dist
+        
+        for neighbor, length in graph[node]:
+            if neighbor != par:
+                stack.append((neighbor, node, d + 1, dist + length))
+    
+    # Find all ancestor-descendant pairs with unique values
+    max_length = 0
+    min_nodes_for_max_length = float('inf')
+    
+    # For each node as potential ancestor
+    for i in range(n):
+        # For each node as potential descendant
+        for j in range(i, n):
+            if i == j:
+                # Single node path
+                path_length = 0
+                path_nodes = 1
+                
+                if path_length > max_length:
+                    max_length = path_length
+                    min_nodes_for_max_length = path_nodes
+                elif path_length == max_length:
+                    min_nodes_for_max_length = min(min_nodes_for_max_length, path_nodes)
+                continue
+            
+            # Check if j is descendant of i
+            if not is_descendant(i, j, parent, depth):
+                continue
+            
+            # Check if all values along the path are unique
+            path_values = set()
+            current = j
+            path_valid = True
+            
+            while current != i and path_valid:
+                if nums[current] in path_values:
+                    path_valid = False
+                else:
+                    path_values.add(nums[current])
+                current = parent[current]
+            
+            if path_valid:
+                if nums[i] in path_values:
+                    path_valid = False
+                else:
+                    path_values.add(nums[i])
+            
+            if path_valid:
+                path_length = abs(dist_from_root[j] - dist_from_root[i])
+                path_nodes = depth[j] - depth[i] + 1
+                
+                if path_length > max_length:
+                    max_length = path_length
+                    min_nodes_for_max_length = path_nodes
+                elif path_length == max_length:
+                    min_nodes_for_max_length = min(min_nodes_for_max_length, path_nodes)
+    
+    return [max_length, min_nodes_for_max_length]
+
+def is_descendant(ancestor: int, node: int, parent: List[int], depth: List[int]) -> bool:
+    """Check if node is descendant of ancestor"""
+    if depth[node] < depth[ancestor]:
+        return False
+    
+    current = node
+    while depth[current] > depth[ancestor]:
+        current = parent[current]
+    
+    return current == ancestor

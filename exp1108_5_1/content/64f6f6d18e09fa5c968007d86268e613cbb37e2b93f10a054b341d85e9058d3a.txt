@@ -1,0 +1,56 @@
+# signature: def minCost_simp(cost: List[List[int]]) -> int
+from typing import List
+
+def minCost_simp(cost: List[List[int]]) -> int:
+    n = len(cost)
+    if n % 2 != 0 or n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    
+    for row in cost:
+        if len(row) != 3:
+            raise ValueError("Invalid input")
+        for val in row:
+            if val < 0 or val > 10**5:
+                raise ValueError("Invalid input")
+    
+    # For symmetric positions (i, n-1-i), we need to find the minimum cost
+    # while ensuring adjacent houses and symmetric houses have different colors
+    
+    # Precompute for each symmetric pair (i, j) the minimum costs for different color combinations
+    # where j = n-1-i
+    
+    total_cost = 0
+    for i in range(n // 2):
+        j = n - 1 - i
+        
+        # Find the minimum cost combination where colors at i and j are different
+        # and also different from their neighbors (if applicable)
+        
+        # For the first half of houses, we need to consider:
+        # - House i cannot have same color as house i-1 (if i > 0)
+        # - House i cannot have same color as house j (symmetric constraint)
+        # - House j cannot have same color as house j+1 (if j < n-1)
+        
+        # Since we're processing sequentially, we'll track possible color combinations
+        
+        # For the current symmetric pair, find all valid color combinations
+        min_cost = float('inf')
+        second_min = float('inf')
+        
+        for color_i in range(3):
+            for color_j in range(3):
+                if color_i == color_j:
+                    continue  # Symmetric constraint
+                
+                current_cost = cost[i][color_i] + cost[j][color_j]
+                
+                if current_cost < min_cost:
+                    second_min = min_cost
+                    min_cost = current_cost
+                elif current_cost < second_min:
+                    second_min = current_cost
+        
+        # We need to track both min and second min to handle adjacent constraints
+        total_cost += min_cost
+    
+    return total_cost

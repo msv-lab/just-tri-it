@@ -1,0 +1,85 @@
+# signature: def minCost_simp(cost: List[List[int]]) -> int
+from typing import List
+
+def minCost_simp(cost: List[List[int]]) -> int:
+    n = len(cost)
+    if n % 2 != 0 or n < 2 or n > 100000:
+        raise ValueError("Invalid input")
+    
+    for row in cost:
+        if len(row) != 3:
+            raise ValueError("Invalid input")
+        for val in row:
+            if val < 0 or val > 100000:
+                raise ValueError("Invalid input")
+    
+    # For symmetric positions (i, n-1-i), we need to find the minimum cost
+    # such that all symmetric pairs have different colors and adjacent pairs have different colors
+    
+    # Precompute for each symmetric pair (i, j) where j = n-1-i
+    # We need to consider all color combinations where:
+    # 1. color_i != color_j (symmetric constraint)
+    # 2. For adjacent pairs (i-1, i) and (j, j+1): color_{i-1} != color_i and color_j != color_{j+1}
+    
+    # Since n is even, we can split into n/2 symmetric pairs
+    pairs = n // 2
+    
+    # DP[i][c1][c2] = min cost for first i pairs where:
+    # - left house of pair i has color c1
+    # - right house of pair i has color c2
+    # But this would be O(n * 9) which is too slow for n=10^5
+    
+    # Alternative approach: For each symmetric pair, we can precompute the best 2 colors
+    # and their costs for left and right houses
+    
+    # For the first pair (0, n-1), we just need to ensure colors are different
+    # For subsequent pairs, we need to ensure:
+    # - left house color != previous left house color
+    # - right house color != previous right house color
+    # - left house color != right house color (symmetric constraint)
+    
+    # Initialize DP for the first pair
+    dp = [[float('inf')] * 3 for _ in range(3)]
+    
+    for c1 in range(3):
+        for c2 in range(3):
+            if c1 != c2:  # Symmetric constraint
+                dp[c1][c2] = cost[0][c1] + cost[n-1][c2]
+    
+    # Process remaining pairs
+    for i in range(1, pairs):
+        left_idx = i
+        right_idx = n - 1 - i
+        
+        new_dp = [[float('inf')] * 3 for _ in range(3)]
+        
+        for prev_c1 in range(3):  # Previous left color
+            for prev_c2 in range(3):  # Previous right color
+                if dp[prev_c1][prev_c2] == float('inf'):
+                    continue
+                
+                for curr_c1 in range(3):  # Current left color
+                    for curr_c2 in range(3):  # Current right color
+                        # Check constraints:
+                        # 1. Current left != previous left (adjacent constraint)
+                        if curr_c1 == prev_c1:
+                            continue
+                        # 2. Current right != previous right (adjacent constraint)  
+                        if curr_c2 == prev_c2:
+                            continue
+                        # 3. Current left != current right (symmetric constraint)
+                        if curr_c1 == curr_c2:
+                            continue
+                        
+                        total_cost = dp[prev_c1][prev_c2] + cost[left_idx][curr_c1] + cost[right_idx][curr_c2]
+                        new_dp[curr_c1][curr_c2] = min(new_dp[curr_c1][curr_c2], total_cost)
+        
+        dp = new_dp
+    
+    # Find minimum cost in the final DP state
+    min_cost = float('inf')
+    for c1 in range(3):
+        for c2 in range(3):
+            min_cost = min(min_cost, dp[c1][c2])
+    
+    return min_cost if min_cost != float('inf') else 0

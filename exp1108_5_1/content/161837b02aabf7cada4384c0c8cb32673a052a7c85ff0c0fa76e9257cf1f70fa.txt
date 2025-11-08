@@ -1,0 +1,92 @@
+# signature: def postcondition(cost: List[List[int]], minimum_cost_symmetric_painting: int) -> bool
+from typing import List
+
+def postcondition(cost: List[List[int]], minimum_cost_symmetric_painting: int) -> bool:
+    n = len(cost)
+    
+    # Check basic constraints
+    if n < 2 or n % 2 != 0:
+        raise ValueError("Invalid input")
+    
+    for i in range(n):
+        if len(cost[i]) != 3:
+            raise ValueError("Invalid input")
+        for j in range(3):
+            if cost[i][j] < 0 or cost[i][j] > 10**5:
+                raise ValueError("Invalid input")
+    
+    # Check if the given cost is achievable
+    # We'll use dynamic programming to find the actual minimum cost
+    
+    # For symmetric painting, we need to consider pairs of houses (i, n-1-i)
+    # For each pair, we need to assign different colors to both houses
+    # and also ensure the colors are different from adjacent pairs
+    
+    # DP[i][c1][c2] = minimum cost for first i pairs where the i-th pair has colors c1 and c2
+    # But this would be O(n * 9) which is too slow for n up to 10^5
+    
+    # Instead, let's use a more efficient approach
+    # For each pair (i, n-1-i), we need to choose colors (c1, c2) where c1 != c2
+    
+    # Let's calculate the minimum possible cost
+    min_cost = 0
+    max_cost = 0
+    
+    for i in range(n // 2):
+        house1 = i
+        house2 = n - 1 - i
+        
+        # For this pair, we need to choose different colors for both houses
+        min_pair_cost = float('inf')
+        max_pair_cost = 0
+        
+        for c1 in range(3):
+            for c2 in range(3):
+                if c1 != c2:
+                    pair_cost = cost[house1][c1] + cost[house2][c2]
+                    min_pair_cost = min(min_pair_cost, pair_cost)
+                    max_pair_cost = max(max_pair_cost, pair_cost)
+        
+        min_cost += min_pair_cost
+        max_cost += max_pair_cost
+    
+    # Also need to ensure adjacent pairs have different colors
+    # Let's find the actual minimum cost using DP
+    
+    # DP[i][c1][c2] = min cost for first i pairs where last pair has colors (c1, c2)
+    dp = [[[float('inf')] * 3 for _ in range(3)] for _ in range(n // 2)]
+    
+    # Initialize first pair
+    for c1 in range(3):
+        for c2 in range(3):
+            if c1 != c2:
+                dp[0][c1][c2] = cost[0][c1] + cost[n-1][c2]
+    
+    # Fill DP table
+    for i in range(1, n // 2):
+        for prev_c1 in range(3):
+            for prev_c2 in range(3):
+                if dp[i-1][prev_c1][prev_c2] == float('inf'):
+                    continue
+                
+                for curr_c1 in range(3):
+                    for curr_c2 in range(3):
+                        # Check constraints:
+                        # 1. Colors in current pair must be different
+                        # 2. Current colors must be different from previous pair's colors
+                        if (curr_c1 != curr_c2 and 
+                            curr_c1 != prev_c1 and 
+                            curr_c2 != prev_c2):
+                            
+                            total_cost = dp[i-1][prev_c1][prev_c2] + cost[i][curr_c1] + cost[n-1-i][curr_c2]
+                            dp[i][curr_c1][curr_c2] = min(dp[i][curr_c1][curr_c2], total_cost)
+    
+    # Find minimum in last pair
+    actual_min_cost = float('inf')
+    for c1 in range(3):
+        for c2 in range(3):
+            actual_min_cost = min(actual_min_cost, dp[n//2 - 1][c1][c2])
+    
+    # Check if the given value is valid
+    # It should be between our calculated bounds and should match the actual minimum
+    return minimum_cost_symmetric_painting == actual_min_cost

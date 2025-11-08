@@ -1,0 +1,133 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+import heapq
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    # Validate inputs
+    if len(nums) < 2 or x < 2 or k < 1 or k * x > len(nums):
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    # Collect all possible subarrays of size x
+    subarrays = []
+    for i in range(n - x + 1):
+        subarray = nums[i:i+x]
+        subarrays.append((i, subarray))
+    
+    # For each subarray, calculate the cost to make all elements equal to the median
+    # and store the cost along with the indices
+    sub_costs = []
+    for i, sub in subarrays:
+        sorted_sub = sorted(sub)
+        median = sorted_sub[x // 2] if x % 2 == 1 else sorted_sub[x // 2 - 1]
+        cost = sum(abs(num - median) for num in sub)
+        sub_costs.append((cost, i, median))
+    
+    # We need to select k non-overlapping subarrays with minimal total cost
+    # This is similar to interval scheduling with weights, but we need to maximize the weight (negative cost)
+    # and select k intervals. We can use a greedy approach with a max heap.
+    
+    # Sort sub_costs by starting index
+    sub_costs.sort(key=lambda sc: sc[1])
+    
+    # We will use dynamic programming with a max heap to keep track of the best options
+    # dp[i] will represent the minimal cost to select i subarrays
+    # Initialize dp as a list of lists or a dictionary, but given k is small (<=15), we can manage
+    
+    # We'll use a list where each element is a tuple (total_cost, last_end_index)
+    # Initialize with 0 cost and end index -x
+    dp = []
+    heapq.heappush(dp, (0, -x))
+    
+    min_total = float('inf')
+    
+    for cost, start, median in sub_costs:
+        end = start + x - 1
+        # Find the best previous dp entry where last_end < start
+        # Since dp is a min-heap based on total_cost, but we need to find the minimal total_cost
+        # with last_end < start. We might need to process all entries in dp.
+        # However, for efficiency, we can keep track of the best possible option.
+        
+        temp_heap = []
+        found = None
+        while dp:
+            current_cost, last_end = heapq.heappop(dp)
+            if last_end < start:
+                found = (current_cost, last_end)
+                # Push back other elements
+                temp_heap.append((current_cost, last_end))
+                break
+            else:
+                temp_heap.append((current_cost, last_end))
+        
+        # Push back elements to dp
+        for item in temp_heap:
+            heapq.heappush(dp, item)
+        
+        if found is not None:
+            new_cost = found[0] + cost
+            new_end = end
+            if len(dp) < k:
+                heapq.heappush(dp, (new_cost, new_end))
+            else:
+                # Check if the new_cost is better than the worst in dp (which is the largest since it's a min-heap)
+                # But since we want minimal total cost, we need to keep track of the minimal total_cost
+                # So the heap should be a max-heap based on negative cost.
+                pass  # This part is tricky; perhaps a different approach is needed.
+    
+    # After processing all subarrays, find the minimal total cost for k subarrays
+    # Reconstruct dp as a max heap based on negative cost to always have the minimal cost available
+    # Alternative approach: use dynamic programming with memoization
+    
+    # Alternative approach: use dynamic programming with memoization where dp[i][j] represents the minimal cost to select j subarrays up to index i
+    # But given the constraints, this might be too slow
+    
+    # Given the time constraints, here's a different approach:
+    # We can model this as selecting k non-overlapping intervals with minimal total cost
+    # We can use a greedy algorithm with a priority queue
+    
+    # Re-sort the sub_costs by end index
+    sub_costs.sort(key=lambda sc: sc[1])
+    
+    # We'll use a list to keep track of the best costs for selecting m subarrays
+    # Initialize dp where dp[m] is the minimal cost to select m subarrays
+    dp = [float('inf')] * (k + 1)
+    dp[0] = 0
+    
+    # We'll keep a list of tuples (end, m, cost) to represent the best cost up to a certain end
+    from collections import deque
+    queue = deque()
+    queue.append((-x, 0, 0))
+    
+    for cost, start, median in sub_costs:
+        end = start + x - 1
+        # Find the largest m where the end of the m-th subarray is < start
+        # Since the queue is sorted by end, we can binary search
+        # But for simplicity, we'll process the queue from the end
+        best_m = -1
+        best_cost = float('inf')
+        temp_queue = deque()
+        while queue:
+            prev_end, m, prev_cost = queue.popleft()
+            if prev_end < start:
+                if prev_cost < best_cost:
+                    best_cost = prev_cost
+                    best_m = m
+                temp_queue.append((prev_end, m, prev_cost))
+                break
+            else:
+                temp_queue.append((prev_end, m, prev_cost))
+        
+        # Rebuild the queue
+        queue = temp_queue + queue
+        
+        if best_m != -1:
+            new_m = best_m + 1
+            new_cost = best_cost + cost
+            if new_m <= k and new_cost < dp[new_m]:
+                dp[new_m] = new_cost
+                queue.append((end, new_m, new_cost))
+    
+    if dp[k] == float('inf'):
+        raise ValueError("Invalid input")
+    return dp[k]

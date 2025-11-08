@@ -1,0 +1,18 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+# test name: test_highly_structured_large_n
+def test_highly_structured_large_n():
+    """Test with large n and structured cost pattern"""
+    n = 1000
+    cost = []
+    for i in range(n):
+        if i % 3 == 0:
+            cost.append([1, 10, 100])
+        elif i % 3 == 1:
+            cost.append([10, 100, 1])
+        else:
+            cost.append([100, 1, 10])
+    result = minCost(n, cost)
+    # Pattern repeats every 3 houses, but symmetry constraints apply
+    # Should find valid coloring that respects all constraints
+    assert result >= n  # Minimum if all costs were 1
+    assert result <= n * 100  # Upper bound

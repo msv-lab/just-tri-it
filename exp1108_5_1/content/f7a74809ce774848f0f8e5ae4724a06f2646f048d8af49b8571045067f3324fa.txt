@@ -1,0 +1,15 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+# test name: test_sequential_constraints_dominate
+def test_sequential_constraints_dominate():
+    """Test where adjacent house constraints are more restrictive than symmetry"""
+    n = 4
+    cost = [
+        [1, 100, 100],  # Prefers color 1
+        [100, 1, 100],  # Prefers color 2  
+        [100, 100, 1],  # Prefers color 3
+        [100, 100, 1]   # Prefers color 3
+    ]
+    result = minCost(n, cost)
+    # Houses 2 and 3 are adjacent and both prefer color 3
+    # Must break either adjacency or symmetry constraint
+    assert result == 1 + 1 + 1 + 100  # [1, 2, 3, 1] = 1 + 1 + 1 + 100 = 103

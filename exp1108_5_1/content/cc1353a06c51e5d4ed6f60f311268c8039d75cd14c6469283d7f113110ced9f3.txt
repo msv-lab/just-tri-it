@@ -1,0 +1,14 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+# test name: test_minimal_cost_differences
+def test_minimal_cost_differences():
+    """Test with very small cost differences to ensure precision"""
+    n = 4
+    cost = [
+        [1, 2, 3],
+        [2, 3, 1], 
+        [3, 1, 2],
+        [1, 2, 3]
+    ]
+    result = minCost(n, cost)
+    # Small cost differences, optimal solution should find minimum
+    assert result == 6  # [1, 3, 1, 2] = 1 + 1 + 1 + 3 = 6 or similar

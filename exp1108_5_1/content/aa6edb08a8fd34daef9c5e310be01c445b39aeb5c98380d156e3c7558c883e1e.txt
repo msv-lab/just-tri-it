@@ -1,0 +1,133 @@
+# signature: def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int
+from typing import List
+import math
+
+def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int:
+    n = len(nums)
+    
+    # Validate inputs
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    # Precompute the cost for each possible subarray of size x
+    subarray_costs = []
+    for i in range(n - x + 1):
+        subarray = nums[i:i + x]
+        # Sort to find median
+        sorted_sub = sorted(subarray)
+        median = sorted_sub[x // 2]
+        # Calculate cost to make all elements equal to median
+        cost = sum(abs(num - median) for num in subarray)
+        subarray_costs.append(cost)
+    
+    # Now we need to find k such that min_operations(k) = given_value
+    # We'll use binary search on k
+    
+    def can_achieve_k_subarrays(k_val):
+        # DP to find minimum operations to get exactly k_val subarrays
+        # dp[i][j] = min operations to get j subarrays using first i positions
+        # Since k is small (<=15), we can use DP
+        
+        m = len(subarray_costs)
+        INF = 10**18
+        
+        # dp[i][j] = min operations to select j non-overlapping subarrays from first i positions
+        dp = [[INF] * (k_val + 1) for _ in range(m + 1)]
+        
+        # Base case: 0 subarrays require 0 operations
+        for i in range(m + 1):
+            dp[i][0] = 0
+        
+        for j in range(1, k_val + 1):
+            for i in range(x * j, m + 1):
+                # Option 1: don't use current position
+                dp[i][j] = min(dp[i][j], dp[i - 1][j])
+                
+                # Option 2: use subarray ending at position i-1
+                if i >= x:
+                    prev_pos = i - x
+                    dp[i][j] = min(dp[i][j], dp[prev_pos][j - 1] + subarray_costs[i - x])
+        
+        # Find minimum operations for at least k_val subarrays
+        min_ops = INF
+        for i in range(x * k_val, m + 1):
+            min_ops = min(min_ops, dp[i][k_val])
+        
+        return min_ops <= min_operations_for_k_equal_subarrays
+    
+    # Binary search for the maximum k that satisfies the condition
+    # and also satisfies k * x <= n
+    max_possible_k = n // x
+    
+    # We want the largest k where min_operations(k) <= given_value
+    # But we need exactly equal to given_value, so we'll check all possible k
+    candidate_k = -1
+    
+    for k in range(1, max_possible_k + 1):
+        # Check if we can achieve exactly k subarrays with the given operations
+        # We need to check if min_operations(k) == given_value
+        
+        # Calculate min operations for exactly k subarrays
+        m = len(subarray_costs)
+        INF = 10**18
+        
+        dp = [[INF] * (k + 1) for _ in range(m + 1)]
+        for i in range(m + 1):
+            dp[i][0] = 0
+        
+        for j in range(1, k + 1):
+            for i in range(x * j, m + 1):
+                dp[i][j] = min(dp[i][j], dp[i - 1][j])
+                if i >= x:
+                    prev_pos = i - x
+                    dp[i][j] = min(dp[i][j], dp[prev_pos][j - 1] + subarray_costs[i - x])
+        
+        min_ops = INF
+        for i in range(x * k, m + 1):
+            min_ops = min(min_ops, dp[i][k])
+        
+        if min_ops == min_operations_for_k_equal_subarrays:
+            candidate_k = k
+            break
+    
+    if candidate_k == -1:
+        # If no exact match found, find the closest one
+        # This handles cases where multiple k could produce the same min_operations
+        best_k = 1
+        min_diff = float('inf')
+        
+        for k in range(1, max_possible_k + 1):
+            m = len(subarray_costs)
+            INF = 10**18
+            
+            dp = [[INF] * (k + 1) for _ in range(m + 1)]
+            for i in range(m + 1):
+                dp[i][0] = 0
+            
+            for j in range(1, k + 1):
+                for i in range(x * j, m + 1):
+                    dp[i][j] = min(dp[i][j], dp[i - 1][j])
+                    if i >= x:
+                        prev_pos = i - x
+                        dp[i][j] = min(dp[i][j], dp[prev_pos][j - 1] + subarray_costs[i - x])
+            
+            min_ops = INF
+            for i in range(x * k, m + 1):
+                min_ops = min(min_ops, dp[i][k])
+            
+            diff = abs(min_ops - min_operations_for_k_equal_subarrays)
+            if diff < min_diff:
+                min_diff = diff
+                best_k = k
+        
+        candidate_k = best_k
+    
+    # Verify constraints
+    if candidate_k < 1 or candidate_k > 15 or candidate_k * x > n:
+        raise ValueError("Invalid input")
+    
+    return candidate_k

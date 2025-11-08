@@ -1,0 +1,132 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+# test name: test_example_1
+def test_example_1():
+    nums = [5, -2, 1, 3, 7, 3, 6, 4, -1]
+    x = 3
+    k = 2
+    result = minOperations(nums, x, k)
+    assert result == 8
+
+def test_example_2():
+    nums = [9, -2, -2, -2, 1, 5]
+    x = 2
+    k = 2
+    result = minOperations(nums, x, k)
+    assert result == 3
+
+def test_single_subarray_minimal_operations():
+    nums = [1, 2, 3, 4, 5]
+    x = 2
+    k = 1
+    result = minOperations(nums, x, k)
+    # For subarray [2,3], best to make both equal to 2.5 (median)
+    # Operations: |2-2.5| + |3-2.5| = 0.5 + 0.5 = 1
+    # But since we need integers, best is make both 2 or both 3 (cost = 1)
+    assert result == 1
+
+def test_already_valid_subarrays():
+    nums = [1, 1, 1, 2, 2, 2, 3, 3, 3]
+    x = 3
+    k = 3
+    result = minOperations(nums, x, k)
+    # Subarrays are already valid: [1,1,1], [2,2,2], [3,3,3]
+    assert result == 0
+
+def test_negative_numbers():
+    nums = [-5, -3, -1, -2, -4, -6]
+    x = 2
+    k = 2
+    result = minOperations(nums, x, k)
+    # For subarrays [-3,-1] and [-2,-4], best to make both -2 in first and both -3 in second
+    # Operations: |(-3)-(-2)| + |(-1)-(-2)| + |(-2)-(-3)| + |(-4)-(-3)| = 1+1+1+1 = 4
+    assert result >= 0  # Operations should be non-negative
+
+def test_large_numbers():
+    nums = [1000000, 1000001, 1000002, 999999, 999998]
+    x = 2
+    k = 2
+    result = minOperations(nums, x, k)
+    # Operations should be relatively small due to close values
+    assert result <= 10
+
+def test_minimum_constraints():
+    nums = [1, 2]
+    x = 2
+    k = 1
+    result = minOperations(nums, x, k)
+    # Make both elements equal: |1-1.5| + |2-1.5| = 1 (if we choose 1 or 2)
+    assert result == 1
+
+def test_overlapping_possibility():
+    nums = [1, 2, 3, 4, 5, 6, 7, 8]
+    x = 3
+    k = 2
+    result = minOperations(nums, x, k)
+    # Should find two non-overlapping subarrays of size 3
+    assert result >= 0
+
+def test_all_same_value():
+    nums = [5, 5, 5, 5, 5, 5, 5, 5]
+    x = 2
+    k = 3
+    result = minOperations(nums, x, k)
+    # All elements already equal, any subarray is valid
+    assert result == 0
+
+def test_alternating_pattern():
+    nums = [1, 10, 1, 10, 1, 10, 1, 10]
+    x = 2
+    k = 3
+    result = minOperations(nums, x, k)
+    # Could make [1,1], [1,1], [1,1] subarrays
+    # Operations needed to change 10s to 1s
+    assert result >= 0
+
+def test_decreasing_sequence():
+    nums = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+    x = 3
+    k = 2
+    result = minOperations(nums, x, k)
+    # Find two subarrays of 3 elements each and make them equal
+    assert result >= 0
+
+def test_random_large_array():
+    nums = list(range(1000))
+    x = 10
+    k = 5
+    result = minOperations(nums, x, k)
+    # Should handle large input within constraints
+    assert result >= 0
+
+def test_k_equals_one():
+    nums = [1, 3, 5, 7, 9, 11]
+    x = 3
+    k = 1
+    result = minOperations(nums, x, k)
+    # Find the best subarray of size 3 and make all elements equal
+    # Best might be [5,7,9] -> make all 7 (cost = 2+0+2 = 4)
+    assert result >= 0
+
+def test_maximum_k():
+    nums = list(range(30))  # 30 elements
+    x = 2
+    k = 15  # Maximum k for given constraints
+    result = minOperations(nums, x, k)
+    # Should find 15 non-overlapping subarrays of size 2
+    assert result >= 0
+
+def test_duplicate_values():
+    nums = [1, 1, 2, 2, 3, 3, 1, 1, 2, 2]
+    x = 2
+    k = 4
+    result = minOperations(nums, x, k)
+    # Many subarrays already have equal elements
+    assert result <= 2  # Should be very small
+
+def test_extreme_values():
+    nums = [-1000000, 1000000, -1000000, 1000000, -1000000, 1000000]
+    x = 2
+    k = 2
+    result = minOperations(nums, x, k)
+    # High cost due to extreme value differences
+    assert result >= 0

@@ -1,0 +1,105 @@
+# signature: def minCost_simp_split_0_inv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> List[List[int]]
+from typing import List
+
+def minCost_simp_split_0_inv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> List[List[int]]:
+    if not cost_prefix:
+        if minimum_beautiful_painting_cost == 0:
+            return [[0, 0, 0]]
+        else:
+            raise ValueError("Invalid input")
+    
+    n = len(cost_prefix) + 1
+    if n % 2 != 0:
+        raise ValueError("Invalid input")
+    
+    if any(len(row) != 3 for row in cost_prefix):
+        raise ValueError("Invalid input")
+    
+    if any(not (0 <= val <= 10**5) for row in cost_prefix for val in row):
+        raise ValueError("Invalid input")
+    
+    if not (0 <= minimum_beautiful_painting_cost <= 10**5 * n * 3):
+        raise ValueError("Invalid input")
+    
+    symmetric_pairs = [(i, n - 1 - i) for i in range(n // 2)]
+    
+    dp = [[[float('inf')] * 3 for _ in range(3)] for _ in range(len(symmetric_pairs))]
+    
+    for pair_idx, (i, j) in enumerate(symmetric_pairs):
+        for color_i in range(3):
+            for color_j in range(3):
+                if color_i == color_j:
+                    continue
+                
+                if pair_idx == 0:
+                    if i == j - 1:
+                        cost = cost_prefix[i][color_i] + cost_prefix[j-1][color_j]
+                    else:
+                        cost = cost_prefix[i][color_i] + cost_prefix[j-1][color_j]
+                    dp[pair_idx][color_i][color_j] = cost
+                else:
+                    prev_i, prev_j = symmetric_pairs[pair_idx - 1]
+                    min_prev = float('inf')
+                    
+                    for prev_color_i in range(3):
+                        for prev_color_j in range(3):
+                            if prev_color_i == prev_color_j:
+                                continue
+                            if prev_color_i == color_i or prev_color_j == color_j:
+                                continue
+                            
+                            if i == j - 1:
+                                cost = cost_prefix[i][color_i] + cost_prefix[j-1][color_j]
+                            else:
+                                cost = cost_prefix[i][color_i] + cost_prefix[j-1][color_j]
+                            
+                            total_cost = dp[pair_idx - 1][prev_color_i][prev_color_j] + cost
+                            min_prev = min(min_prev, total_cost)
+                    
+                    dp[pair_idx][color_i][color_j] = min_prev
+    
+    last_pair_idx = len(symmetric_pairs) - 1
+    min_total = float('inf')
+    best_colors = None
+    
+    for color_i in range(3):
+        for color_j in range(3):
+            if color_i == color_j:
+                continue
+            if dp[last_pair_idx][color_i][color_j] < min_total:
+                min_total = dp[last_pair_idx][color_i][color_j]
+                best_colors = (color_i, color_j)
+    
+    if min_total > minimum_beautiful_painting_cost:
+        raise ValueError("Invalid input")
+    
+    required_suffix_cost = minimum_beautiful_painting_cost - min_total
+    
+    suffix = [[required_suffix_cost // 3] * 3]
+    remainder = required_suffix_cost % 3
+    
+    for i in range(remainder):
+        suffix[0][i] += 1
+    
+    for i in range(3):
+        suffix[0][i] = max(0, min(10**5, suffix[0][i]))
+    
+    actual_min_cost = float('inf')
+    for color_last in range(3):
+        if color_last == best_colors[1]:
+            continue
+        
+        total = min_total + suffix[0][color_last]
+        actual_min_cost = min(actual_min_cost, total)
+    
+    if actual_min_cost != minimum_beautiful_painting_cost:
+        adjustment = minimum_beautiful_painting_cost - actual_min_cost
+        if 0 <= suffix[0][best_colors[1]] + adjustment <= 10**5:
+            suffix[0][best_colors[1]] += adjustment
+        else:
+            for color in range(3):
+                if color != best_colors[1] and 0 <= suffix[0][color] + adjustment <= 10**5:
+                    suffix[0][color] += adjustment
+                    break
+    
+    return suffix

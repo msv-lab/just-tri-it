@@ -1,0 +1,52 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x > n:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Precompute the cost for making each possible subarray of length x equal to a target value
+    # We'll use dynamic programming where dp[i][j] = min operations to get j subarrays using first i positions
+    INF = float('inf')
+    dp = [INF] * (k + 1)
+    dp[0] = 0
+    
+    # For each possible starting position of a subarray
+    for start in range(n - x + 1):
+        end = start + x - 1
+        subarray_sum = prefix[end + 1] - prefix[start]
+        
+        # The optimal target value is the median of the subarray
+        # But for efficiency, we'll use the mean rounded to nearest integer
+        sorted_sub = sorted(nums[start:end + 1])
+        median = sorted_sub[x // 2]
+        
+        # Calculate cost to make all elements equal to median
+        cost = 0
+        for i in range(start, end + 1):
+            cost += abs(nums[i] - median)
+        
+        # Update DP table backwards to avoid reusing the same subarray
+        new_dp = dp[:]
+        for j in range(k, 0, -1):
+            if dp[j - 1] != INF:
+                new_dp[j] = min(new_dp[j], dp[j - 1] + cost)
+        dp = new_dp
+    
+    return dp[k] if dp[k] != INF else 0

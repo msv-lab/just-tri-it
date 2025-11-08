@@ -1,0 +1,118 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Convert to tree rooted at 0
+    tree = defaultdict(list)
+    parent = [-1] * n
+    visited = [False] * n
+    
+    stack = [0]
+    visited[0] = True
+    while stack:
+        node = stack.pop()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                tree[node].append((neighbor, length))
+                stack.append(neighbor)
+    
+    # Global variables to store results
+    max_length = 0
+    min_nodes_for_max_length = float('inf')
+    
+    def dfs(node, path_values, path_lengths):
+        nonlocal max_length, min_nodes_for_max_length
+        
+        current_value = nums[node]
+        
+        # Check if current value already exists in path
+        if current_value in path_values:
+            # Find the position where this value last appeared
+            last_pos = path_values[current_value]
+            
+            # Create new path starting after the duplicate
+            new_path_values = {}
+            new_path_lengths = {}
+            
+            for val, pos in list(path_values.items()):
+                if pos > last_pos:
+                    new_path_values[val] = pos
+                    new_path_lengths[val] = path_lengths[val]
+            
+            path_values = new_path_values
+            path_lengths = new_path_lengths
+        
+        # Add current node to path
+        path_values[current_value] = len(path_values)
+        path_lengths[current_value] = 0  # We'll update this properly
+        
+        # Calculate path lengths for all values in current path
+        path_nodes = sorted([(pos, val) for val, pos in path_values.items()])
+        cumulative_length = 0
+        
+        # Reconstruct the path with proper lengths
+        for i in range(len(path_nodes)):
+            val = path_nodes[i][1]
+            if i > 0:
+                # Add edge length from previous node to current node
+                prev_val = path_nodes[i-1][1]
+                # Find the edge between consecutive nodes in path
+                found = False
+                for neighbor, length in tree[path_nodes[i-1][0]]:
+                    if nums[neighbor] == val:
+                        cumulative_length += length
+                        found = True
+                        break
+                if not found:
+                    # This shouldn't happen in a valid tree path
+                    cumulative_length += 0
+            path_lengths[val] = cumulative_length
+        
+        # Update global results
+        current_path_length = cumulative_length
+        current_node_count = len(path_values)
+        
+        if current_path_length > max_length:
+            max_length = current_path_length
+            min_nodes_for_max_length = current_node_count
+        elif current_path_length == max_length:
+            if current_node_count < min_nodes_for_max_length:
+                min_nodes_for_max_length = current_node_count
+        
+        # Explore children
+        for child, edge_length in tree[node]:
+            # Create copies for recursion
+            new_path_values = path_values.copy()
+            new_path_lengths = path_lengths.copy()
+            
+            # Update path length for the edge to child
+            if new_path_values:
+                # Add edge length to all path lengths
+                for val in new_path_lengths:
+                    new_path_lengths[val] += edge_length
+            
+            dfs(child, new_path_values, new_path_lengths)
+    
+    # Start DFS from root
+    dfs(0, {}, {})
+    
+    # Handle case where no path was found (shouldn't happen)
+    if max_length == 0:
+        min_nodes_for_max_length = 1
+    
+    return [max_length, min_nodes_for_max_length]

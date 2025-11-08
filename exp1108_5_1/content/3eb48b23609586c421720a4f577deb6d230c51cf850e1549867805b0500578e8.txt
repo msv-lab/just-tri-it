@@ -1,0 +1,10 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+# test name: test_non_consecutive_optimal_subarrays
+def test_non_consecutive_optimal_subarrays():
+    nums = [10, 1, 10, 2, 10, 3, 10, 4, 10, 5]
+    x = 2
+    k = 3
+    result = minOperations(nums, x, k)
+    # Best strategy: use subarrays at indices (0,2), (2,4), (4,6) 
+    # All are already 10s - cost 0
+    assert result == 0

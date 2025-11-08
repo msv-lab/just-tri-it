@@ -1,0 +1,10 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+# test name: test_star_with_duplicate_leaves
+def test_star_with_duplicate_leaves():
+    """Test star structure with duplicate values at leaves"""
+    edges = [[0,1,2],[0,2,3],[0,3,4],[0,4,5]]
+    nums = [1,2,2,3,3]  # Duplicates at leaves
+    result = longestSpecialPath(edges, nums)
+    # Valid paths: 0->3 (length 4, 2 nodes), 0->4 (length 5, 2 nodes)
+    # 0->1 (length 2, 2 nodes), 0->2 (length 3, 2 nodes)
+    assert result == [5, 2]

@@ -1,0 +1,15 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+# test name: test_two_colors_only_viable
+def test_two_colors_only_viable():
+    """Test when only two colors are economically viable due to high third color costs"""
+    n = 4
+    cost = [
+        [1, 2, 1000],
+        [2, 1, 1000],
+        [1, 2, 1000],
+        [2, 1, 1000]
+    ]
+    result = minCost(n, cost)
+    # Only colors 1 and 2 are viable, must alternate properly
+    # Valid pattern: [1,2,1,2] = 1 + 1 + 1 + 1 = 4
+    assert result == 4

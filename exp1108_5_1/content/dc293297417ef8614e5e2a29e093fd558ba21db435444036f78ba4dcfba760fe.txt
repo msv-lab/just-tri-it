@@ -1,0 +1,92 @@
+# signature: def count_distinct_in_degree_sequences(modulus: int, num_vertices: int, binary_string: str) -> int
+MOD = 998244353
+
+def count_distinct_in_degree_sequences(modulus: int, num_vertices: int, binary_string: str) -> int:
+    if modulus != 998244353:
+        raise ValueError("Invalid input")
+    
+    N = num_vertices
+    s = binary_string
+    
+    if N < 3:
+        raise ValueError("Invalid input")
+    if len(s) != N:
+        raise ValueError("Invalid input")
+    if any(c not in '01' for c in s):
+        raise ValueError("Invalid input")
+    
+    # Count number of 1s in the binary string
+    k = s.count('1')
+    
+    # The graph has:
+    # - N edges in the cycle (0-1, 1-2, ..., (N-1)-0)
+    # - k edges from vertex N to vertices where s_i = '1'
+    # Total edges = N + k
+    
+    # For the cycle part, the sum of in-degrees for vertices 0..N-1 from cycle edges
+    # must equal N (each edge contributes 1 to the total in-degree sum)
+    # For the star edges from vertex N, each contributes 1 to total in-degree sum
+    
+    # The key observation: for the cycle, if we fix the directions of all edges,
+    # the in-degrees d_0, d_1, ..., d_{N-1} from cycle edges satisfy certain constraints
+    # Specifically, for each consecutive pair (d_i, d_{i+1}), the possible values are limited
+    
+    # Let's use dynamic programming
+    # dp[i][state] where state represents the relationship between d_i and d_{i+1}
+    # state 0: d_i < d_{i+1}
+    # state 1: d_i = d_{i+1}  
+    # state 2: d_i > d_{i+1}
+    
+    dp = [1, 0, 0]  # Initial state at position 0
+    
+    for i in range(N):
+        new_dp = [0, 0, 0]
+        if s[i] == '1':
+            # Vertex i is connected to vertex N
+            # More possibilities for in-degree transitions
+            new_dp[0] = (dp[0] + dp[1] + dp[2]) % MOD
+            new_dp[1] = (dp[0] + dp[1] + dp[2]) % MOD  
+            new_dp[2] = (dp[0] + dp[1] + dp[2]) % MOD
+        else:
+            # Vertex i is not connected to vertex N
+            # Fewer possibilities for in-degree transitions
+            new_dp[0] = (dp[0] + dp[1]) % MOD
+            new_dp[1] = (dp[0] + dp[1] + dp[2]) % MOD
+            new_dp[2] = (dp[1] + dp[2]) % MOD
+        dp = new_dp
+    
+    # Now we need to account for vertex N
+    # Vertex N has degree k, so its in-degree d_N can be from 0 to k
+    # For each possible d_N, we multiply by the number of ways to choose which edges
+    # incident to vertex N are incoming
+    
+    # The total number of sequences is sum_{d_N=0}^k [C(k, d_N) * (dp values)]
+    # But we need to be careful about the wrap-around from vertex N-1 to vertex 0
+    
+    # Let's compute the final answer considering all constraints
+    result = 0
+    
+    # Precompute factorials for combinations
+    fact = [1] * (k + 1)
+    inv_fact = [1] * (k + 1)
+    for i in range(1, k + 1):
+        fact[i] = fact[i-1] * i % MOD
+    
+    # Fermat's little theorem for modular inverse
+    inv_fact[k] = pow(fact[k], MOD-2, MOD)
+    for i in range(k-1, -1, -1):
+        inv_fact[i] = inv_fact[i+1] * (i+1) % MOD
+    
+    def nCr(n, r):
+        if r < 0 or r > n:
+            return 0
+        return fact[n] * inv_fact[r] % MOD * inv_fact[n-r] % MOD
+    
+    # For each possible in-degree of vertex N, multiply by combination count
+    # and add up all dp states
+    for dN in range(k + 1):
+        ways_for_N = nCr(k, dN)
+        total_dp = sum(dp) % MOD
+        result = (result + ways_for_N * total_dp) % MOD
+    
+    return result

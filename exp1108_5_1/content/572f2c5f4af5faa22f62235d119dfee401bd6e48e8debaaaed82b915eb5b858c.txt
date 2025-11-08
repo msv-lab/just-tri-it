@@ -1,0 +1,98 @@
+# signature: def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]:
+    if not longest_special_path_info or len(longest_special_path_info) != 2:
+        raise ValueError("Invalid input")
+    
+    target_length, target_min_nodes = longest_special_path_info
+    
+    if target_length < 1 or target_min_nodes < 1 or target_min_nodes > target_length:
+        raise ValueError("Invalid input")
+    
+    n = len(edges) + 1
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Build tree structure (rooted at 0)
+    parent = [-1] * n
+    children = defaultdict(list)
+    visited = [False] * n
+    
+    queue = deque([0])
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                children[node].append(neighbor)
+                queue.append(neighbor)
+    
+    # Strategy: Create a path of length target_length with target_min_nodes unique values
+    # We'll create a simple solution where we assign values to create the required path
+    
+    nums = [0] * n
+    
+    if target_length == 1:
+        # Single node path
+        for i in range(n):
+            nums[i] = i
+        return nums
+    
+    # Find a path from root with exactly target_length nodes
+    # We need to assign values such that the path has exactly target_min_nodes unique values
+    
+    # Find a suitable path in the tree
+    path_nodes = []
+    stack = [(0, 1)]  # (node, depth)
+    
+    while stack and len(path_nodes) < target_length:
+        node, depth = stack.pop()
+        path_nodes.append(node)
+        
+        if depth < target_length and children[node]:
+            # Add one child to continue the path
+            stack.append((children[node][0], depth + 1))
+    
+    # If we couldn't find a path of required length, extend with additional nodes
+    if len(path_nodes) < target_length:
+        # Add more nodes to reach target_length
+        current_length = len(path_nodes)
+        remaining = target_length - current_length
+        
+        # Find additional nodes not in the current path
+        all_nodes = set(range(n))
+        path_set = set(path_nodes)
+        extra_nodes = list(all_nodes - path_set)
+        
+        # Add the first 'remaining' extra nodes to the path
+        path_nodes.extend(extra_nodes[:remaining])
+    
+    # Ensure we have exactly target_length nodes in our path
+    path_nodes = path_nodes[:target_length]
+    
+    # Assign values to create the required number of unique values
+    unique_count = target_min_nodes
+    
+    # Create a pattern where we have unique_count unique values repeating
+    for i, node in enumerate(path_nodes):
+        nums[node] = i % unique_count
+    
+    # Assign values to remaining nodes (not in our main path)
+    used_values = set(nums[node] for node in path_nodes)
+    next_val = max(used_values) + 1 if used_values else 0
+    
+    for i in range(n):
+        if nums[i] == 0 and i not in path_nodes:
+            nums[i] = next_val
+            next_val += 1
+    
+    return nums

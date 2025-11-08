@@ -1,0 +1,101 @@
+# signature: def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> list[int]
+from typing import List
+
+def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> List[int]:
+    n = len(nums)
+    
+    # Validate input constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # For each possible starting position of a subarray of length x
+    # Calculate the cost to make all elements equal to the median
+    subarray_costs = []
+    for i in range(n - x + 1):
+        # Extract the subarray
+        subarray = nums[i:i + x]
+        
+        # Sort to find median
+        sorted_sub = sorted(subarray)
+        
+        # For odd length, median is middle element
+        # For even length, either middle element works (cost is same for both)
+        median = sorted_sub[x // 2]
+        
+        # Calculate cost to make all elements equal to median
+        cost = 0
+        for num in subarray:
+            cost += abs(num - median)
+        
+        subarray_costs.append((i, cost))
+    
+    # Sort subarrays by cost
+    subarray_costs.sort(key=lambda item: item[1])
+    
+    # For each k, we need to find k non-overlapping subarrays with minimum total cost
+    # The subarrays cannot overlap, so we need to select them carefully
+    
+    max_possible_k = n // x
+    result = []
+    
+    # Check all possible k values in the valid range
+    for k in range(1, 16):  # k from 1 to 15
+        if k * x > n:  # k subarrays of length x must fit in the array
+            continue
+        
+        # We need to find if there exists a selection of k non-overlapping subarrays
+        # with total cost exactly equal to min_operations_for_k_equal_subarrays
+        
+        # Use dynamic programming to find minimum cost for exactly k non-overlapping subarrays
+        # dp[i][j] = minimum cost to select j subarrays from first i subarray positions
+        # But since n can be up to 10^5 and k up to 15, we need a more efficient approach
+        
+        # Instead, we'll use a greedy approach with backtracking for small k
+        
+        def backtrack(idx, count, total_cost, used):
+            if count == k:
+                return total_cost == min_operations_for_k_equal_subarrays
+            
+            if idx >= len(subarray_costs):
+                return False
+            
+            # Skip current subarray
+            if backtrack(idx + 1, count, total_cost, used):
+                return True
+            
+            # Try to take current subarray if it doesn't overlap with used ones
+            start_i, cost = subarray_costs[idx]
+            end_i = start_i + x - 1
+            
+            # Check if this subarray overlaps with any used subarray
+            overlap = False
+            for used_start in used:
+                used_end = used_start + x - 1
+                if not (end_i < used_start or start_i > used_end):
+                    overlap = True
+                    break
+            
+            if not overlap:
+                used.add(start_i)
+                if backtrack(idx + 1, count + 1, total_cost + cost, used):
+                    return True
+                used.remove(start_i)
+            
+            return False
+        
+        # Try with the cheapest subarrays first
+        if backtrack(0, 0, 0, set()):
+            result.append(k)
+    
+    return result

@@ -1,0 +1,87 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    if not edges or len(nums) != len(edges) + 1:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    graph = defaultdict(list)
+    
+    # Build the graph
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Find parent-child relationships by doing BFS from root 0
+    parent = [-1] * n
+    children = defaultdict(list)
+    edge_length = defaultdict(int)
+    
+    visited = [False] * n
+    queue = deque([0])
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                children[node].append(neighbor)
+                edge_length[(node, neighbor)] = length
+                queue.append(neighbor)
+    
+    # DFS to compute the longest special path
+    # We'll track: max_length, min_nodes for the path ending at each node
+    # And also the best overall
+    
+    # dp[node] = (max_length_from_ancestor, min_nodes_from_ancestor, last_value_frequency)
+    # But we need to track the path from ancestors with unique values
+    
+    best_length = 0
+    best_min_nodes = float('inf')
+    
+    def dfs(node, path_values, path_length, path_nodes):
+        nonlocal best_length, best_min_nodes
+        
+        # Current path is valid (all unique values)
+        current_length = path_length
+        current_nodes = path_nodes
+        
+        # Update global best
+        if current_length > best_length:
+            best_length = current_length
+            best_min_nodes = current_nodes
+        elif current_length == best_length:
+            if current_nodes < best_min_nodes:
+                best_min_nodes = current_nodes
+        
+        # Explore children
+        for child in children[node]:
+            child_val = nums[child]
+            edge_len = edge_length[(node, child)]
+            
+            if child_val in path_values:
+                # Can't extend path with this child due to duplicate value
+                # Start a new path from this child
+                dfs(child, {child_val}, 0, 1)
+            else:
+                # Can extend the path
+                path_values.add(child_val)
+                dfs(child, path_values, path_length + edge_len, path_nodes + 1)
+                path_values.remove(child_val)
+    
+    # Start DFS from each node as potential starting point
+    for start_node in range(n):
+        dfs(start_node, {nums[start_node]}, 0, 1)
+    
+    # Handle case where no path with positive length exists
+    if best_length == 0:
+        # All single-node paths have length 0
+        return [0, 1]
+    
+    return [best_length, best_min_nodes]

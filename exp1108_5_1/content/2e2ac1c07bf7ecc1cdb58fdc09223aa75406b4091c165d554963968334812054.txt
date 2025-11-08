@@ -1,0 +1,77 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2 or len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Build tree structure with parent-child relationships (root at 0)
+    tree = defaultdict(list)
+    parent = [-1] * n
+    dist_from_root = [0] * n
+    
+    # BFS to establish parent-child relationships and distances from root
+    visited = [False] * n
+    queue = deque([0])
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                dist_from_root[neighbor] = dist_from_root[node] + length
+                tree[node].append((neighbor, length))
+                queue.append(neighbor)
+    
+    # DFS to find the longest special path
+    # We'll track: current node, current path length, current node count, value set
+    max_length = 0
+    min_nodes_for_max_length = float('inf')
+    
+    def dfs(node, path_length, node_count, value_set):
+        nonlocal max_length, min_nodes_for_max_length
+        
+        # Check if current path is special (all values unique)
+        if len(value_set) == node_count:
+            # This is a valid special path
+            if path_length > max_length:
+                max_length = path_length
+                min_nodes_for_max_length = node_count
+            elif path_length == max_length:
+                if node_count < min_nodes_for_max_length:
+                    min_nodes_for_max_length = node_count
+        
+        # Explore children
+        for child, length in tree[node]:
+            if nums[child] in value_set:
+                # Can't extend path with this child (duplicate value)
+                continue
+            
+            # Add child's value to the set and continue DFS
+            value_set.add(nums[child])
+            dfs(child, path_length + length, node_count + 1, value_set)
+            value_set.remove(nums[child])
+    
+    # Start DFS from each node as the root of a potential special path
+    for start_node in range(n):
+        value_set = {nums[start_node]}
+        dfs(start_node, 0, 1, value_set)
+    
+    # Handle case where no special path was found (shouldn't happen per constraints)
+    if max_length == 0:
+        min_nodes_for_max_length = 1
+    
+    # Append 1 to the final answer as requested
+    return [max_length + 1, min_nodes_for_max_length + 1]

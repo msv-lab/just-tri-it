@@ -1,0 +1,120 @@
+# signature: def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]:
+    if not longest_special_path_info or len(longest_special_path_info) != 2:
+        raise ValueError("Invalid input")
+    
+    target_length, target_min_nodes = longest_special_path_info
+    
+    if target_length < 0 or target_min_nodes < 1:
+        raise ValueError("Invalid input")
+    
+    n = len(edges) + 1
+    
+    # Build adjacency list for the tree
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Build the tree structure (parent-child relationships) with BFS from root 0
+    parent = [-1] * n
+    children = defaultdict(list)
+    visited = [False] * n
+    queue = deque([0])
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, _ in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                children[node].append(neighbor)
+                queue.append(neighbor)
+    
+    # Case 1: If target_length is 0, we need a path with 1 node (length 0)
+    if target_length == 0:
+        if target_min_nodes != 1:
+            raise ValueError("Invalid input")
+        # All nodes can have the same value (e.g., all 0) since no path of length 1
+        # would have unique values (trivial case)
+        return [0] * n
+    
+    # Case 2: We need to construct a path of length target_length with target_min_nodes nodes
+    # The number of nodes in the path is target_min_nodes
+    # The path length (sum of edge lengths) is target_length
+    
+    # We'll try to create a path from root downwards with exactly target_min_nodes nodes
+    # and total edge length = target_length
+    
+    # First, check if it's possible to have such a path
+    if target_min_nodes < 1:
+        raise ValueError("Invalid input")
+    
+    # We need to assign unique values along this path
+    # Let's try to create a path starting from root with target_min_nodes nodes
+    
+    # Find a chain of target_min_nodes nodes from root
+    path_nodes = []
+    current = 0
+    path_nodes.append(current)
+    
+    # Build the longest chain we can from root
+    chain = [0]
+    while len(chain) < target_min_nodes and children[chain[-1]]:
+        chain.append(children[chain[-1]][0])
+    
+    if len(chain) < target_min_nodes:
+        # We cannot form a chain with target_min_nodes nodes from root
+        # Try to find any chain of target_min_nodes nodes
+        chain = []
+        # Use DFS to find the deepest node
+        max_depth = 0
+        deepest_node = 0
+        
+        stack = [(0, 0, -1)]  # (node, depth, parent)
+        while stack:
+            node, depth, par = stack.pop()
+            if depth > max_depth:
+                max_depth = depth
+                deepest_node = node
+            
+            for child in children[node]:
+                if child != par:
+                    stack.append((child, depth + 1, node))
+        
+        # Build chain from deepest node upwards
+        chain = []
+        node = deepest_node
+        while node != -1 and len(chain) < target_min_nodes:
+            chain.append(node)
+            node = parent[node]
+        
+        chain.reverse()
+        
+        if len(chain) < target_min_nodes:
+            # Still can't form the required chain
+            # We'll need to create values that prevent longer paths
+            # For now, return a simple assignment
+            nums = list(range(n))
+            return nums
+    
+    # We have our chain, now assign unique values
+    nums = [0] * n
+    
+    # Assign unique values to chain nodes
+    for i, node in enumerate(chain):
+        nums[node] = i
+    
+    # Fill remaining nodes with values that won't create longer special paths
+    # Use values that repeat to break uniqueness
+    next_val = len(chain)
+    for i in range(n):
+        if nums[i] == 0 and i not in chain:
+            nums[i] = next_val % (len(chain) + 1)
+            next_val += 1
+    
+    return nums

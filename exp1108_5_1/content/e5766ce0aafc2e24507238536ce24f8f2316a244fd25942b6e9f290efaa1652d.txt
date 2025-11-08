@@ -1,0 +1,73 @@
+# signature: def minCost_simp_split_0_sinv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> list[List[List[int]]]
+from typing import List
+
+def minCost_simp_split_0_sinv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> List[List[List[int]]]:
+    n = len(cost_prefix) + 1
+    
+    if n % 2 != 0 or n < 2:
+        raise ValueError("Invalid input")
+    
+    if not cost_prefix:
+        if n == 0:
+            return []
+        else:
+            raise ValueError("Invalid input")
+    
+    for row in cost_prefix:
+        if len(row) != 3:
+            raise ValueError("Invalid input")
+        for val in row:
+            if val < 0 or val > 100000:
+                raise ValueError("Invalid input")
+    
+    if minimum_beautiful_painting_cost < 0:
+        raise ValueError("Invalid input")
+    
+    dp = [[[float('inf')] * 3 for _ in range(3)] for _ in range(n)]
+    
+    for c1 in range(3):
+        for c2 in range(3):
+            if c1 != c2:
+                dp[1][c1][c2] = cost_prefix[0][c1] + cost_prefix[1][c2]
+    
+    for i in range(2, n-1):
+        new_dp = [[float('inf')] * 3 for _ in range(3)]
+        for prev1 in range(3):
+            for prev2 in range(3):
+                if dp[i-1][prev1][prev2] == float('inf'):
+                    continue
+                for curr in range(3):
+                    if curr == prev2:
+                        continue
+                    if i < n//2 and curr == prev1:
+                        continue
+                    if i >= n//2 and curr == dp[n-1-i][prev1][prev2]:
+                        continue
+                    new_dp[prev2][curr] = min(new_dp[prev2][curr], dp[i-1][prev1][prev2] + cost_prefix[i][curr])
+        dp[i] = new_dp
+    
+    result = []
+    
+    for c1 in range(3):
+        for c2 in range(3):
+            if dp[n-2][c1][c2] == float('inf'):
+                continue
+            for last_color in range(3):
+                if last_color == c2:
+                    continue
+                mirror_idx = n - 1
+                mirror_color_required = None
+                if mirror_idx < n//2:
+                    mirror_color_required = dp[mirror_idx][c1][c2]
+                else:
+                    mirror_pair_idx = n - 1 - mirror_idx
+                    mirror_color_required = dp[mirror_pair_idx][c1][c2] if mirror_pair_idx < len(dp) else None
+                
+                if mirror_color_required is not None and last_color == mirror_color_required:
+                    continue
+                
+                total_cost = dp[n-2][c1][c2] + cost_suffix_val
+                if total_cost == minimum_beautiful_painting_cost:
+                    result.append([[last_color_cost for last_color_cost in range(3) if last_color_cost == cost_suffix_val]])
+    
+    return result

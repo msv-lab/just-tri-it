@@ -1,0 +1,81 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x > n:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # DP array: dp[i][j] = min operations to get j subarrays using first i+x-1 elements
+    # Since k <= 15, we can use bitmask DP
+    INF = float('inf')
+    dp = [INF] * (1 << k)
+    dp[0] = 0
+    
+    # For each possible starting position of a subarray
+    for start in range(n - x + 1):
+        end = start + x - 1
+        # Calculate the cost to make all elements in this subarray equal to target
+        # The optimal target is the median of the subarray
+        sub = nums[start:end + 1]
+        sub_sorted = sorted(sub)
+        
+        # Median minimizes absolute deviations
+        median = sub_sorted[x // 2]
+        
+        # Calculate operations needed
+        cost = 0
+        for num in sub:
+            cost += abs(num - median)
+        
+        # Also try mean as it might be better in some cases
+        mean = sum(sub) // x
+        cost_mean1 = 0
+        for num in sub:
+            cost_mean1 += abs(num - mean)
+        
+        cost_mean2 = 0
+        for num in sub:
+            cost_mean2 += abs(num - (mean + 1))
+        
+        cost = min(cost, cost_mean1, cost_mean2)
+        
+        # Update DP state
+        new_dp = dp[:]
+        for mask in range(1 << k):
+            if dp[mask] == INF:
+                continue
+            
+            # Try to add this subarray to existing masks
+            for j in range(k):
+                if not (mask >> j) & 1:
+                    new_mask = mask | (1 << j)
+                    new_dp[new_mask] = min(new_dp[new_mask], dp[mask] + cost)
+        
+        dp = new_dp
+    
+    # Find the minimum operations for at least k subarrays
+    result = INF
+    for mask in range(1 << k):
+        if bin(mask).count('1') >= k:
+            result = min(result, dp[mask])
+    
+    if result == INF:
+        raise ValueError("Invalid input")
+    
+    return result + 1

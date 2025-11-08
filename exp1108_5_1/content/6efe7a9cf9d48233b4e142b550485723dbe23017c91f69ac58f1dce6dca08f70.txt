@@ -1,0 +1,87 @@
+# signature: def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> list[int]
+from typing import List
+import math
+
+def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> List[int]:
+    n = len(nums)
+    
+    # Validate inputs
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum queries
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Function to get sum of subarray from i to j-1
+    def get_sum(i, j):
+        return prefix[j] - prefix[i]
+    
+    # For each possible starting position of a subarray of length x
+    # Calculate the cost to make all elements equal to the median
+    subarray_costs = []
+    for i in range(n - x + 1):
+        sub = nums[i:i + x]
+        # Sort to find median
+        sorted_sub = sorted(sub)
+        median = sorted_sub[x // 2]
+        # Calculate cost to make all elements equal to median
+        cost = sum(abs(num - median) for num in sub)
+        subarray_costs.append((i, cost))
+    
+    # We need to find all k such that we can select k non-overlapping subarrays
+    # with total cost exactly equal to min_operations_for_k_equal_subarrays
+    # k ranges from 1 to min(15, n // x)
+    max_k = min(15, n // x)
+    result = []
+    
+    # For each possible k, check if there exists a selection of k non-overlapping subarrays
+    # with total cost exactly equal to min_operations_for_k_equal_subarrays
+    for k in range(1, max_k + 1):
+        if k * x > n:
+            continue
+            
+        # Use dynamic programming to find minimum cost for exactly k subarrays
+        # dp[i][j] = minimum cost to select j subarrays ending at or before position i
+        # Initialize with infinity
+        INF = float('inf')
+        dp = [[INF] * (k + 1) for _ in range(n + 1)]
+        
+        # Base case: 0 subarrays cost 0
+        for i in range(n + 1):
+            dp[i][0] = 0
+        
+        # Fill DP table
+        for j in range(1, k + 1):
+            for i in range(n):
+                if dp[i][j - 1] != INF:
+                    # Try to place next subarray starting at position i
+                    for start_idx, cost in subarray_costs:
+                        if start_idx >= i and start_idx + x <= n:
+                            end_idx = start_idx + x
+                            total_cost = dp[i][j - 1] + cost
+                            if total_cost < dp[end_idx][j]:
+                                dp[end_idx][j] = total_cost
+        
+        # Check if we can achieve exactly the target cost
+        min_cost_for_k = min(dp[i][k] for i in range(n + 1))
+        
+        # We need to check if the exact cost can be achieved
+        # Since we're looking for exact match, we need to find if any dp[i][k] equals target
+        exact_match_found = False
+        for i in range(n + 1):
+            if dp[i][k] == min_operations_for_k_equal_subarrays:
+                exact_match_found = True
+                break
+        
+        if exact_match_found:
+            result.append(k)
+    
+    return result

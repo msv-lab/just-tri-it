@@ -1,0 +1,79 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x < 2 or k * x > n:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # DP table: dp[i][j] = min operations to get j subarrays using first i+x-1 elements
+    # But since k is small (<=15), we can use a different approach
+    
+    # We need to find k non-overlapping subarrays of length x
+    # The key insight: for each candidate subarray position, we can calculate the cost
+    # to make all elements equal to the median (for minimum operations)
+    
+    # Calculate cost for each possible subarray of length x
+    subarray_costs = []
+    for i in range(n - x + 1):
+        # Extract the subarray
+        sub = nums[i:i + x]
+        # Sort to find median
+        sorted_sub = sorted(sub)
+        # For odd length, median is middle element; for even, either middle works
+        median = sorted_sub[x // 2]
+        # Calculate cost to make all elements equal to median
+        cost = sum(abs(num - median) for num in sub)
+        subarray_costs.append((i, cost, median))
+    
+    # Now we need to select k non-overlapping subarrays with minimum total cost
+    # Since k is small, we can use dynamic programming with state (position, count)
+    
+    # Sort subarrays by starting index
+    subarray_costs.sort()
+    
+    # DP approach: memoization for (index, count)
+    from functools import lru_cache
+    
+    @lru_cache(None)
+    def dfs(idx, count):
+        if count == 0:
+            return 0
+        if idx >= len(subarray_costs):
+            return float('inf')
+        
+        # Skip current subarray
+        skip = dfs(idx + 1, count)
+        
+        # Take current subarray
+        current_start, current_cost, _ = subarray_costs[idx]
+        next_idx = idx + 1
+        # Find next non-overlapping subarray
+        while next_idx < len(subarray_costs) and subarray_costs[next_idx][0] < current_start + x:
+            next_idx += 1
+        
+        take = current_cost + dfs(next_idx, count - 1)
+        
+        return min(skip, take)
+    
+    result = dfs(0, k)
+    
+    if result == float('inf'):
+        raise ValueError("Invalid input")
+    
+    return result

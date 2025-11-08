@@ -1,0 +1,70 @@
+# signature: def minCost_simp(cost: List[List[int]]) -> int
+from typing import List
+
+def minCost_simp(cost: List[List[int]]) -> int:
+    n = len(cost)
+    
+    # Check constraints
+    if n % 2 != 0 or n < 2 or n > 100000:
+        raise ValueError("Invalid input")
+    
+    for i in range(n):
+        if len(cost[i]) != 3:
+            raise ValueError("Invalid input")
+        for j in range(3):
+            if cost[i][j] < 0 or cost[i][j] > 100000:
+                raise ValueError("Invalid input")
+    
+    # For each pair of symmetric houses (i, n-1-i), we need to find the minimum cost
+    # such that both houses have different colors and also different from their adjacent symmetric pairs
+    
+    # We'll process pairs of symmetric houses
+    total_cost = 0
+    
+    for i in range(n // 2):
+        j = n - 1 - i  # symmetric house
+        
+        # Find all possible color combinations for houses i and j
+        # They must have different colors
+        min_pair_cost = float('inf')
+        
+        for color_i in range(3):
+            for color_j in range(3):
+                if color_i != color_j:
+                    # Check if this pair conflicts with previous symmetric pairs
+                    # For the first pair, no conflict with previous
+                    if i == 0:
+                        pair_cost = cost[i][color_i] + cost[j][color_j]
+                        min_pair_cost = min(min_pair_cost, pair_cost)
+                    else:
+                        # For subsequent pairs, we need to ensure they don't conflict with
+                        # the previous symmetric pair (i-1, n-i)
+                        prev_i = i - 1
+                        prev_j = n - i  # which is j + 1
+                        
+                        # The current house i cannot have same color as previous house i-1
+                        # The current house j cannot have same color as previous house j+1
+                        # Also, house i and house j cannot have same color
+                        if (color_i != prev_color_i and color_j != prev_color_j and 
+                            color_i != color_j):
+                            pair_cost = cost[i][color_i] + cost[j][color_j]
+                            min_pair_cost = min(min_pair_cost, pair_cost)
+        
+        # For the first iteration, we need to store the chosen colors
+        if i == 0:
+            # Find the actual combination that gives min cost
+            for color_i in range(3):
+                for color_j in range(3):
+                    if color_i != color_j:
+                        pair_cost = cost[i][color_i] + cost[j][color_j]
+                        if pair_cost == min_pair_cost:
+                            prev_color_i = color_i
+                            prev_color_j = color_j
+                            break
+                else:
+                    continue
+                break
+        
+        total_cost += min_pair_cost
+    
+    return total_cost + 1

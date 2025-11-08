@@ -1,0 +1,77 @@
+# signature: def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool
+from typing import List
+import math
+
+def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x < 2 or k * x > n:
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Memoization for DP
+    memo = {}
+    
+    def dp(idx, remaining_k, last_end):
+        if remaining_k == 0:
+            return 0
+        if idx > n - x:
+            return float('inf')
+        
+        key = (idx, remaining_k, last_end)
+        if key in memo:
+            return memo[key]
+        
+        # Option 1: Skip current position
+        skip = dp(idx + 1, remaining_k, last_end)
+        
+        # Option 2: Take subarray starting at idx if it doesn't overlap with last subarray
+        if idx >= last_end:
+            # Calculate cost to make all elements in subarray [idx, idx+x-1] equal
+            # The optimal target value is the median for odd x, or average of two medians for even x
+            subarray = nums[idx:idx + x]
+            sorted_sub = sorted(subarray)
+            
+            # For minimum operations, we want to make all elements equal to the median
+            if x % 2 == 1:
+                target = sorted_sub[x // 2]
+            else:
+                # For even length, either median works
+                target1 = sorted_sub[x // 2 - 1]
+                target2 = sorted_sub[x // 2]
+                cost1 = sum(abs(num - target1) for num in subarray)
+                cost2 = sum(abs(num - target2) for num in subarray)
+                target = target1 if cost1 <= cost2 else target2
+            
+            cost = sum(abs(num - target) for num in subarray)
+            
+            take = cost + dp(idx + x, remaining_k - 1, idx + x)
+        else:
+            take = float('inf')
+        
+        result = min(skip, take)
+        memo[key] = result
+        return result
+    
+    # Find minimum operations needed
+    min_ops = float('inf')
+    for start in range(n - x * k + 1):
+        min_ops = min(min_ops, dp(start, k, 0))
+    
+    # Check if the given value is valid
+    return min_operations_for_k_equal_subarrays >= min_ops

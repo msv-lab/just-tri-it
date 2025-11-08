@@ -1,0 +1,135 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+import heapq
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    # Check for invalid inputs
+    if not (2 <= len(nums) <= 10**5):
+        raise ValueError("Invalid input")
+    if not (2 <= x <= len(nums)):
+        raise ValueError("Invalid input")
+    if not (1 <= k <= 15):
+        raise ValueError("Invalid input")
+    if not (2 <= k * x <= len(nums)):
+        raise ValueError("Invalid input")
+    for num in nums:
+        if not (-10**6 <= num <= 10**6):
+            raise ValueError("Invalid input")
+    
+    n = len(nums)
+    # The subarrays must be non-overlapping, so the maximum possible subarrays is (n // x)
+    if k * x > n:
+        return 0  # though constraints say k*x <= n, this is just a safeguard
+    
+    # The idea is to select k subarrays of size x, non-overlapping, and for each subarray,
+    # make all elements equal to the median (to minimize operations)
+    # Then, select the top-k subarrays with the least operations
+    
+    # Precompute all possible subarrays of size x and their cost
+    subarrays = []
+    for i in range(n - x + 1):
+        subarray = nums[i:i+x]
+        # To minimize operations, we should make all elements equal to the median
+        sorted_sub = sorted(subarray)
+        median = sorted_sub[x // 2]  # median for even x is the lower one
+        operations = sum(abs(num - median) for num in subarray)
+        subarrays.append((operations, i, i + x - 1))
+    
+    # Now, we need to select k non-overlapping subarrays with the least total operations
+    # This is a classic interval scheduling problem with the goal of maximizing (or here, minimizing) the sum
+    
+    # We can use a greedy approach with a max-heap (but since we want min, we use min-heap)
+    # Sort the subarrays by their end index
+    subarrays.sort(key=lambda s: s[2])
+    
+    # Use dynamic programming to select non-overlapping intervals
+    # dp[i][j] represents the minimum operations to select j intervals from first i intervals
+    # But with k up to 15 and n up to 1e5, we need a more efficient approach
+    
+    # Alternative approach: use a min-heap to keep track of the best k non-overlapping intervals
+    # This is inspired by the "maximum number of non-overlapping intervals" problem but with costs
+    
+    # We will process intervals in order of their start time, and for each interval, we will
+    # find the latest non-overlapping interval before it and update the dp accordingly
+    
+    # Initialize a list to store the best k costs up to each interval
+    # We'll use a list of lists, where each element is a sorted list of the top k costs achievable up to that point
+    
+    # First, sort the subarrays by their start index
+    subarrays.sort(key=lambda s: s[1])
+    
+    # We'll keep a list of (end, heap), where heap is a max-heap of the top k costs up to that end
+    # Initialize with end = -infinity and heap = [0] (0 cost for 0 intervals)
+    dp = [ (float('-inf'), [0]) ]
+    
+    for ops, start, end in subarrays:
+        # Find the largest end in dp that is < start
+        left, right = 0, len(dp)
+        while left < right:
+            mid = (left + right) // 2
+            if dp[mid][0] < start:
+                left = mid + 1
+            else:
+                right = mid
+        # The last dp index with end < start is left - 1
+        best_idx = left - 1
+        if best_idx == -1:
+            # No previous intervals, can only take this one if we're selecting 1
+            new_costs = [0, ops] if k >= 1 else [0]
+        else:
+            _, prev_costs = dp[best_idx]
+            new_costs = []
+            # We can take up to min(k, len(prev_costs)) intervals from prev_costs and add current ops
+            max_take = min(k, len(prev_costs))
+            for take in range(max_take + 1):
+                if take < len(prev_costs):
+                    if take == 0:
+                        new_cost = ops
+                    else:
+                        new_cost = prev_costs[take - 1] + ops
+                    new_costs.append(new_cost)
+        # Merge with the previous best costs up to the current end
+        # Find the position to insert the current end in dp
+        left, right = 0, len(dp)
+        while left < right:
+            mid = (left + right) // 2
+            if dp[mid][0] < end:
+                left = mid + 1
+            else:
+                right = mid
+        # The new entry is at left
+        # The new_costs should be merged with the existing costs at dp[left] if dp[left][0] == end
+        if left < len(dp) and dp[left][0] == end:
+            existing_costs = dp[left][1]
+            # Merge new_costs and existing_costs and keep the top k smallest
+            merged = []
+            i = j = 0
+            while len(merged) < k and (i < len(new_costs) or j < len(existing_costs)):
+                if i < len(new_costs) and (j >= len(existing_costs) or new_costs[i] < existing_costs[j]):
+                    if not merged or new_costs[i] != merged[-1]:
+                        merged.append(new_costs[i])
+                    i += 1
+                else:
+                    if j < len(existing_costs):
+                        if not merged or existing_costs[j] != merged[-1]:
+                            merged.append(existing_costs[j])
+                        j += 1
+            dp[left] = (end, merged)
+        else:
+            # Insert new entry
+            # Keep only the top k smallest costs
+            unique_costs = list(set(new_costs))
+            unique_costs.sort()
+            top_k = unique_costs[:k]
+            dp.insert(left, (end, top_k))
+    
+    # The answer is the minimal k-th cost in the last entry of dp
+    if len(dp) == 0:
+        return 0
+    last_costs = dp[-1][1]
+    if k <= len(last_costs):
+        return last_costs[k - 1]
+    else:
+        # According to constraints, k*x <= n, so it should always be possible
+        # But if not, return the maximum possible (though problem says it's possible)
+        return last_costs[-1] if last_costs else 0

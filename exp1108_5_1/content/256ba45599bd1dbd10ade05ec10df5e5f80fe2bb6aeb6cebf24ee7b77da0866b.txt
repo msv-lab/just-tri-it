@@ -1,0 +1,87 @@
+# signature: def postcondition(edges: List[List[int]], nums: List[int], longest_special_path_info: List[int]) -> bool
+from typing import List
+from collections import defaultdict, deque
+
+def postcondition(edges: List[List[int]], nums: List[int], longest_special_path_info: List[int]) -> bool:
+    n = len(nums)
+    
+    # Validate input constraints
+    if n < 2 or n > 50000:
+        raise ValueError("Invalid input")
+    if len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    if len(longest_special_path_info) != 2:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list for the tree
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length < 1 or length > 1000:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Validate nums array
+    if len(nums) != n:
+        raise ValueError("Invalid input")
+    for num in nums:
+        if num < 0 or num > 50000:
+            raise ValueError("Invalid input")
+    
+    # Build the tree structure (rooted at 0)
+    parent = [-1] * n
+    depth = [0] * n
+    dist_from_root = [0] * n
+    
+    # BFS to build tree structure and calculate distances
+    queue = deque([0])
+    parent[0] = -1
+    depth[0] = 0
+    dist_from_root[0] = 0
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if neighbor != parent[node]:
+                parent[neighbor] = node
+                depth[neighbor] = depth[node] + 1
+                dist_from_root[neighbor] = dist_from_root[node] + length
+                queue.append(neighbor)
+    
+    # Find actual longest special path
+    max_length = 0
+    min_nodes_for_max_length = float('inf')
+    
+    # For each node as potential starting point, find the longest special path starting from it
+    for start in range(n):
+        visited_values = set()
+        stack = [(start, nums[start], 0, 1)]  # (current_node, path_values, path_length, node_count)
+        
+        while stack:
+            node, path_value, path_len, node_count = stack.pop()
+            
+            # Check if current path is special (all values unique)
+            if len(visited_values) + 1 == node_count and path_value not in visited_values:
+                # Update max_length and min_nodes_for_max_length
+                if path_len > max_length:
+                    max_length = path_len
+                    min_nodes_for_max_length = node_count
+                elif path_len == max_length:
+                    min_nodes_for_max_length = min(min_nodes_for_max_length, node_count)
+                
+                # Explore children
+                for child, edge_length in graph[node]:
+                    if child != parent[node]:
+                        if nums[child] not in visited_values and nums[child] != path_value:
+                            visited_values.add(path_value)
+                            stack.append((child, nums[child], path_len + edge_length, node_count + 1))
+                            visited_values.remove(path_value)
+    
+    # Check if the claimed info matches the actual computed values
+    claimed_length, claimed_min_nodes = longest_special_path_info
+    
+    # Handle edge case where no special path exists (shouldn't happen per constraints)
+    if max_length == 0:
+        return claimed_length == 0 and claimed_min_nodes == 1
+    
+    return claimed_length == max_length and claimed_min_nodes == min_nodes_for_max_length

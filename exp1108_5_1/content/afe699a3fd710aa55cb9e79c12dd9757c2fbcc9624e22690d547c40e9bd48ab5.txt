@@ -1,0 +1,88 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    
+    # Validate inputs
+    if n < 2:
+        raise ValueError("Invalid input")
+    if len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    for edge in edges:
+        if len(edge) != 3:
+            raise ValueError("Invalid input")
+        if edge[0] < 0 or edge[0] >= n or edge[1] < 0 or edge[1] >= n:
+            raise ValueError("Invalid input")
+        if edge[2] <= 0:
+            raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # DFS to find parent-child relationships and build tree structure
+    parent = [-1] * n
+    depth = [0] * n
+    dist_from_root = [0] * n
+    
+    stack = [0]
+    parent[0] = -1
+    depth[0] = 0
+    dist_from_root[0] = 0
+    
+    # Create a tree structure with root at 0
+    while stack:
+        node = stack.pop()
+        for neighbor, length in graph[node]:
+            if neighbor != parent[node]:
+                parent[neighbor] = node
+                depth[neighbor] = depth[node] + 1
+                dist_from_root[neighbor] = dist_from_root[node] + length
+                stack.append(neighbor)
+    
+    # Find all ancestor-descendant pairs with unique values
+    max_length = 0
+    min_nodes_for_max_length = float('inf')
+    
+    # For each node as starting point, find valid descendant paths
+    for i in range(n):
+        # Path starting and ending at same node
+        if True:  # Single node path always has unique values
+            path_length = 0
+            path_nodes = 1
+            if path_length > max_length:
+                max_length = path_length
+                min_nodes_for_max_length = path_nodes
+            elif path_length == max_length:
+                min_nodes_for_max_length = min(min_nodes_for_max_length, path_nodes)
+        
+        # DFS to find all descendants with unique values
+        stack = [(i, {nums[i]}, 1, 0)]  # (current_node, value_set, node_count, total_length)
+        
+        while stack:
+            current, value_set, node_count, total_length = stack.pop()
+            
+            for neighbor, length in graph[current]:
+                if neighbor == parent[current]:
+                    continue
+                
+                if nums[neighbor] not in value_set:
+                    new_value_set = value_set.copy()
+                    new_value_set.add(nums[neighbor])
+                    new_node_count = node_count + 1
+                    new_total_length = total_length + length
+                    
+                    # Update results
+                    if new_total_length > max_length:
+                        max_length = new_total_length
+                        min_nodes_for_max_length = new_node_count
+                    elif new_total_length == max_length:
+                        min_nodes_for_max_length = min(min_nodes_for_max_length, new_node_count)
+                    
+                    stack.append((neighbor, new_value_set, new_node_count, new_total_length))
+    
+    return [max_length, min_nodes_for_max_length]

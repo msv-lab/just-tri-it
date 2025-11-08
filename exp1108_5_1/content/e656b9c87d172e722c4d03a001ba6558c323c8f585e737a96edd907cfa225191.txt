@@ -1,0 +1,62 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+from typing import List
+
+def minCost(n: int, cost: List[List[int]]) -> int:
+    if n < 2 or n % 2 != 0:
+        raise ValueError("Invalid input")
+    
+    if len(cost) != n or any(len(row) != 3 for row in cost):
+        raise ValueError("Invalid input")
+    
+    if any(not (0 <= c <= 10**5) for row in cost for c in row):
+        raise ValueError("Invalid input")
+    
+    # For each pair of symmetric houses (i, n-1-i), we need to choose different colors
+    # Also adjacent houses must have different colors
+    
+    # We'll use dynamic programming where dp[i][c1][c2] represents the minimum cost
+    # for the first i+1 pairs, with the left house of the current pair having color c1
+    # and the right house having color c2
+    
+    # Since n can be up to 10^5, we need an efficient approach
+    # We'll process pairs and maintain the best costs for the current pair
+    
+    # Initialize DP for the first pair (houses 0 and n-1)
+    dp = [[float('inf')] * 3 for _ in range(3)]
+    
+    for c1 in range(3):
+        for c2 in range(3):
+            if c1 != c2:  # Symmetric houses must have different colors
+                dp[c1][c2] = cost[0][c1] + cost[n-1][c2]
+    
+    # Process remaining pairs
+    for i in range(1, n//2):
+        new_dp = [[float('inf')] * 3 for _ in range(3)]
+        
+        for prev_c1 in range(3):  # Color of left house in previous pair
+            for prev_c2 in range(3):  # Color of right house in previous pair
+                if dp[prev_c1][prev_c2] == float('inf'):
+                    continue
+                
+                # Current left house is at position i
+                # Current right house is at position n-1-i
+                for curr_c1 in range(3):  # Color for current left house
+                    for curr_c2 in range(3):  # Color for current right house
+                        # Check constraints:
+                        # 1. Adjacent constraint: current left house can't have same color as previous left house
+                        # 2. Symmetric constraint: current left and right houses can't have same color
+                        if curr_c1 != prev_c1 and curr_c1 != curr_c2:
+                            total_cost = dp[prev_c1][prev_c2] + cost[i][curr_c1] + cost[n-1-i][curr_c2]
+                            if total_cost < new_dp[curr_c1][curr_c2]:
+                                new_dp[curr_c1][curr_c2] = total_cost
+        
+        dp = new_dp
+    
+    # Find the minimum cost from all valid configurations
+    min_total = float('inf')
+    for c1 in range(3):
+        for c2 in range(3):
+            if dp[c1][c2] < min_total:
+                min_total = dp[c1][c2]
+    
+    return min_total

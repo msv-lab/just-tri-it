@@ -1,0 +1,77 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    
+    # Validate inputs
+    if n < 2:
+        raise ValueError("Invalid input")
+    if len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    for edge in edges:
+        if len(edge) != 3:
+            raise ValueError("Invalid input")
+        u, v, length = edge
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Build tree structure with parent pointers
+    parent = [-1] * n
+    children = defaultdict(list)
+    edge_lengths = {}
+    
+    # BFS to build tree rooted at 0
+    visited = [False] * n
+    queue = deque([0])
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                children[node].append(neighbor)
+                edge_lengths[(node, neighbor)] = length
+                edge_lengths[(neighbor, node)] = length
+                queue.append(neighbor)
+    
+    # DFS to compute longest special paths
+    max_length = 0
+    min_nodes_for_max_length = float('inf')
+    
+    def dfs(node, current_path_values, current_length, current_nodes):
+        nonlocal max_length, min_nodes_for_max_length
+        
+        # Check if current path is valid (all unique values)
+        if nums[node] in current_path_values:
+            return
+        
+        # Update current path
+        current_path_values.add(nums[node])
+        
+        # Check if this is a special path
+        if current_length > max_length:
+            max_length = current_length
+            min_nodes_for_max_length = current_nodes
+        elif current_length == max_length:
+            min_nodes_for_max_length = min(min_nodes_for_max_length, current_nodes)
+        
+        # Explore children
+        for child in children[node]:
+            edge_len = edge_lengths[(node, child)]
+            dfs(child, current_path_values.copy(), current_length + edge_len, current_nodes + 1)
+    
+    # Start DFS from each node as potential starting point
+    for start_node in range(n):
+        dfs(start_node, set(), 0, 1)
+    
+    return [max_length, min_nodes_for_max_length]

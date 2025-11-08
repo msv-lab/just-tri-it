@@ -1,0 +1,12 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+# test name: test_multiple_longest_paths_different_node_counts
+def test_multiple_longest_paths_different_node_counts():
+    """Test when multiple paths have same max length but different node counts"""
+    edges = [[0,1,5],[0,2,5],[1,3,1],[1,4,1],[2,5,2]]
+    nums = [1,2,3,4,5,6]  # All unique values
+    result = longestSpecialPath(edges, nums)
+    # Paths with length 6: 0->1->3 (3 nodes), 0->1->4 (3 nodes), 0->2->5 (3 nodes)
+    # Paths with length 7: 0->1->3->? (none), 0->1->4->? (none), 0->2->5->? (none)
+    # Actually recalculating: 0->1->3 = 6, 0->1->4 = 6, 0->2->5 = 7
+    # So longest is 0->2->5 with length 7, 3 nodes
+    assert result == [7, 3]

@@ -1,0 +1,78 @@
+# signature: def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> list[int]
+from typing import List
+import math
+
+def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> List[int]:
+    # Input validation
+    if not nums or len(nums) < 2:
+        raise ValueError("Invalid input")
+    if x < 2 or x > len(nums):
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    max_k = min(15, n // x)
+    
+    # Precompute prefix sums for efficient median calculation
+    # We'll use a sliding window approach
+    
+    # For each possible k, we need to find the minimum operations
+    # This is equivalent to selecting k disjoint segments of length x
+    # that minimize the sum of operations to make each segment equal
+    
+    # We can use dynamic programming: dp[i][j] = min operations for j segments ending at or before i
+    # But with constraints, we can optimize
+    
+    # Precompute operations for each possible segment
+    segment_ops = []
+    
+    for i in range(n - x + 1):
+        segment = nums[i:i + x]
+        sorted_segment = sorted(segment)
+        median = sorted_segment[x // 2]
+        operations = sum(abs(num - median) for num in segment)
+        segment_ops.append(operations)
+    
+    # Now we need to find for each k, the minimum sum of k non-overlapping segments
+    # We can use dynamic programming where dp[i][j] = min operations using j segments ending at position i
+    
+    k_values = []
+    
+    for k in range(1, max_k + 1):
+        if k * x > n:
+            continue
+            
+        # DP table: dp[i][j] = min operations using j segments with last segment ending at i
+        dp = [[float('inf')] * (k + 1) for _ in range(n)]
+        
+        # Initialize for 1 segment
+        for i in range(x - 1, n):
+            dp[i][1] = segment_ops[i - x + 1]
+        
+        # Fill for more segments
+        for j in range(2, k + 1):
+            # For j segments, we need at least j*x elements
+            min_prev_end = (j - 1) * x - 1
+            min_current_end = j * x - 1
+            
+            # Track minimum of previous segment
+            min_prev = float('inf')
+            
+            for i in range(min_current_end, n):
+                # Update min_prev with values from previous segment that end before current segment starts
+                if i - x >= min_prev_end:
+                    min_prev = min(min_prev, dp[i - x][j - 1])
+                
+                if min_prev < float('inf'):
+                    dp[i][j] = min_prev + segment_ops[i - x + 1]
+        
+        # Find minimum operations for exactly k segments
+        min_ops = float('inf')
+        for i in range(k * x - 1, n):
+            min_ops = min(min_ops, dp[i][k])
+        
+        if min_ops == min_operations_for_k_equal_subarrays:
+            k_values.append(k)
+    
+    return k_values

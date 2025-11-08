@@ -1,0 +1,89 @@
+# signature: def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> list[int]
+from typing import List
+import math
+
+def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> List[int]:
+    # Input validation
+    if not nums or len(nums) < 2:
+        raise ValueError("Invalid input")
+    if x < 2 or x > len(nums):
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    result = []
+    
+    # Try all possible k values
+    for k in range(1, 16):  # k from 1 to 15
+        if k * x > n:
+            continue
+            
+        # We need to select k non-overlapping subarrays of size x
+        # The optimal strategy is to make all elements in each subarray equal to their median
+        # and we need to find the k subarrays that minimize total operations
+        
+        # Precompute prefix sums for efficient range sum calculation
+        prefix_sum = [0] * (n + 1)
+        for i in range(n):
+            prefix_sum[i + 1] = prefix_sum[i] + nums[i]
+        
+        # Calculate operations for each possible subarray of size x
+        subarray_ops = []
+        for i in range(n - x + 1):
+            # Extract subarray
+            subarray = nums[i:i + x]
+            # Sort to find median
+            sorted_sub = sorted(subarray)
+            median = sorted_sub[x // 2]
+            
+            # Calculate operations needed: sum of absolute differences from median
+            operations = 0
+            for val in subarray:
+                operations += abs(val - median)
+            subarray_ops.append((operations, i))
+        
+        # Now we need to select k non-overlapping subarrays with minimum total operations
+        # Use dynamic programming: dp[i][j] = min ops using j subarrays ending at or before position i
+        
+        # Sort subarrays by their end position for easier non-overlapping check
+        subarray_info = []
+        for ops, start in subarray_ops:
+            end = start + x - 1
+            subarray_info.append((start, end, ops))
+        
+        # Sort by end position
+        subarray_info.sort(key=lambda item: item[1])
+        
+        # DP approach: for each subarray, we can either take it or not
+        # Let's use a simpler approach: try all combinations of k non-overlapping subarrays
+        
+        m = len(subarray_info)
+        min_total_ops = float('inf')
+        
+        # Backtracking to find minimum operations for k non-overlapping subarrays
+        def backtrack(idx, count, current_ops, last_end):
+            nonlocal min_total_ops
+            if count == k:
+                min_total_ops = min(min_total_ops, current_ops)
+                return
+            if idx >= m:
+                return
+            if m - idx < k - count:  # Not enough remaining subarrays
+                return
+            
+            # Skip current subarray
+            backtrack(idx + 1, count, current_ops, last_end)
+            
+            # Take current subarray if it doesn't overlap with previous
+            start, end, ops = subarray_info[idx]
+            if start > last_end:
+                backtrack(idx + 1, count + 1, current_ops + ops, end)
+        
+        backtrack(0, 0, 0, -1)
+        
+        # If we found a valid combination and it matches our target
+        if min_total_ops != float('inf') and min_total_ops == min_operations_for_k_equal_subarrays:
+            result.append(k)
+    
+    return result

@@ -1,0 +1,81 @@
+# signature: def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> list[int]
+from typing import List
+import heapq
+
+def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> List[int]:
+    # Input validation
+    if not nums or x < 2 or x > len(nums) or min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    max_k = min(15, n // x)
+    
+    # Precompute prefix sums and prefix absolute sums for efficient range queries
+    prefix_sum = [0] * (n + 1)
+    prefix_abs_sum = [0] * (n + 1)
+    for i in range(n):
+        prefix_sum[i + 1] = prefix_sum[i] + nums[i]
+        prefix_abs_sum[i + 1] = prefix_abs_sum[i] + abs(nums[i])
+    
+    # Precompute operations needed for each possible subarray of size x
+    # For a subarray starting at i, operations = sum(|nums[j] - median| for j in range(i, i+x))
+    # We can use two heaps to maintain median and calculate operations efficiently
+    
+    # For simplicity, we'll precompute for all possible starting positions
+    subarray_ops = []
+    
+    for start in range(n - x + 1):
+        # Extract the subarray
+        subarr = nums[start:start + x]
+        
+        # Sort to find median and calculate operations
+        sorted_subarr = sorted(subarr)
+        median = sorted_subarr[x // 2] if x % 2 == 1 else (sorted_subarr[x // 2 - 1] + sorted_subarr[x // 2]) // 2
+        
+        # Calculate operations needed
+        operations = 0
+        for num in subarr:
+            operations += abs(num - median)
+        
+        subarray_ops.append((start, operations))
+    
+    # Now we need to find k disjoint subarrays with minimum total operations
+    # This is a classic dynamic programming problem
+    
+    # DP[k][i] = minimum operations to select k subarrays ending at or before position i
+    k_max = max_k
+    dp = [[float('inf')] * (n + 1) for _ in range(k_max + 1)]
+    
+    # Base case: 0 subarrays require 0 operations
+    for i in range(n + 1):
+        dp[0][i] = 0
+    
+    # Fill DP table
+    for k in range(1, k_max + 1):
+        for i in range(n):
+            # Option 1: Don't take current position
+            dp[k][i + 1] = min(dp[k][i + 1], dp[k][i])
+            
+            # Option 2: Take subarray ending at current position if possible
+            if i >= x - 1:
+                start = i - x + 1
+                # Find the operations for subarray starting at 'start'
+                for sub_start, ops in subarray_ops:
+                    if sub_start == start:
+                        # Check if this subarray doesn't overlap with previous selection
+                        # We need to ensure we have enough space for k-1 subarrays before
+                        if start >= x * (k - 1):
+                            prev_end = start - 1
+                            if dp[k - 1][prev_end + 1] != float('inf'):
+                                dp[k][i + 1] = min(dp[k][i + 1], dp[k - 1][prev_end + 1] + ops)
+                        break
+    
+    # Find all k where the minimum operations equals the target
+    result = []
+    for k in range(1, k_max + 1):
+        if k * x <= n:  # Additional constraint check
+            min_ops = min(dp[k][i] for i in range(n + 1))
+            if min_ops == min_operations_for_k_equal_subarrays:
+                result.append(k)
+    
+    return sorted(result)

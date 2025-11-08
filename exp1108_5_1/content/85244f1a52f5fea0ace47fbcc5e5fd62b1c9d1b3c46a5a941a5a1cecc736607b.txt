@@ -1,0 +1,91 @@
+# signature: def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]:
+    if not longest_special_path_info or len(longest_special_path_info) != 2:
+        raise ValueError("Invalid input")
+    
+    target_length, target_min_nodes = longest_special_path_info
+    
+    if target_length < 0 or target_min_nodes < 1:
+        raise ValueError("Invalid input")
+    
+    n = len(edges) + 1
+    
+    # Build the tree
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Find parent-child relationships by doing BFS from root 0
+    parent = [-1] * n
+    children = [[] for _ in range(n)]
+    visited = [False] * n
+    queue = deque([0])
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                children[node].append(neighbor)
+                queue.append(neighbor)
+    
+    # We need to construct nums such that:
+    # - The longest special path has length = target_length
+    # - The minimum number of nodes in all longest special paths = target_min_nodes
+    
+    nums = [0] * n
+    
+    # Simple approach: create a path of length target_length with unique values
+    # and ensure it has exactly target_min_nodes
+    
+    if target_length == 0:
+        # All nodes can have the same value, no special path longer than 1
+        for i in range(n):
+            nums[i] = 0
+        return nums
+    
+    # We'll create a chain from root with unique values
+    # The chain length will be target_min_nodes
+    current = 0
+    chain_length = target_min_nodes
+    
+    # Assign unique values along a chain
+    used_values = set()
+    value = 0
+    
+    # Create the main chain with unique values
+    chain_nodes = []
+    node = 0
+    for i in range(chain_length):
+        if node == -1:
+            break
+        chain_nodes.append(node)
+        # Find next child to continue the chain
+        if i < chain_length - 1 and children[node]:
+            node = children[node][0]
+        else:
+            break
+    
+    # Assign unique values to chain nodes
+    for i, node_idx in enumerate(chain_nodes):
+        while value in used_values:
+            value += 1
+        nums[node_idx] = value
+        used_values.add(value)
+        value += 1
+    
+    # Fill remaining nodes with values that won't create longer paths
+    # Use repeated values to break uniqueness
+    fill_value = nums[0]  # Use root's value for all other nodes
+    
+    for i in range(n):
+        if nums[i] == 0 and i != 0:  # Not assigned yet and not root
+            nums[i] = fill_value
+    
+    return nums

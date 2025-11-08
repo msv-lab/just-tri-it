@@ -1,0 +1,11 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+# test name: test_overlapping_constraints_forced_separation
+def test_overlapping_constraints_forced_separation():
+    nums = [1, 100, 1, 100, 1, 100, 1, 100]
+    x = 4
+    k = 1
+    result = minOperations(nums, x, k)
+    # Need one subarray of size 4
+    # Best: make all elements 1 (cost: 99+0+99+0 = 198)
+    # Or make all elements 100 (same cost: 99+0+99+0 = 198)
+    assert result == 198

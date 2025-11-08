@@ -1,0 +1,9 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+# test name: test_three_node_chain_with_duplicate
+def test_three_node_chain_with_duplicate():
+    """Test minimal chain with duplicate in middle"""
+    edges = [[0,1,2],[1,2,3]]
+    nums = [1,2,1]  # Duplicate at ends
+    result = longestSpecialPath(edges, nums)
+    # Valid paths: 0->1 (length 2, 2 nodes), 1->2 (length 3, 2 nodes)
+    assert result == [3, 2]

@@ -1,0 +1,80 @@
+# signature: def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> list[int]
+from typing import List
+
+def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> List[int]:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Function to calculate sum of subarray from i to j-1
+    def subarray_sum(i, j):
+        return prefix[j] - prefix[i]
+    
+    # Calculate all possible k values based on constraints
+    max_k = min(15, n // x)
+    valid_k = []
+    
+    # For each possible k, calculate the minimum operations needed
+    for k in range(1, max_k + 1):
+        if k * x > n:
+            continue
+            
+        # We need to select k non-overlapping subarrays of length x
+        # The optimal strategy is to select subarrays that minimize the operations
+        # Operations for a subarray = sum of absolute differences from target value
+        # The optimal target for each subarray is the median of that subarray
+        
+        # DP approach: dp[i][j] = min operations for j subarrays using first i elements
+        # But we need to optimize for large n
+        
+        # Instead, we'll use a sliding window approach to find the best k subarrays
+        
+        # Generate all possible starting positions for k subarrays
+        # This is too slow for large n, so we need a smarter approach
+        
+        # Alternative: Use dynamic programming with state (position, subarrays_used)
+        # But n can be up to 10^5 and k up to 15, so O(n*k) is acceptable
+        
+        INF = float('inf')
+        dp = [[INF] * (k + 1) for _ in range(n + 1)]
+        dp[0][0] = 0
+        
+        for i in range(n + 1):
+            for j in range(k + 1):
+                if dp[i][j] == INF:
+                    continue
+                
+                # Skip current element
+                if i < n:
+                    dp[i + 1][j] = min(dp[i + 1][j], dp[i][j])
+                
+                # Start a new subarray at position i
+                if j < k and i + x <= n:
+                    subarr = nums[i:i + x]
+                    # Calculate operations to make all elements equal
+                    # The optimal target is the median
+                    sorted_subarr = sorted(subarr)
+                    median = sorted_subarr[x // 2]
+                    operations = sum(abs(num - median) for num in subarr)
+                    
+                    dp[i + x][j + 1] = min(dp[i + x][j + 1], dp[i][j] + operations)
+        
+        min_ops = min(dp[i][k] for i in range(n + 1))
+        
+        if min_ops == min_operations_for_k_equal_subarrays:
+            valid_k.append(k)
+    
+    return valid_k

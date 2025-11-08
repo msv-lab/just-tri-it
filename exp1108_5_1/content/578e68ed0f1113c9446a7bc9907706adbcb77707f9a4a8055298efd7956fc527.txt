@@ -1,0 +1,79 @@
+# signature: def minCost_simp(cost: List[List[int]]) -> int
+from typing import List
+
+def minCost_simp(cost: List[List[int]]) -> int:
+    n = len(cost)
+    if n % 2 != 0 or n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    
+    for row in cost:
+        if len(row) != 3:
+            raise ValueError("Invalid input")
+        for val in row:
+            if val < 0 or val > 10**5:
+                raise ValueError("Invalid input")
+    
+    # For each position i, we need to consider its symmetric position n-1-i
+    # We need to assign colors such that:
+    # 1. adjacent houses have different colors
+    # 2. symmetric houses have different colors
+    
+    # Since n is even, we can think of the houses as forming pairs (i, n-1-i)
+    # For each pair, we need to choose two different colors
+    
+    # We'll use dynamic programming where dp[i][c1][c2] would be too expensive
+    # Instead, we can process pairs and track the best costs for different color combinations
+    
+    # Let's process the first half of houses (pairs)
+    half = n // 2
+    
+    # Initialize DP for the first pair
+    # dp[c1][c2] = minimum cost where first house has color c1 and its symmetric has color c2
+    dp = [[float('inf')] * 3 for _ in range(3)]
+    
+    # Initialize for the first pair (house 0 and house n-1)
+    for c1 in range(3):
+        for c2 in range(3):
+            if c1 != c2:  # Symmetric houses must have different colors
+                dp[c1][c2] = cost[0][c1] + cost[n-1][c2]
+    
+    # Process the remaining pairs
+    for i in range(1, half):
+        new_dp = [[float('inf')] * 3 for _ in range(3)]
+        
+        # Current pair: house i and house n-1-i
+        for prev_c1 in range(3):  # Color of house i-1
+            for prev_c2 in range(3):  # Color of house n-i
+                if prev_c1 == prev_c2:
+                    continue  # Invalid state
+                
+                for curr_c1 in range(3):  # Color of house i
+                    for curr_c2 in range(3):  # Color of house n-1-i
+                        # Check constraints:
+                        # 1. Adjacent constraint: house i-1 and house i must have different colors
+                        if prev_c1 == curr_c1:
+                            continue
+                        # 2. Symmetric constraint: house i and house n-1-i must have different colors
+                        if curr_c1 == curr_c2:
+                            continue
+                        # 3. Adjacent constraint for symmetric side: house n-i and house n-1-i must have different colors
+                        if prev_c2 == curr_c2:
+                            continue
+                        
+                        new_cost = dp[prev_c1][prev_c2] + cost[i][curr_c1] + cost[n-1-i][curr_c2]
+                        if new_cost < new_dp[curr_c1][curr_c2]:
+                            new_dp[curr_c1][curr_c2] = new_cost
+        
+        dp = new_dp
+    
+    # Find the minimum cost in the final state
+    min_cost = float('inf')
+    for c1 in range(3):
+        for c2 in range(3):
+            if c1 != c2:
+                min_cost = min(min_cost, dp[c1][c2])
+    
+    if min_cost == float('inf'):
+        raise ValueError("Invalid input")
+    
+    return min_cost

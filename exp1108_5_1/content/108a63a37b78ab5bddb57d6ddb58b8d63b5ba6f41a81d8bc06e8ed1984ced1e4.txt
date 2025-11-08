@@ -1,0 +1,65 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2 or len(edges) != n - 1:
+        raise ValueError("Invalid input")
+    
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    parent = [-1] * n
+    depth = [0] * n
+    dist_from_root = [0] * n
+    
+    stack = [0]
+    parent[0] = 0
+    while stack:
+        node = stack.pop()
+        for neighbor, length in graph[node]:
+            if parent[neighbor] == -1:
+                parent[neighbor] = node
+                depth[neighbor] = depth[node] + 1
+                dist_from_root[neighbor] = dist_from_root[node] + length
+                stack.append(neighbor)
+    
+    max_length = 0
+    min_nodes = float('inf')
+    
+    def dfs(node, path_values, path_nodes, path_length):
+        nonlocal max_length, min_nodes
+        
+        current_value = nums[node]
+        if current_value in path_values:
+            return
+        
+        path_values.add(current_value)
+        path_nodes.append(node)
+        
+        if path_length > max_length:
+            max_length = path_length
+            min_nodes = len(path_nodes)
+        elif path_length == max_length:
+            min_nodes = min(min_nodes, len(path_nodes))
+        
+        for neighbor, edge_length in graph[node]:
+            if neighbor == parent[node]:
+                continue
+            dfs(neighbor, path_values, path_nodes, path_length + edge_length)
+        
+        path_values.remove(current_value)
+        path_nodes.pop()
+    
+    for start in range(n):
+        dfs(start, set(), [], 0)
+    
+    if max_length == 0:
+        min_nodes = 1
+    
+    return [max_length, min_nodes]

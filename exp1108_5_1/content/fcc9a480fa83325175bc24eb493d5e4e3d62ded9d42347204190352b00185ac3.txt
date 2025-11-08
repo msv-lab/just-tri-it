@@ -1,0 +1,114 @@
+# signature: def count_distinct_in_degree_sequences(modulus: int, num_vertices: int, binary_string: str) -> int
+MOD = 998244353
+
+def count_distinct_in_degree_sequences(modulus: int, num_vertices: int, binary_string: str) -> int:
+    if modulus != 998244353:
+        raise ValueError("Invalid input")
+    
+    N = num_vertices
+    s = binary_string
+    
+    if N < 3:
+        raise ValueError("Invalid input")
+    if len(s) != N:
+        raise ValueError("Invalid input")
+    if any(c not in '01' for c in s):
+        raise ValueError("Invalid input")
+    
+    # Count number of '1's in the string
+    k = s.count('1')
+    
+    # The graph has:
+    # - N edges in the cycle (0-1, 1-2, ..., N-1-0)
+    # - k edges from vertex N to vertices where s_i = 1
+    # Total edges = N + k
+    
+    # For the cycle part: each vertex in the cycle has exactly 2 neighbors in the cycle
+    # For the star part: vertex N has degree k, and each vertex connected to N has 1 extra edge
+    
+    # The key observation: 
+    # For the cycle, the sum of in-degrees equals N (one per edge)
+    # For the star edges, the sum of in-degrees equals k (one per edge)
+    # So total sum of all in-degrees = N + k
+    
+    # Also, for each vertex in the cycle, its in-degree is determined by:
+    # - The two cycle edges incident to it: each can contribute 0 or 1 to its in-degree
+    # - The star edge (if present): can contribute 0 or 1 to its in-degree
+    
+    # Therefore, for vertex i in the cycle: d_i ∈ {0,1,2,3} (2 from cycle + 1 from star)
+    # For vertex N: d_N ∈ {0,1,...,k} (from the k star edges)
+    
+    # The generating function approach:
+    # For cycle vertices: generating function is (1 + x)^2 if s_i=0, (1 + x)^3 if s_i=1
+    # For vertex N: generating function is (1 + x)^k
+    
+    # But we need to account for the constraint that sum of all in-degrees = N + k
+    
+    # Actually, there's a more combinatorial approach:
+    # The answer equals the number of ways to choose in-degrees for cycle vertices
+    # such that for each i, d_i = a_i + b_i where:
+    # - a_i is contribution from the two cycle edges incident to vertex i
+    # - b_i is contribution from the star edge (0 or 1)
+    # And the sum of all d_i = N + k
+    
+    # Let's use dynamic programming
+    # dp[i][j] = number of ways for first i vertices with total in-degree j from cycle edges
+    
+    dp = [0] * (2*N + 5)
+    dp[0] = 1
+    
+    # Process cycle vertices
+    for i in range(N):
+        new_dp = [0] * (2*N + 5)
+        for j in range(2*N + 1):
+            if dp[j] == 0:
+                continue
+            # For vertex i, the two cycle edges can contribute 0, 1, or 2 to its in-degree
+            for deg in range(3):
+                new_dp[j + deg] = (new_dp[j + deg] + dp[j]) % MOD
+        dp = new_dp
+    
+    # Now we need to distribute the star edges
+    # We have k star edges, each can go to vertex N or to the cycle vertex
+    
+    # Let x be the number of star edges directed toward cycle vertices
+    # Then vertex N gets in-degree = k - x
+    # And we need to distribute x in-degrees among the k vertices that have star edges
+    
+    # Precompute combinations
+    fact = [1] * (N + 5)
+    inv_fact = [1] * (N + 5)
+    for i in range(1, N + 5):
+        fact[i] = fact[i-1] * i % MOD
+    
+    def mod_pow(a, b):
+        res = 1
+        while b:
+            if b & 1:
+                res = res * a % MOD
+            a = a * a % MOD
+            b >>= 1
+        return res
+    
+    inv_fact[N + 4] = mod_pow(fact[N + 4], MOD - 2)
+    for i in range(N + 3, -1, -1):
+        inv_fact[i] = inv_fact[i + 1] * (i + 1) % MOD
+    
+    def comb(n, k):
+        if k < 0 or k > n:
+            return 0
+        return fact[n] * inv_fact[k] % MOD * inv_fact[n - k] % MOD
+    
+    result = 0
+    # x = number of star edges directed toward cycle vertices
+    for x in range(k + 1):
+        # Ways to choose which x of the k star edges go to cycle vertices
+        ways_star = comb(k, x)
+        
+        # Total in-degree from cycle should be: N (from cycle edges) + x (from star edges)
+        total_deg = N + x
+        
+        if 0 <= total_deg < len(dp):
+            result = (result + ways_star * dp[total_deg]) % MOD
+    
+    return result

@@ -1,0 +1,10 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+# test name: test_large_x_small_k_complex_optimization
+def test_large_x_small_k_complex_optimization():
+    nums = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+    x = 5
+    k = 1
+    result = minOperations(nums, x, k)
+    # Find best subarray of size 5 and make all elements equal
+    # Optimal: [30,40,50,60,70] -> make all 50 (cost: 20+10+0+10+20=60)
+    assert result == 60

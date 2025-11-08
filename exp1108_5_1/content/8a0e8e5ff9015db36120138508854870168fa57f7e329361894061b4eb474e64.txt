@@ -1,0 +1,60 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate inputs
+    if n <= 0 or x < 2 or k < 1 or k * x > n or x > n:
+        raise ValueError("Invalid input")
+    
+    # Precompute the cost for making each possible segment of length x equal to a target value
+    # We need to find k non-overlapping segments
+    
+    # Strategy: For each possible starting position i (where i can be from 0 to n-x),
+    # we can compute the cost to make that segment equal to any target value.
+    # The optimal target value for a segment is the median of that segment (for L1 cost).
+    
+    # Precompute all segments and their costs
+    segments = []
+    for i in range(n - x + 1):
+        segment = nums[i:i+x]
+        sorted_segment = sorted(segment)
+        
+        # Median for even length x: we can use either middle value
+        # For L1 minimization, any value between the two middle values gives same cost
+        median = sorted_segment[x // 2]
+        
+        # Calculate cost to make all elements equal to median
+        cost = sum(abs(num - median) for num in segment)
+        segments.append((i, cost, median))
+    
+    # Now we need to select k non-overlapping segments with minimum total cost
+    # Since k is small (<=15), we can use dynamic programming
+    # dp[i][j] = min cost to select j segments ending at or before position i
+    
+    # But we need to handle non-overlapping constraint
+    # Let's use memoization with position and count
+    
+    from functools import lru_cache
+    
+    @lru_cache(maxsize=None)
+    def dfs(pos, count):
+        if count == 0:
+            return 0
+        if pos >= len(segments):
+            return float('inf')
+        
+        # Option 1: Skip current position
+        skip = dfs(pos + 1, count)
+        
+        # Option 2: Take segment at current position, then skip x positions
+        current_segment = segments[pos]
+        next_pos = pos + x  # segments cannot overlap
+        take = current_segment[1] + dfs(next_pos, count - 1)
+        
+        return min(skip, take)
+    
+    result = dfs(0, k)
+    
+    return result if result != float('inf') else 0

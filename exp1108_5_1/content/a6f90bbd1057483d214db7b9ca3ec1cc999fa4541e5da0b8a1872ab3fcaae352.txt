@@ -1,0 +1,132 @@
+# signature: def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]:
+    if len(longest_special_path_info) != 2:
+        raise ValueError("Invalid input")
+    
+    target_length, target_min_nodes = longest_special_path_info
+    
+    if target_length < 1 or target_min_nodes < 1 or target_min_nodes > target_length:
+        raise ValueError("Invalid input")
+    
+    n = len(edges) + 1
+    
+    # Build the tree
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        graph[u].append(v)
+        graph[v].append(u)
+    
+    # Find parent-child relationships using BFS from root 0
+    parent = [-1] * n
+    children = defaultdict(list)
+    visited = [False] * n
+    queue = deque([0])
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                children[node].append(neighbor)
+                queue.append(neighbor)
+    
+    # Strategy: Create a path of length target_length with target_min_nodes
+    # We'll create a chain where the first target_min_nodes nodes have unique values
+    # and the remaining nodes repeat values to ensure the path length is exactly target_length
+    
+    nums = [0] * n
+    
+    if target_length == 1:
+        # Single node path - all nodes can have the same value
+        for i in range(n):
+            nums[i] = 0
+        return nums
+    
+    # Find a chain of nodes of length target_length
+    chain = []
+    
+    def find_chain(node, depth):
+        if depth == target_length:
+            return True
+        for child in children[node]:
+            chain.append(child)
+            if find_chain(child, depth + 1):
+                return True
+            chain.pop()
+        return False
+    
+    # Start from root
+    chain = [0]
+    if not find_chain(0, 1):
+        # If we can't find a chain of exact length, try to build one
+        # We'll create a chain manually by selecting nodes in DFS order
+        chain = []
+        stack = [(0, -1)]  # (node, parent)
+        order = []
+        parent_map = {}
+        
+        while stack:
+            node, par = stack.pop()
+            parent_map[node] = par
+            order.append(node)
+            for child in reversed(children[node]):
+                stack.append((child, node))
+        
+        # Find the deepest node
+        depth = [0] * n
+        for node in reversed(order):
+            if node != 0:
+                depth[parent_map[node]] = max(depth[parent_map[node]], depth[node] + 1)
+        
+        # Build chain from deepest path
+        chain = []
+        max_depth_node = max(range(n), key=lambda x: depth[x])
+        current = max_depth_node
+        while current != -1:
+            chain.append(current)
+            current = parent_map.get(current, -1)
+        chain.reverse()
+        
+        # Trim or extend chain to match target_length
+        if len(chain) > target_length:
+            chain = chain[:target_length]
+        elif len(chain) < target_length:
+            # Extend chain by repeating the last node's children
+            while len(chain) < target_length and children[chain[-1]]:
+                chain.append(children[chain[-1]][0])
+            # If still not enough, we have a problem
+            if len(chain) < target_length:
+                raise ValueError("Invalid input")
+    
+    # Assign values to create the special path
+    # The first target_min_nodes nodes in the chain get unique values
+    # Remaining nodes in chain repeat values to break uniqueness
+    
+    used_values = set()
+    value = 0
+    
+    # Assign unique values to first target_min_nodes nodes in chain
+    for i in range(min(target_min_nodes, len(chain))):
+        while value in used_values:
+            value += 1
+        nums[chain[i]] = value
+        used_values.add(value)
+        value += 1
+    
+    # For remaining nodes in chain, use a repeated value to break uniqueness
+    if len(chain) > target_min_nodes:
+        repeat_value = nums[chain[target_min_nodes - 1]]  # Repeat the last unique value
+        for i in range(target_min_nodes, len(chain)):
+            nums[chain[i]] = repeat_value
+    
+    # Fill remaining nodes with values that won't create longer paths
+    for i in range(n):
+        if nums[i] == 0 and i not in chain:
+            nums[i] = 0
+    
+    return nums

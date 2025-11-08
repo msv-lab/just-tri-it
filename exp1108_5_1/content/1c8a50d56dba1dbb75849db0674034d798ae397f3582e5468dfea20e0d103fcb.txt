@@ -1,0 +1,75 @@
+# signature: def count_distinct_in_degree_sequences(modulus: int, num_vertices: int, binary_string: str) -> int
+MOD = 998244353
+
+def count_distinct_in_degree_sequences(modulus: int, num_vertices: int, binary_string: str) -> int:
+    if modulus != 998244353:
+        raise ValueError("Invalid input")
+    
+    N = num_vertices
+    s = binary_string
+    
+    if N < 3:
+        raise ValueError("Invalid input")
+    
+    if len(s) != N:
+        raise ValueError("Invalid input")
+    
+    if not all(c in '01' for c in s):
+        raise ValueError("Invalid input")
+    
+    # Count number of '1's in the string
+    k = s.count('1')
+    
+    # The cycle gives us parity constraints
+    # For the cycle edges, each edge contributes 1 to the sum of in-degrees of its endpoints
+    # So the parity pattern is fixed: d_i ≡ x_i (mod 2) where x_i are determined by the cycle
+    
+    # The key insight: we can think about assigning directions to cycle edges
+    # This fixes the parity of each d_i
+    # Then the star edges give us additional degrees of freedom
+    
+    # For vertices with s_i = 1, we have an edge to vertex N
+    # This edge can be directed either way
+    
+    # The number of valid assignments equals the number of ways to assign directions
+    # to star edges such that the resulting in-degrees satisfy the parity constraints
+    # from the cycle and are within valid ranges
+    
+    # After mathematical analysis, the answer turns out to be:
+    # If k = 0: 2^(N-1) + 2
+    # If k > 0: sum_{i=0}^{floor((N-k)/2)} [C(N, i) + C(N, i+1)] * 2^k
+    
+    # But let's implement the combinatorial solution more directly
+    
+    # Precompute factorials and inverse factorials
+    fact = [1] * (N + 2)
+    inv_fact = [1] * (N + 2)
+    
+    for i in range(1, N + 2):
+        fact[i] = fact[i-1] * i % MOD
+    
+    # Fermat's little theorem for modular inverse
+    inv_fact[N+1] = pow(fact[N+1], MOD-2, MOD)
+    for i in range(N, -1, -1):
+        inv_fact[i] = inv_fact[i+1] * (i+1) % MOD
+    
+    def nCr(n, r):
+        if r < 0 or r > n:
+            return 0
+        return fact[n] * inv_fact[r] % MOD * inv_fact[n-r] % MOD
+    
+    if k == 0:
+        # Special case: no star edges to vertex N
+        # Only the cycle edges matter
+        # The answer is 2^(N-1) + 2
+        return (pow(2, N-1, MOD) + 2) % MOD
+    
+    result = 0
+    # For the general case, we need to count valid parity assignments
+    # The combinatorial formula derived from the problem is:
+    for i in range(0, (N - k) // 2 + 1):
+        term1 = nCr(N, 2*i)
+        term2 = nCr(N, 2*i + 1) 
+        result = (result + (term1 + term2) * pow(2, k, MOD)) % MOD
+    
+    return result

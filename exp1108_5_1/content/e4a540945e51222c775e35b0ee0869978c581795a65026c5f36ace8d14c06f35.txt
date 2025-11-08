@@ -1,0 +1,74 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    if not nums or x <= 0 or k <= 0 or k * x > len(nums):
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Precompute prefix sums of squares for efficient range sum of squares calculation
+    prefix_sq = [0] * (n + 1)
+    for i in range(n):
+        prefix_sq[i + 1] = prefix_sq[i] + nums[i] * nums[i]
+    
+    # DP table: dp[i][j] = min operations to get j valid subarrays starting from position i
+    # Since k <= 15, we can use a reasonable state space
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(n + 1)]
+    
+    # Base case: 0 operations needed for 0 subarrays
+    for i in range(n + 1):
+        dp[i][0] = 0
+    
+    # Fill DP table from right to left
+    for i in range(n - 1, -1, -1):
+        for j in range(k + 1):
+            # Option 1: Skip current position
+            dp[i][j] = min(dp[i][j], dp[i + 1][j])
+            
+            # Option 2: Try to form a subarray starting at position i
+            if j > 0 and i + x <= n:
+                # Calculate the minimum operations to make nums[i:i+x] all equal
+                # The optimal target value is the median (for L1) or mean (for L2)
+                # For this problem, we need to minimize sum of absolute differences
+                # The optimal target is the median of the subarray
+                
+                # Extract the subarray
+                subarray = nums[i:i + x]
+                sorted_sub = sorted(subarray)
+                
+                # Find median (for odd x, it's middle; for even x, either middle works)
+                median = sorted_sub[x // 2]
+                
+                # Calculate operations needed
+                operations = 0
+                for val in subarray:
+                    operations += abs(val - median)
+                
+                # Alternative: we can also try the mean for better results in some cases
+                # Let's try both median and mean and take the minimum
+                mean = sum(subarray) // x
+                mean_operations = 0
+                for val in subarray:
+                    mean_operations += abs(val - mean)
+                
+                operations = min(operations, mean_operations)
+                
+                # Update DP
+                dp[i][j] = min(dp[i][j], operations + dp[i + x][j - 1])
+    
+    # Find the minimum operations among all starting positions for k subarrays
+    result = INF
+    for i in range(n - k * x + 1):
+        result = min(result, dp[i][k])
+    
+    if result == INF:
+        raise ValueError("Invalid input")
+    
+    return int(result)

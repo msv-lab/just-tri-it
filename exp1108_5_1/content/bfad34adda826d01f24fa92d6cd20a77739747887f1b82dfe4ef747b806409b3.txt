@@ -1,0 +1,78 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+import heapq
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Input validation
+    if not (2 <= n <= 10**5):
+        raise ValueError("Invalid input")
+    if not all(-10**6 <= num <= 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if not (2 <= x <= n):
+        raise ValueError("Invalid input")
+    if not (1 <= k <= 15):
+        raise ValueError("Invalid input")
+    if not (2 <= k * x <= n):
+        raise ValueError("Invalid input")
+    
+    # Precompute the cost for each possible starting position of a subarray
+    # cost[i] = minimum operations to make subarray starting at i have all equal elements
+    cost = [0] * (n - x + 1)
+    
+    for i in range(n - x + 1):
+        # To minimize operations, we should make all elements equal to the median
+        subarray = nums[i:i+x]
+        sorted_sub = sorted(subarray)
+        
+        # For odd length, median is middle element
+        # For even length, either middle element works (cost is same)
+        median = sorted_sub[x // 2]
+        
+        # Calculate total operations to make all elements equal to median
+        total_ops = 0
+        for num in subarray:
+            total_ops += abs(num - median)
+        
+        cost[i] = total_ops
+    
+    # Now we need to select k non-overlapping subarrays with minimum total cost
+    # Dynamic programming approach
+    # dp[i][j] = minimum cost to select j subarrays from first i positions
+    # But k is small (<=15), so we can use a different approach
+    
+    # We'll use a DP where state is (position, count of subarrays selected, last selected position)
+    # But this would be too slow. Instead, we'll use a greedy approach with priority queue
+    
+    # Alternative: use DP with state (mask of selected subarrays, last position)
+    # But k is small, so we can use a simpler approach
+    
+    # Since k is small, we can use a DP that considers the order of selection
+    memo = {}
+    
+    def dfs(pos, selected):
+        if selected == k:
+            return 0
+        if pos >= len(cost):
+            return float('inf')
+        
+        if (pos, selected) in memo:
+            return memo[(pos, selected)]
+        
+        # Option 1: skip current position
+        skip = dfs(pos + 1, selected)
+        
+        # Option 2: take current subarray at position pos
+        # Next subarray must start at least at pos + x
+        take = cost[pos] + dfs(pos + x, selected + 1)
+        
+        memo[(pos, selected)] = min(skip, take)
+        return memo[(pos, selected)]
+    
+    result = dfs(0, 0)
+    
+    if result == float('inf'):
+        raise ValueError("Invalid input")
+    
+    return result

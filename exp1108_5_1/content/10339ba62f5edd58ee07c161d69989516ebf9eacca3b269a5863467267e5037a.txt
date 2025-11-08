@@ -1,0 +1,10 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+# test name: test_multiple_valid_longest_paths_same_length
+def test_multiple_valid_longest_paths_same_length():
+    """Test when multiple paths have same max length and same node count"""
+    edges = [[0,1,2],[0,2,2],[1,3,3],[2,4,3]]
+    nums = [1,2,3,4,5]  # All unique values
+    result = longestSpecialPath(edges, nums)
+    # Both 0->1->3 and 0->2->4 have length 5 and 3 nodes
+    # Multiple correct answers possible, but both have same characteristics
+    assert result[0] == 5 and result[1] == 3

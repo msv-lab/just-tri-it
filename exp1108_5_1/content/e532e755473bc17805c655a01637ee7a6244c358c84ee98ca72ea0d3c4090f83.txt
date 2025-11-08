@@ -1,0 +1,99 @@
+# signature: def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]:
+    if not longest_special_path_info or len(longest_special_path_info) != 2:
+        raise ValueError("Invalid input")
+    
+    target_length, target_min_nodes = longest_special_path_info
+    
+    if target_length < 0 or target_min_nodes < 1:
+        raise ValueError("Invalid input")
+    
+    n = len(edges) + 1
+    
+    # Build the tree
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Find parent-child relationships by doing BFS from root 0
+    parent = [-1] * n
+    children = defaultdict(list)
+    visited = [False] * n
+    queue = deque([0])
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, _ in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                children[node].append(neighbor)
+                queue.append(neighbor)
+    
+    # Strategy: Create a path of length target_length with target_min_nodes
+    # We'll create a simple increasing sequence along a path from root
+    
+    nums = [0] * n
+    
+    if target_length == 0:
+        # All nodes can have the same value (e.g., 0)
+        return nums
+    
+    # Find a path from root with exactly target_min_nodes
+    path_nodes = []
+    stack = [(0, [0])]
+    
+    while stack and not path_nodes:
+        node, current_path = stack.pop()
+        if len(current_path) == target_min_nodes:
+            path_nodes = current_path
+            break
+        for child in children[node]:
+            stack.append((child, current_path + [child]))
+    
+    # If we couldn't find a path with exactly target_min_nodes, use the longest path from root
+    if not path_nodes:
+        # Do BFS to find the farthest node from root
+        dist = [-1] * n
+        dist[0] = 0
+        queue = deque([0])
+        farthest_node = 0
+        
+        while queue:
+            node = queue.popleft()
+            if dist[node] > dist[farthest_node]:
+                farthest_node = node
+            for neighbor, length in graph[node]:
+                if dist[neighbor] == -1:
+                    dist[neighbor] = dist[node] + 1
+                    queue.append(neighbor)
+        
+        # Reconstruct path from root to farthest_node
+        path = []
+        node = farthest_node
+        while node != -1:
+            path.append(node)
+            node = parent[node]
+        path.reverse()
+        
+        # Take the first target_min_nodes from this path
+        path_nodes = path[:target_min_nodes]
+    
+    # Assign unique values to the path nodes to ensure the special path
+    for i, node in enumerate(path_nodes):
+        nums[node] = i
+    
+    # Fill remaining nodes with values that won't create longer paths
+    # Use values that are already in the path to ensure they break uniqueness
+    for i in range(n):
+        if nums[i] == 0 and i not in path_nodes:
+            nums[i] = 0  # Use value 0 which appears in the path
+    
+    return nums

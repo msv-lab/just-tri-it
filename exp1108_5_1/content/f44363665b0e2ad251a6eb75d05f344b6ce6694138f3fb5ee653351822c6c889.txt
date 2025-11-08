@@ -1,0 +1,115 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Find root (node 0) and build parent-child relationships
+    parent = [-1] * n
+    children = defaultdict(list)
+    edge_lengths = defaultdict(int)
+    
+    # BFS to build tree structure with root at 0
+    stack = [0]
+    visited = [False] * n
+    visited[0] = True
+    
+    while stack:
+        node = stack.pop()
+        for neighbor, length in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                children[node].append(neighbor)
+                edge_lengths[(node, neighbor)] = length
+                stack.append(neighbor)
+    
+    # Result: [max_length, min_nodes_for_max_length]
+    result = [0, 0]
+    
+    # DFS function returns: 
+    # - max path length ending at current node
+    # - number of nodes in that path
+    # - set of values in that path
+    def dfs(node):
+        nonlocal result
+        
+        # Start with path containing only current node
+        best_length = 0
+        best_nodes = 1
+        path_values = {nums[node]}
+        
+        for child in children[node]:
+            child_length, child_nodes, child_values = dfs(child)
+            edge_len = edge_lengths[(node, child)]
+            
+            # Check if we can extend the path from child to current node
+            if nums[node] not in child_values:
+                # Extend the path from child
+                extended_length = child_length + edge_len
+                extended_nodes = child_nodes + 1
+                
+                # Update result if we found a longer path
+                if extended_length > result[0]:
+                    result[0] = extended_length
+                    result[1] = extended_nodes
+                elif extended_length == result[0] and extended_nodes < result[1]:
+                    result[1] = extended_nodes
+                
+                # Update best path ending at current node
+                if extended_length > best_length:
+                    best_length = extended_length
+                    best_nodes = extended_nodes
+                    path_values = child_values | {nums[node]}
+                elif extended_length == best_length and extended_nodes < best_nodes:
+                    best_nodes = extended_nodes
+                    path_values = child_values | {nums[node]}
+        
+        # Also consider paths between two different children
+        # We need to find two paths from different children that can be combined
+        child_paths = []
+        for child in children[node]:
+            child_length, child_nodes, child_values = dfs(child)
+            edge_len = edge_lengths[(node, child)]
+            
+            if nums[node] not in child_values:
+                child_paths.append((child_length + edge_len, child_nodes + 1, child_values | {nums[node]}))
+        
+        # Try all pairs of child paths
+        for i in range(len(child_paths)):
+            len1, nodes1, vals1 = child_paths[i]
+            for j in range(i + 1, len(child_paths)):
+                len2, nodes2, vals2 = child_paths[j]
+                
+                # Check if the combined path has unique values
+                if len(vals1 | vals2) == len(vals1) + len(vals2) - 1:  # -1 because nums[node] is in both
+                    total_length = len1 + len2
+                    total_nodes = nodes1 + nodes2 - 1  # -1 because node is counted twice
+                    
+                    if total_length > result[0]:
+                        result[0] = total_length
+                        result[1] = total_nodes
+                    elif total_length == result[0] and total_nodes < result[1]:
+                        result[1] = total_nodes
+        
+        return best_length, best_nodes, path_values
+    
+    # Start DFS from root
+    dfs(0)
+    
+    # If no path found (result still [0, 0]), set to single node path
+    if result == [0, 0]:
+        result = [0, 1]
+    
+    return result

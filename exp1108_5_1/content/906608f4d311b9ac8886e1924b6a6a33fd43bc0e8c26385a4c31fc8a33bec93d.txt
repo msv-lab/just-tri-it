@@ -1,0 +1,77 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+from typing import List
+
+def minCost(n: int, cost: List[List[int]]) -> int:
+    if n <= 0 or n % 2 != 0 or len(cost) != n or any(len(house) != 3 for house in cost):
+        raise ValueError("Invalid input")
+    
+    if n == 2:
+        # The two houses must be different colors and not the same as each other (which is already implied)
+        min_total = float('inf')
+        for c1 in range(3):
+            for c2 in range(3):
+                if c1 != c2:
+                    total = cost[0][c1] + cost[1][c2]
+                    if total < min_total:
+                        min_total = total
+        return min_total
+    
+    # For each pair of symmetric houses, we need to choose two different colors for them
+    # and ensure that adjacent houses (including within the pair) have different colors.
+    # We can process each symmetric pair independently, choosing the minimal cost combinations.
+    
+    total_cost = 0
+    for i in range(n // 2):
+        j = n - 1 - i
+        if i == j:
+            raise ValueError("Invalid input: n must be even")
+        
+        # The two houses at i and j must have different colors.
+        # Also, if i > 0, house i must be different from house i-1, and similarly for j < n-1.
+        # However, since we process pairs in order, we can track the previous choices.
+        
+        # For the first pair (i=0, j=n-1), no adjacent constraints except between themselves.
+        if i == 0:
+            min_pair_cost = float('inf')
+            for ci in range(3):
+                for cj in range(3):
+                    if ci != cj:
+                        current_cost = cost[i][ci] + cost[j][cj]
+                        if current_cost < min_pair_cost:
+                            min_pair_cost = current_cost
+                            last_ci, last_cj = ci, cj
+            total_cost += min_pair_cost
+        else:
+            # For subsequent pairs, house i must be different from house i-1, and j must be different from j+1
+            # But since j+1 is the mirror of i-1, their colors must also be different.
+            # So, house i must be different from house i-1, and house j must be different from house j+1 (which is i-1's mirror)
+            # But house i-1's mirror is (n - 1 - (i - 1)) = n - i.
+            # Wait, let's re-express:
+            # For the current pair (i, j), the previous pair was (i-1, j+1).
+            # So house i must be different from house i-1, and house j must be different from house j+1 (which is i-1's mirror, but j+1 is the previous j in the pair).
+            # So the constraints are:
+            # - house i color != house i-1 color
+            # - house j color != house j+1 color
+            # - house i color != house j color (since they are symmetric)
+            
+            prev_i = i - 1
+            prev_j = j + 1
+            # The previous colors were last_ci (for prev_i) and last_cj (for prev_j)
+            # Wait, no: in the previous iteration, we processed (prev_i, prev_j), and we stored their colors as last_ci and last_cj.
+            # So for the current i and j, the adjacent houses are prev_i (i-1) and prev_j (j+1).
+            
+            min_pair_cost = float('inf')
+            for ci in range(3):
+                for cj in range(3):
+                    if ci != cj and ci != last_ci and cj != last_cj:
+                        current_cost = cost[i][ci] + cost[j][cj]
+                        if current_cost < min_pair_cost:
+                            min_pair_cost = current_cost
+                            new_last_ci, new_last_cj = ci, cj
+            if min_pair_cost == float('inf'):
+                # No valid coloring possible
+                raise ValueError("No valid coloring possible")
+            total_cost += min_pair_cost
+            last_ci, last_cj = new_last_ci, new_last_cj
+    
+    return total_cost

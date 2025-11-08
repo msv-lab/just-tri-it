@@ -1,0 +1,94 @@
+# signature: def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> list[int]
+from typing import List
+import heapq
+
+def minOperations_sinv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> List[int]:
+    # Input validation
+    if not nums or x < 2 or x > len(nums) or min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    max_k = n // x
+    
+    # Check constraints for k
+    if max_k == 0:
+        return []
+    
+    # Precompute operations for all possible segments
+    segment_ops = []
+    
+    # For each starting position, compute operations needed for segment of length x
+    for i in range(n - x + 1):
+        segment = nums[i:i + x]
+        # Sort to find median
+        sorted_segment = sorted(segment)
+        median = sorted_segment[x // 2]
+        
+        # Calculate operations: sum of absolute differences from median
+        operations = sum(abs(num - median) for num in segment)
+        segment_ops.append((i, operations))
+    
+    # Now we need to find all k where we can select k non-overlapping segments
+    # with minimum total operations = target
+    
+    result = []
+    
+    # Try all possible k values
+    for k in range(1, min(16, max_k + 1)):  # k <= 15 and k*x <= n
+        # Use dynamic programming to find minimum operations for k segments
+        # dp[i][j] = min operations using j segments ending at or before position i
+        
+        # Since k is small, we can use a more direct approach
+        # Find the k segments with minimum operations that don't overlap
+        
+        # Sort segments by operations
+        sorted_segments = sorted(segment_ops, key=lambda x: x[1])
+        
+        # Try to find combination of k non-overlapping segments with exact sum
+        # This is complex, so let's find the minimum possible operations first
+        
+        # Use priority queue approach to find minimum operations for k segments
+        segments_by_start = sorted(segment_ops, key=lambda x: x[0])
+        
+        # For small k, we can use a DP that considers segment selection
+        # dp[i][j] = min operations using j segments, considering first i segments
+        
+        m = len(segments_by_start)
+        INF = float('inf')
+        
+        # Initialize DP table
+        dp = [[INF] * (k + 1) for _ in range(m + 1)]
+        dp[0][0] = 0
+        
+        for i in range(1, m + 1):
+            start_i, ops_i = segments_by_start[i - 1]
+            end_i = start_i + x - 1
+            
+            # Copy previous row (not taking current segment)
+            for j in range(k + 1):
+                dp[i][j] = min(dp[i][j], dp[i - 1][j])
+            
+            # Try to take current segment
+            # Find the last segment that doesn't overlap with current one
+            prev_idx = i - 1
+            while prev_idx > 0:
+                start_prev, _ = segments_by_start[prev_idx - 1]
+                end_prev = start_prev + x - 1
+                if end_prev < start_i:  # No overlap
+                    break
+                prev_idx -= 1
+            
+            # Update DP for taking current segment
+            for j in range(1, k + 1):
+                if dp[prev_idx][j - 1] != INF:
+                    dp[i][j] = min(dp[i][j], dp[prev_idx][j - 1] + ops_i)
+        
+        # Find minimum operations for exactly k segments
+        min_ops = INF
+        for i in range(m + 1):
+            min_ops = min(min_ops, dp[i][k])
+        
+        if min_ops != INF and min_ops == min_operations_for_k_equal_subarrays:
+            result.append(k)
+    
+    return result

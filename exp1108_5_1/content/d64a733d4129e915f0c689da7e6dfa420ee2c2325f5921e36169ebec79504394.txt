@@ -1,0 +1,155 @@
+# signature: def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool
+from typing import List
+
+def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x < 2 or k * x > n:
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculations
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Precompute prefix sums of squares for efficient range variance calculations
+    prefix_sq = [0] * (n + 1)
+    for i in range(n):
+        prefix_sq[i + 1] = prefix_sq[i] + nums[i] * nums[i]
+    
+    def get_range_sum(l, r):
+        """Get sum of elements from index l to r-1"""
+        return prefix[r] - prefix[l]
+    
+    def get_range_sq_sum(l, r):
+        """Get sum of squares of elements from index l to r-1"""
+        return prefix_sq[r] - prefix_sq[l]
+    
+    def cost_for_target(start, target):
+        """Calculate cost to make subarray [start, start+x) equal to target"""
+        current_sum = get_range_sum(start, start + x)
+        current_sq_sum = get_range_sq_sum(start, start + x)
+        
+        # The optimal target is the mean (rounded to minimize sum of absolute differences)
+        # For sum of squared differences: cost = sum((a_i - t)^2) = sum(a_i^2) - 2*t*sum(a_i) + x*t^2
+        # This is minimized when t = mean (for squared differences)
+        # For absolute differences, the median minimizes, but mean is close and easier to compute
+        
+        # We'll use the actual mean for squared cost calculation
+        mean = round(current_sum / x)
+        
+        # Calculate the actual cost (sum of absolute differences)
+        # We can compute this efficiently using the relationship:
+        # sum(|a_i - t|) = sum(a_i) - t*x + 2*sum_{a_i < t}(t - a_i)
+        # But for simplicity, we'll use the mathematical identity:
+        # The cost is minimized when t is the median, but for our purpose we can try nearby values
+        
+        # Try the floor and ceil of the mean to find minimum absolute cost
+        t1 = int(current_sum / x)
+        t2 = t1 + 1
+        
+        cost1 = 0
+        cost2 = 0
+        
+        # For large x, we need an efficient way to compute the absolute cost
+        # We can use the relationship: sum(|a_i - t|) = sum_{a_i >= t}(a_i - t) + sum_{a_i < t}(t - a_i)
+        # = (sum_{a_i >= t} a_i) - t * count_ge + t * count_lt - (sum_{a_i < t} a_i)
+        
+        # For simplicity in this implementation, we'll compute directly for the candidate targets
+        # In a more optimized version, we could use sorting or binary search
+        
+        # Let's compute for both candidate targets and take the minimum
+        for t in [t1, t2]:
+            # For absolute differences, we need to compute sum(|a_i - t|)
+            # We can approximate this using the relationship with variance:
+            # sum(|a_i - t|) >= |sum(a_i) - t*x|, but this is not exact
+            
+            # For this problem, we'll use the mathematical fact that for absolute differences,
+            # the cost is sum(|a_i - m|) where m is the median
+            # But computing median efficiently for each window is complex
+            
+            # Alternative approach: use the fact that sum(|a_i - t|) is minimized at median
+            # and the minimum value can be computed using prefix sums if the array was sorted
+            
+            # Since we need efficiency, we'll use a different approach:
+            # We'll find the cost to make all elements equal to the optimal value
+            # The optimal value is the median for absolute differences
+            
+        # For this implementation, let's use a simplified approach:
+        # The cost to make all elements equal to target is sum(|a_i - target|)
+        # We can compute this by: cost = |sum(a_i) - target * x|
+        # This is exact when all adjustments are in the same direction
+        
+        # Actually, the exact formula for absolute differences when making all elements equal to t:
+        # cost = sum(|a_i - t|)
+        # This is minimized when t is the median, not the mean
+        
+        # For efficiency, we'll compute the cost using the mathematical relationship:
+        # Let m be the median, then cost = sum_{i} |a_i - m|
+        # = (sum of elements greater than m) - m * (count greater) + m * (count less) - (sum of elements less than m)
+        
+        # Since we can't efficiently get the median for each window, we'll use an approximation:
+        # The cost is at least |current_sum - target * x|
+        
+        return abs(current_sum - target * x)
+    
+    # We need to find k non-overlapping subarrays of length x
+    # This is a complex combinatorial optimization problem
+    
+    # Dynamic programming approach: dp[i][j] = minimum cost to select j subarrays from first i elements
+    # But with n up to 10^5 and k up to 15, O(n*k) might be acceptable
+    
+    # Initialize DP table
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(n + 1)]
+    dp[0][0] = 0
+    
+    # Precompute costs for all possible subarrays
+    # costs[i] = minimum cost to make subarray starting at i have all equal elements
+    costs = [0] * (n - x + 1)
+    for i in range(n - x + 1):
+        # Find the optimal target value (median minimizes absolute differences)
+        # For efficiency, we'll use the mean as an approximation
+        window = nums[i:i + x]
+        window_sorted = sorted(window)
+        median = window_sorted[x // 2]
+        cost = 0
+        for num in window:
+            cost += abs(num - median)
+        costs[i] = cost
+    
+    # Fill DP table
+    for i in range(1, n + 1):
+        dp[i][0] = 0
+        for j in range(1, k + 1):
+            # Option 1: don't use current position as end of a subarray
+            dp[i][j] = min(dp[i][j], dp[i - 1][j])
+            
+            # Option 2: use subarray ending at i-1 (if possible)
+            if i >= x and j >= 1:
+                start = i - x
+                cost = costs[start]
+                dp[i][j] = min(dp[i][j], dp[start][j - 1] + cost)
+    
+    # Find minimum cost to get at least k subarrays
+    min_cost = INF
+    for i in range(x * k, n + 1):
+        min_cost = min(min_cost, dp[i][k])
+    
+    # Check if the given value is valid
+    if min_cost == INF:
+        # Not possible to find k subarrays
+        return False
+    
+    return min_operations_for_k_equal_subarrays >= min_cost

@@ -1,0 +1,182 @@
+# signature: def minCost_simp(cost: List[List[int]]) -> int
+from typing import List
+
+def minCost_simp(cost: List[List[int]]) -> int:
+    n = len(cost)
+    if n % 2 != 0 or n < 2 or n > 100000:
+        raise ValueError("Invalid input")
+    
+    for row in cost:
+        if len(row) != 3:
+            raise ValueError("Invalid input")
+        for val in row:
+            if val < 0 or val > 100000:
+                raise ValueError("Invalid input")
+    
+    # For symmetric constraint: houses at distance i and n-1-i must have different colors
+    # We need to assign colors to all houses such that:
+    # 1. adjacent houses have different colors
+    # 2. symmetric houses (i and n-1-i) have different colors
+    
+    # Since n is even, we can think of the houses as forming a circular-like constraint
+    # Actually, the constraints form a graph where each house is connected to:
+    # - its left neighbor (if exists)
+    # - its right neighbor (if exists)  
+    # - its symmetric house
+    
+    # For n=2: houses 0 and 1 are adjacent AND symmetric
+    # For n=4: houses 0-1 adjacent, 1-2 adjacent, 2-3 adjacent, and symmetric pairs: (0,3), (1,2)
+    
+    # The problem reduces to coloring this graph with 3 colors minimizing cost
+    
+    # For the first two houses (0 and 1), we need to consider:
+    # - They are adjacent (different colors)
+    # - They are symmetric with the last two houses
+    
+    # Actually, let's analyze the constraints:
+    # Let the houses be 0,1,...,n-1
+    # Adjacent: (0,1), (1,2), ..., (n-2,n-1)
+    # Symmetric: (0,n-1), (1,n-2), ..., (n/2-1, n/2)
+    
+    # This creates a cycle: 0-1-2-...-n-1-0 (through symmetric constraint)
+    
+    # Since we have 3 colors and the graph is bipartite? Let's check:
+    # The constraints form a cycle of length n (0-1-2-...-n-1-0)
+    # For even n, this is an even cycle, which is bipartite
+    
+    # But wait, we have additional constraints within the cycle?
+    # Actually, the symmetric constraints connect opposite houses, creating a cycle
+    
+    # The key insight: the constraints form a single cycle of length n
+    # Houses: 0 connected to 1 and n-1
+    # House 1 connected to 0 and 2 and n-2 (through symmetric)
+    # Actually, let's trace the cycle:
+    # Start at house 0, go to house 1 (adjacent), then to house 2 (adjacent), ...
+    # until house n/2-1, then to house n/2 (adjacent), but wait, house n/2 is symmetric with house n/2-1?
+    # No, symmetric pairs are (i, n-1-i)
+    
+    # Actually, the graph has two cycles:
+    # One for even indices: 0-2-4-...-n-2-0 (through symmetric)
+    # One for odd indices: 1-3-5-...-n-1-1 (through symmetric)
+    
+    # Let me verify with n=4:
+    # Houses: 0,1,2,3
+    # Adjacent: (0,1), (1,2), (2,3)
+    # Symmetric: (0,3), (1,2)
+    # This creates: 0-1-2-3-0 (cycle)
+    # Path: 0-1 (adjacent), 1-2 (adjacent AND symmetric), 2-3 (adjacent), 3-0 (symmetric)
+    
+    # So it's a single cycle of length 4
+    
+    # For n=6:
+    # Houses: 0,1,2,3,4,5
+    # Adjacent: (0,1),(1,2),(2,3),(3,4),(4,5)
+    # Symmetric: (0,5),(1,4),(2,3)
+    # Cycle: 0-1-2-3-4-5-0
+    # Path: 0-1 (adjacent), 1-2 (adjacent), 2-3 (adjacent AND symmetric), 3-4 (adjacent), 4-5 (adjacent), 5-0 (symmetric)
+    
+    # So we have a cycle of length n
+    
+    # Now, for an even cycle with 3 colors, we have two possible color patterns:
+    # Pattern 1: 0,1,0,1,... (alternating two colors)
+    # Pattern 2: 0,1,2,0,1,2,... (cycling three colors)
+    
+    # But we need to minimize cost
+    
+    # Let's use dynamic programming where dp[i][c] = min cost to color first i+1 houses
+    # with house i having color c, satisfying all constraints
+    
+    # However, we have the cycle constraint (house 0 and house n-1 must have different colors)
+    # So we need to try all color combinations for house 0 and house n-1
+    
+    # Actually, we can fix the color of house 0 and compute, then try all 3 colors for house 0
+    
+    # But there's a simpler approach: since it's a cycle, we can break it by fixing colors for first two houses
+    
+    # Wait, but we have symmetric constraints that create the cycle
+    
+    # Let me think differently: the problem is equivalent to coloring a cycle graph with n nodes
+    # using 3 colors with minimum cost
+    
+    # We can use DP that considers the cycle structure
+    # dp[i][c1][c2] = min cost for first i houses with house i-1 color c1 and house i color c2
+    
+    # But this would be O(n * 3 * 3) = O(9n) which is fine for n=10^5
+    
+    # However, we need to handle the cycle closure
+    
+    # Approach:
+    # 1. Try all color pairs for house 0 and house 1 (6 possibilities)
+    # 2. For each fixed pair, compute DP for the chain
+    # 3. At the end, we need to check the constraint between house n-1 and house 0
+    
+    # But wait, we also have symmetric constraints between house i and house n-1-i
+    # This is already encoded in the cycle structure we identified
+    
+    # Actually, let me re-examine the constraints for n=4:
+    # We have cycle: 0-1-2-3-0
+    # The symmetric constraints are: (0,3) and (1,2)
+    # But in our cycle, we already have edges: (0,1), (1,2), (2,3), (3,0)
+    # So the symmetric constraints are already included in the cycle!
+    
+    # Therefore, we just need to color the cycle with the given costs
+    
+    # Algorithm:
+    # Since it's a cycle, we fix the color of the first house and run DP
+    
+    # Let dp[i][c] = minimum cost to color houses 0..i with house i having color c
+    # But we need to remember the color of house 0 to check the cycle closure
+    
+    # Better: run DP twice - once for each possible color of house 0
+    
+    # Actually, we need to try all 3 colors for house 0, and for each, compute the DP
+    # while ensuring house n-1 has a different color from both house n-2 and house 0
+    
+    if n == 2:
+        # Special case: only two houses, they are adjacent and symmetric
+        min_cost = float('inf')
+        for c0 in range(3):
+            for c1 in range(3):
+                if c0 != c1:  # adjacent constraint
+                    # symmetric constraint: house 0 and house 1 must have different colors (already satisfied by adjacent)
+                    cost_total = cost[0][c0] + cost[1][c1]
+                    min_cost = min(min_cost, cost_total)
+        return min_cost
+    
+    # General case: n >= 4
+    # We'll use DP where we fix the color of house 0 and house 1
+    min_total = float('inf')
+    
+    # Try all possible color pairs for first two houses
+    for c0 in range(3):
+        for c1 in range(3):
+            if c0 == c1:
+                continue  # adjacent constraint
+                
+            # Initialize DP
+            dp = [[float('inf')] * 3 for _ in range(n)]
+            dp[0][c0] = cost[0][c0]
+            dp[1][c1] = cost[1][c1] + dp[0][c0]
+            
+            # Fill DP for houses 2 to n-1
+            for i in range(2, n):
+                for c in range(3):
+                    for prev_c in range(3):
+                        if prev_c == c:
+                            continue  # adjacent constraint
+                        if dp[i-1][prev_c] < float('inf'):
+                            new_cost = dp[i-1][prev_c] + cost[i][c]
+                            if new_cost < dp[i][c]:
+                                dp[i][c] = new_cost
+            
+            # Check cycle closure: house n-1 and house 0 must have different colors
+            for last_c in range(3):
+                if last_c == c0:  # cycle constraint
+                    continue
+                if dp[n-1][last_c] < min_total:
+                    min_total = dp[n-1][last_c]
+    
+    if min_total == float('inf'):
+        raise ValueError("Invalid input")
+    
+    return min_total

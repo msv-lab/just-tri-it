@@ -1,0 +1,160 @@
+# signature: def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool
+from typing import List
+
+def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool:
+    n = len(nums)
+    
+    # Validate inputs
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x < 2 or k * x > n:
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Precompute squared prefix sums for efficient range squared sum calculation
+    prefix_sq = [0] * (n + 1)
+    for i in range(n):
+        prefix_sq[i + 1] = prefix_sq[i] + nums[i] * nums[i]
+    
+    def get_range_sum(l, r):
+        """Get sum of elements from index l to r-1"""
+        return prefix[r] - prefix[l]
+    
+    def get_range_sq_sum(l, r):
+        """Get sum of squares of elements from index l to r-1"""
+        return prefix_sq[r] - prefix_sq[l]
+    
+    def cost_for_subarray(l, r, target):
+        """Calculate cost to make subarray [l, r) equal to target"""
+        length = r - l
+        if length == 0:
+            return 0
+        
+        # Cost = sum((nums[i] - target)^2) but we need absolute differences
+        # We can compute this efficiently using prefix sums
+        sum_val = get_range_sum(l, r)
+        sum_sq = get_range_sq_sum(l, r)
+        
+        # The optimal target that minimizes sum of absolute differences is the median
+        # But for computational efficiency, we'll use the mean as an approximation
+        # and then adjust
+        
+        # For absolute differences, the optimal is the median, but we can compute
+        # the cost for a given target directly
+        temp = sorted(nums[l:r])
+        median = temp[length // 2]
+        
+        # Calculate cost using median (optimal for absolute differences)
+        cost = 0
+        for i in range(l, r):
+            cost += abs(nums[i] - median)
+        
+        return cost
+    
+    # We need to select k non-overlapping subarrays of length x
+    # This is a dynamic programming problem
+    
+    # dp[i][j] = minimum cost to select j subarrays from first i elements
+    # We'll use a more efficient approach due to constraints
+    
+    # Since k is small (<=15), we can use a DP that tracks the state of selected subarrays
+    INF = float('inf')
+    
+    # We'll try all possible combinations of k subarrays
+    # But this is too slow for n=10^5, so we need a smarter approach
+    
+    # Alternative approach: use interval DP with state [position][subarrays_used]
+    dp = [INF] * (k + 1)
+    dp[0] = 0
+    
+    # Precompute costs for all possible subarrays
+    # There are O(n) possible subarrays of length x
+    subarray_costs = []
+    for i in range(n - x + 1):
+        # Find the optimal value for this subarray and compute cost
+        sub = nums[i:i + x]
+        sub_sorted = sorted(sub)
+        median = sub_sorted[x // 2]
+        cost = 0
+        for val in sub:
+            cost += abs(val - median)
+        subarray_costs.append((i, i + x, cost))
+    
+    # Sort subarrays by starting position
+    subarray_costs.sort()
+    
+    # Now we need to select k non-overlapping subarrays with minimum total cost
+    # This is similar to weighted interval scheduling
+    
+    # We'll use a DP approach where dp[j] = min cost to select j subarrays
+    # and we process subarrays in order
+    
+    # Create a list of subarrays with (start, end, cost)
+    intervals = [(start, end, cost) for start, end, cost in subarray_costs]
+    
+    # Sort intervals by end time
+    intervals.sort(key=lambda x: x[1])
+    
+    # Binary search to find the last non-overlapping interval
+    def find_prev(end_idx):
+        low, high = 0, len(intervals) - 1
+        result = -1
+        while low <= high:
+            mid = (low + high) // 2
+            if intervals[mid][1] <= end_idx:
+                result = mid
+                low = mid + 1
+            else:
+                high = mid - 1
+        return result
+    
+    # Precompute previous non-overlapping interval for each interval
+    prev = [-1] * len(intervals)
+    for i in range(len(intervals)):
+        start, end, cost = intervals[i]
+        prev[i] = find_prev(start)
+    
+    # DP table: dp[i][j] = min cost using first i intervals to select j subarrays
+    dp_table = [[INF] * (k + 1) for _ in range(len(intervals) + 1)]
+    for i in range(len(intervals) + 1):
+        dp_table[i][0] = 0
+    
+    for i in range(1, len(intervals) + 1):
+        start, end, cost = intervals[i - 1]
+        prev_idx = prev[i - 1]
+        
+        for j in range(1, k + 1):
+            # Option 1: Don't take current interval
+            dp_table[i][j] = min(dp_table[i][j], dp_table[i - 1][j])
+            
+            # Option 2: Take current interval
+            if prev_idx == -1:
+                # No previous non-overlapping interval
+                if j == 1:
+                    dp_table[i][j] = min(dp_table[i][j], cost)
+            else:
+                dp_table[i][j] = min(dp_table[i][j], dp_table[prev_idx + 1][j - 1] + cost)
+    
+    # Find minimum cost to get at least k subarrays
+    min_cost = INF
+    for i in range(k, len(intervals) + 1):
+        min_cost = min(min_cost, dp_table[i][k])
+    
+    # If we couldn't find k non-overlapping subarrays, it's impossible
+    if min_cost == INF:
+        return False
+    
+    # Check if the given value is valid
+    return min_operations_for_k_equal_subarrays >= min_cost

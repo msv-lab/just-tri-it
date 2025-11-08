@@ -1,0 +1,78 @@
+# signature: def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int
+from typing import List
+
+def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int:
+    if not nums or x < 2 or x > len(nums):
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute prefix sums for efficient median calculation
+    sorted_nums = sorted(nums)
+    prefix_sum = [0] * (n + 1)
+    for i in range(n):
+        prefix_sum[i + 1] = prefix_sum[i] + sorted_nums[i]
+    
+    def get_median_cost(start, length):
+        """Calculate cost to make elements equal to median for a sorted segment"""
+        if length == 0:
+            return 0
+        
+        mid = start + length // 2
+        median = sorted_nums[mid]
+        
+        # Sum of elements before median
+        left_sum = prefix_sum[mid] - prefix_sum[start]
+        # Sum of elements after median
+        right_sum = prefix_sum[start + length] - prefix_sum[mid + 1]
+        
+        # Cost = (median * left_count - left_sum) + (right_sum - median * right_count)
+        left_count = mid - start
+        right_count = start + length - mid - 1
+        
+        return (median * left_count - left_sum) + (right_sum - median * right_count)
+    
+    # Try all possible k values that satisfy constraints
+    max_possible_k = n // x
+    for k in range(1, max_possible_k + 1):
+        if k * x > n:
+            continue
+            
+        # Use dynamic programming to find minimum operations for exactly k subarrays
+        # dp[i][j] = min operations to select j subarrays using first i elements
+        dp = [[float('inf')] * (k + 1) for _ in range(n + 1)]
+        dp[0][0] = 0
+        
+        for i in range(n + 1):
+            for j in range(k + 1):
+                if dp[i][j] == float('inf'):
+                    continue
+                
+                # Skip current element
+                if i + 1 <= n:
+                    dp[i + 1][j] = min(dp[i + 1][j], dp[i][j])
+                
+                # Take subarray starting at position i
+                if j < k and i + x <= n:
+                    # Get the segment from i to i+x-1 in sorted order
+                    segment = sorted(nums[i:i + x])
+                    # Calculate cost to make all elements equal in this segment
+                    segment_cost = get_median_cost(0, x)
+                    
+                    dp[i + x][j + 1] = min(dp[i + x][j + 1], dp[i][j] + segment_cost)
+        
+        # Find minimum operations for at least k subarrays
+        min_ops = float('inf')
+        for i in range(n + 1):
+            if dp[i][k] < min_ops:
+                min_ops = dp[i][k]
+        
+        if min_ops == min_operations_for_k_equal_subarrays:
+            return k
+    
+    # If no k found, check if it's exactly 0 operations (k=0 is not valid)
+    if min_operations_for_k_equal_subarrays == 0:
+        raise ValueError("Invalid input")
+    
+    # If we reach here, no valid k was found
+    raise ValueError("Invalid input")

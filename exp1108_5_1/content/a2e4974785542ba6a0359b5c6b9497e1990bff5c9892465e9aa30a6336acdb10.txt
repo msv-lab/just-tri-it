@@ -1,0 +1,109 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+import heapq
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    # Check for invalid inputs
+    if not (2 <= len(nums) <= 10**5):
+        raise ValueError("Invalid input")
+    if not all(-10**6 <= num <= 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if not (2 <= x <= len(nums)):
+        raise ValueError("Invalid input")
+    if not (1 <= k <= 15):
+        raise ValueError("Invalid input")
+    if not (2 <= k * x <= len(nums)):
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    # The starting indices of possible subarrays of size x
+    # The subarrays are non-overlapping, so we can choose any k of them
+    # We need to select k subarrays such that the total operations to make all elements in each subarray equal is minimized
+    
+    # Precompute the cost for each possible subarray of size x
+    # The cost is the minimal operations to make all elements in the subarray equal to the median
+    subarray_costs = []
+    for i in range(n - x + 1):
+        sub = nums[i:i+x]
+        # To minimize operations, we should make all elements equal to the median
+        sub_sorted = sorted(sub)
+        median = sub_sorted[x // 2] if x % 2 == 1 else sub_sorted[x // 2 - 1]
+        cost = sum(abs(num - median) for num in sub)
+        subarray_costs.append((cost, i))
+    
+    # Now, we need to select k non-overlapping subarrays with minimal total cost
+    # We can use a priority queue (min-heap) to select the k smallest costs with non-overlapping indices
+    
+    # Sort the subarrays by their cost
+    subarray_costs.sort()
+    
+    # We need to select k subarrays with minimal total cost and non-overlapping indices
+    # This is similar to the interval scheduling problem but with the goal of minimizing total cost
+    # We can use a greedy approach with a priority queue
+    
+    # Initialize variables to track selected subarrays
+    selected = []
+    total_cost = 0
+    last_end = -1
+    
+    # We need to select k subarrays with minimal cost and no overlap
+    # To maximize the number of possible selections, we can process subarrays in order of increasing end index
+    # So we first sort subarray_costs by end index, then by cost
+    subarray_info = []
+    for cost, start in subarray_costs:
+        end = start + x - 1
+        subarray_info.append((start, end, cost))
+    
+    # Sort subarray_info by end index to facilitate greedy selection
+    subarray_info.sort(key=lambda s: s[1])
+    
+    selected_count = 0
+    total_cost = 0
+    last_end = -1
+    
+    for start, end, cost in subarray_info:
+        if start > last_end:
+            selected_count += 1
+            total_cost += cost
+            last_end = end
+            if selected_count == k:
+                break
+    
+    if selected_count < k:
+        # Try alternative approach if the greedy by end doesn't work
+        # This might happen if there are not enough non-overlapping subarrays when processed in order of end
+        # So we need to find k subarrays with minimal total cost, regardless of order
+        # This is a more complex problem, possibly requiring dynamic programming or backtracking
+        # However, given the constraints (k <= 15), we can use a backtracking approach with pruning
+        
+        # Let's try a backtracking approach to select k non-overlapping subarrays with minimal total cost
+        # We'll process subarray_info sorted by cost and try to pick the smallest cost subarrays first
+        
+        subarray_info_sorted_cost = sorted(subarray_info, key=lambda s: s[2])
+        min_total = float('inf')
+        
+        def backtrack(index, count, current_cost, last_end_bt):
+            nonlocal min_total
+            if count == k:
+                if current_cost < min_total:
+                    min_total = current_cost
+                return
+            if index >= len(subarray_info_sorted_cost):
+                return
+            if current_cost >= min_total:
+                return  # Prune the branch if current_cost exceeds the found minimum
+            
+            # Option 1: pick the current subarray if it doesn't overlap with last_end_bt
+            start, end, cost = subarray_info_sorted_cost[index]
+            if start > last_end_bt:
+                backtrack(index + 1, count + 1, current_cost + cost, end)
+            # Option 2: skip the current subarray
+            backtrack(index + 1, count, current_cost, last_end_bt)
+        
+        backtrack(0, 0, 0, -1)
+        if min_total != float('inf'):
+            total_cost = min_total
+        else:
+            raise ValueError("Invalid input: cannot find k non-overlapping subarrays")
+    
+    return total_cost

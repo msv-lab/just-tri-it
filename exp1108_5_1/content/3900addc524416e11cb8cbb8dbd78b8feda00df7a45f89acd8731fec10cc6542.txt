@@ -1,0 +1,107 @@
+# signature: def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int
+from typing import List
+import heapq
+
+def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int:
+    # Input validation
+    if not nums or x < 2 or x > len(nums) or min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Function to calculate operations needed for a subarray to have all elements equal to target
+    def operations_for_subarray(start, target):
+        # Operations needed = sum of absolute differences between each element and target
+        # This can be computed using prefix sums and careful calculation
+        total = 0
+        for i in range(start, start + x):
+            total += abs(nums[i] - target)
+        return total
+    
+    # Function to find minimum operations for exactly k subarrays
+    def min_operations_for_k(k):
+        # We need to select k non-overlapping subarrays of size x
+        # This is a dynamic programming problem
+        
+        # dp[i][j] = min operations to select j subarrays from first i elements
+        # But with constraints, we can optimize
+        
+        # For each possible starting position of subarrays
+        # Precompute operations for each possible subarray
+        subarray_ops = []
+        for i in range(n - x + 1):
+            # For each subarray, the optimal target is the median of the subarray
+            # to minimize sum of absolute differences
+            subarray = nums[i:i + x]
+            sorted_sub = sorted(subarray)
+            median = sorted_sub[x // 2]
+            ops = operations_for_subarray(i, median)
+            subarray_ops.append((i, ops))
+        
+        # Now we need to select k non-overlapping subarrays with minimum total operations
+        # Subarrays cannot overlap, so if we take subarray starting at i, next subarray must start at i + x or later
+        
+        # Use dynamic programming: dp[i] = list of (operations, count) for subarrays ending at or before i
+        # But with k up to 15, we can use a different approach
+        
+        # Sort subarrays by starting position and use priority queue approach
+        subarray_ops.sort(key=lambda x: x[0])  # sort by starting position
+        
+        # For small k, we can use a greedy approach with priority queue
+        heap = []
+        result = float('inf')
+        
+        # Try all possible combinations (with pruning)
+        def backtrack(idx, count, total_ops, last_end):
+            nonlocal result
+            if count == k:
+                result = min(result, total_ops)
+                return
+            if idx >= len(subarray_ops):
+                return
+            if total_ops >= result:  # pruning
+                return
+            
+            # Skip current subarray
+            backtrack(idx + 1, count, total_ops, last_end)
+            
+            # Take current subarray if it doesn't overlap
+            start_pos, ops = subarray_ops[idx]
+            if start_pos >= last_end:
+                backtrack(idx + 1, count + 1, total_ops + ops, start_pos + x)
+        
+        backtrack(0, 0, 0, 0)
+        return result if result != float('inf') else float('inf')
+    
+    # Binary search for k that gives exactly the target operations
+    max_possible_k = n // x
+    
+    # Try all possible k values in the valid range
+    for k in range(1, max_possible_k + 1):
+        if k * x > n:  # Constraint: k * x <= n
+            continue
+        
+        ops_needed = min_operations_for_k(k)
+        if ops_needed == min_operations_for_k_equal_subarrays:
+            return k
+    
+    # If no exact match found, find the closest
+    best_k = 1
+    min_diff = float('inf')
+    
+    for k in range(1, max_possible_k + 1):
+        if k * x > n:
+            continue
+        
+        ops_needed = min_operations_for_k(k)
+        diff = abs(ops_needed - min_operations_for_k_equal_subarrays)
+        if diff < min_diff:
+            min_diff = diff
+            best_k = k
+    
+    return best_k

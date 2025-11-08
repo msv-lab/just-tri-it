@@ -1,0 +1,74 @@
+# signature: def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool
+from typing import List
+
+def postcondition(nums: List[int], x: int, k: int, min_operations_for_k_equal_subarrays: int) -> bool:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x < 2 or k * x > n:
+        raise ValueError("Invalid input")
+    if min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # DP state: dp[mask][i] = minimum operations to achieve mask of subarrays ending at or before position i
+    # mask is a bitmask representing which subarrays we've found
+    full_mask = (1 << k) - 1
+    
+    # Initialize DP with infinity
+    INF = float('inf')
+    dp = [INF] * (1 << k)
+    dp[0] = 0
+    
+    # For each possible ending position of a subarray
+    for end in range(x - 1, n):
+        start = end - x + 1
+        
+        # Calculate cost to make all elements in subarray [start, end] equal to target value
+        # The optimal target is the median (for odd x) or average of two medians (for even x)
+        # For simplicity and efficiency, we'll use the mean rounded to nearest integer
+        subarray_sum = prefix[end + 1] - prefix[start]
+        target = round(subarray_sum / x)
+        
+        # Calculate operations needed
+        operations = 0
+        for i in range(start, end + 1):
+            operations += abs(nums[i] - target)
+        
+        # Try to add this subarray to all existing states
+        for mask in range(full_mask, -1, -1):
+            if dp[mask] == INF:
+                continue
+            
+            # Find next available subarray slot
+            for j in range(k):
+                if not (mask >> j) & 1:
+                    new_mask = mask | (1 << j)
+                    dp[new_mask] = min(dp[new_mask], dp[mask] + operations)
+                    break
+    
+    # Find minimum operations to get at least k subarrays
+    min_operations = INF
+    for mask in range(1 << k):
+        # Count number of subarrays in this mask
+        subarray_count = bin(mask).count('1')
+        if subarray_count >= k:
+            min_operations = min(min_operations, dp[mask])
+    
+    # Check if the given value is valid
+    if min_operations == INF:
+        return False
+    
+    return min_operations_for_k_equal_subarrays >= min_operations

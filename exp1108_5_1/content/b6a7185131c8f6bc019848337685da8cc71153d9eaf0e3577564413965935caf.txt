@@ -1,0 +1,96 @@
+# signature: def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int
+from typing import List
+import heapq
+
+def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int:
+    # Input validation
+    if not nums or x < 2 or x > len(nums) or min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute prefix sums for efficient range sum queries
+    prefix_sum = [0] * (n + 1)
+    for i in range(n):
+        prefix_sum[i + 1] = prefix_sum[i] + nums[i]
+    
+    # Function to compute operations needed for a subarray [l, r] to have all elements equal to target
+    def operations_for_subarray(l, r, target):
+        # Operations = sum of absolute differences from target
+        # For sorted array, this can be computed efficiently
+        subarray = nums[l:r + 1]
+        sorted_sub = sorted(subarray)
+        median = sorted_sub[len(sorted_sub) // 2]
+        
+        # Calculate sum of absolute differences from median
+        total_ops = 0
+        for num in subarray:
+            total_ops += abs(num - median)
+        
+        return total_ops
+    
+    # Function to compute min operations for exactly k subarrays using dynamic programming
+    def min_operations_for_k(k_val):
+        # DP[i][j] = min operations to cover first i elements with j subarrays
+        # Since k is small (<=15), we can use DP
+        
+        dp = [[float('inf')] * (k_val + 1) for _ in range(n + 1)]
+        dp[0][0] = 0
+        
+        for i in range(n + 1):
+            for j in range(k_val + 1):
+                if dp[i][j] == float('inf'):
+                    continue
+                
+                # Try to add a new subarray starting from position i + 1
+                for next_start in range(i + 1, n - x + 2):
+                    end = next_start + x - 1
+                    if end > n:
+                        break
+                    
+                    # Calculate operations needed for this subarray
+                    ops = operations_for_subarray(next_start - 1, end - 1, 0)
+                    if j + 1 <= k_val:
+                        dp[end][j + 1] = min(dp[end][j + 1], dp[i][j] + ops)
+        
+        return min(dp[i][k_val] for i in range(n + 1))
+    
+    # Binary search on k to find which k produces the given operations count
+    # k can range from 1 to floor(n/x)
+    left, right = 1, n // x
+    result = -1
+    
+    while left <= right:
+        mid = (left + right) // 2
+        current_ops = min_operations_for_k(mid)
+        
+        if current_ops == min_operations_for_k_equal_subarrays:
+            result = mid
+            break
+        elif current_ops < min_operations_for_k_equal_subarrays:
+            # We need more operations, so try larger k
+            left = mid + 1
+        else:
+            # We have too many operations, try smaller k
+            right = mid - 1
+    
+    # If we didn't find exact match, return the closest valid k
+    if result == -1:
+        # Find k that gives operations closest to target
+        best_k = 1
+        min_diff = float('inf')
+        
+        for k_candidate in range(1, n // x + 1):
+            ops = min_operations_for_k(k_candidate)
+            diff = abs(ops - min_operations_for_k_equal_subarrays)
+            if diff < min_diff:
+                min_diff = diff
+                best_k = k_candidate
+        
+        result = best_k
+    
+    # Verify constraints
+    if result < 1 or result > 15 or result * x > n:
+        raise ValueError("Invalid input")
+    
+    return result

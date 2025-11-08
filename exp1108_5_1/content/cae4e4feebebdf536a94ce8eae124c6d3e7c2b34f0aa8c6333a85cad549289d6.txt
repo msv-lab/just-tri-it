@@ -1,0 +1,59 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate constraints
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x < 2 or k * x > n:
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # DP table: dp[i][j] = min operations to have j subarrays ending at or before position i
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(n + 1)]
+    
+    # Base case: 0 subarrays require 0 operations
+    for i in range(n + 1):
+        dp[i][0] = 0
+    
+    # Fill DP table
+    for j in range(1, k + 1):
+        for i in range(j * x, n + 1):
+            # Option 1: Don't use current position as end of j-th subarray
+            dp[i][j] = min(dp[i][j], dp[i - 1][j])
+            
+            # Option 2: Use positions [i-x, i-1] as the j-th subarray
+            start = i - x
+            end = i - 1
+            
+            # Calculate the median of this subarray for minimum operations
+            subarray = nums[start:end + 1]
+            sorted_sub = sorted(subarray)
+            median = sorted_sub[x // 2]  # For odd x, median is middle; for even, either middle works
+            
+            # Calculate operations needed to make all elements equal to median
+            operations = 0
+            for num in subarray:
+                operations += abs(num - median)
+            
+            # Update DP
+            dp[i][j] = min(dp[i][j], dp[start][j - 1] + operations)
+    
+    result = dp[n][k]
+    if result == INF:
+        raise ValueError("Invalid input")
+    
+    return result + 1

@@ -1,0 +1,10 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+# test name: test_extreme_n_with_minimal_costs
+def test_extreme_n_with_minimal_costs():
+    """Test with n=100000 and minimal cost variations"""
+    n = 100000
+    cost = [[1, 1, 1] for _ in range(n)]
+    result = minCost(n, cost)
+    # All costs are equal, any valid coloring works
+    # Minimum cost is n (each house costs 1)
+    assert result == n

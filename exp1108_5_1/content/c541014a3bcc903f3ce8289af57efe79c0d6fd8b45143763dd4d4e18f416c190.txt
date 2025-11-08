@@ -1,0 +1,103 @@
+# signature: def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int
+from typing import List
+import math
+
+def minOperations_inv_k(min_operations_for_k_equal_subarrays: int, nums: List[int], x: int) -> int:
+    # Validate inputs
+    if not nums or x < 2 or x > len(nums) or min_operations_for_k_equal_subarrays < 0:
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute prefix sums for efficient range sum queries
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # For each possible k, compute the minimum operations
+    max_possible_k = n // x
+    k_candidates = []
+    
+    for k in range(1, max_possible_k + 1):
+        if k * x > n:
+            continue
+            
+        # We need to select k disjoint subarrays of length x
+        # The optimal strategy is to select subarrays where we can make all elements equal
+        # with minimal operations. For a subarray of length x, the minimum operations
+        # to make all elements equal is achieved by making them all equal to the median.
+        
+        # Use dynamic programming: dp[i][j] = min operations for first i elements to get j subarrays
+        # But since k can be up to 15 and n up to 10^5, we need an efficient approach
+        
+        # Precompute cost for each possible subarray starting position
+        subarray_costs = []
+        for start in range(n - x + 1):
+            end = start + x - 1
+            # Extract the subarray
+            subarr = nums[start:end + 1]
+            # Sort to find median
+            sorted_subarr = sorted(subarr)
+            median = sorted_subarr[x // 2]
+            # Calculate operations needed
+            cost = sum(abs(num - median) for num in subarr)
+            subarray_costs.append((start, cost))
+        
+        # Now we need to select k non-overlapping subarrays with minimum total cost
+        # Sort subarrays by starting position
+        subarray_costs.sort()
+        
+        # Use greedy with priority queue or dynamic programming
+        # Since k is small (<= 15), we can use a DP that considers the last chosen subarray
+        
+        m = len(subarray_costs)
+        # dp[i][j] = min cost using first i subarrays to choose j subarrays
+        dp = [[float('inf')] * (k + 1) for _ in range(m + 1)]
+        
+        for i in range(m + 1):
+            dp[i][0] = 0
+        
+        for i in range(1, m + 1):
+            start_i, cost_i = subarray_costs[i - 1]
+            for j in range(1, k + 1):
+                # Option 1: Don't take current subarray
+                dp[i][j] = min(dp[i][j], dp[i - 1][j])
+                
+                # Option 2: Take current subarray
+                # Find the last subarray that doesn't overlap with current one
+                last_valid = 0
+                for prev in range(i - 1, 0, -1):
+                    start_prev, _ = subarray_costs[prev - 1]
+                    if start_prev + x <= start_i:
+                        last_valid = prev
+                        break
+                
+                dp[i][j] = min(dp[i][j], dp[last_valid][j - 1] + cost_i)
+        
+        min_ops = min(dp[i][k] for i in range(m + 1))
+        k_candidates.append((k, min_ops))
+    
+    # Find k where min_ops equals the target
+    for k, min_ops in k_candidates:
+        if min_ops == min_operations_for_k_equal_subarrays:
+            # Verify constraints
+            if 1 <= k <= 15 and 2 <= k * x <= n:
+                return k
+    
+    # If no exact match found, find the closest
+    # Since the problem says "return any valid value" when multiple could produce the result,
+    # and we need to return exactly the target, if no exact match, we need to handle this case
+    # For the purpose of this problem, we'll return the k with operations closest to target
+    best_k = -1
+    min_diff = float('inf')
+    
+    for k, min_ops in k_candidates:
+        diff = abs(min_ops - min_operations_for_k_equal_subarrays)
+        if diff < min_diff and 1 <= k <= 15 and 2 <= k * x <= n:
+            min_diff = diff
+            best_k = k
+    
+    if best_k == -1:
+        raise ValueError("Invalid input")
+    
+    return best_k

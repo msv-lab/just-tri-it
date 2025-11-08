@@ -1,0 +1,66 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    n = len(nums)
+    
+    # Validate inputs
+    if n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if x < 2 or x > n:
+        raise ValueError("Invalid input")
+    if k < 1 or k > 15:
+        raise ValueError("Invalid input")
+    if k * x > n:
+        raise ValueError("Invalid input")
+    if any(num < -10**6 or num > 10**6 for num in nums):
+        raise ValueError("Invalid input")
+    
+    # Precompute prefix sums for efficient range sum calculation
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + nums[i]
+    
+    # Precompute squared prefix sums for efficient range squared sum calculation
+    prefix_sq = [0] * (n + 1)
+    for i in range(n):
+        prefix_sq[i + 1] = prefix_sq[i] + nums[i] * nums[i]
+    
+    # DP table: dp[i][j] = min operations to have j subarrays ending at or before position i
+    INF = float('inf')
+    dp = [[INF] * (k + 1) for _ in range(n + 1)]
+    
+    # Base case: 0 operations needed for 0 subarrays
+    for i in range(n + 1):
+        dp[i][0] = 0
+    
+    # Fill DP table
+    for j in range(1, k + 1):
+        for i in range(j * x, n + 1):
+            # Option 1: Don't use current position as end of j-th subarray
+            dp[i][j] = min(dp[i][j], dp[i - 1][j])
+            
+            # Option 2: Use current position as end of j-th subarray
+            if i >= x:
+                # Calculate the optimal target value for subarray ending at i
+                # The optimal target is the median of nums[i-x:i] for minimum absolute deviations
+                # But for squared errors, it's the mean
+                subarray = nums[i - x:i]
+                
+                # For minimum absolute deviations, median is optimal
+                sorted_sub = sorted(subarray)
+                median = sorted_sub[x // 2] if x % 2 == 1 else sorted_sub[x // 2 - 1]
+                
+                # Calculate operations needed to make all elements equal to median
+                operations = 0
+                for num in subarray:
+                    operations += abs(num - median)
+                
+                # Update DP
+                dp[i][j] = min(dp[i][j], dp[i - x][j - 1] + operations)
+    
+    result = dp[n][k]
+    if result == INF:
+        raise ValueError("Invalid input")
+    
+    return result + 1

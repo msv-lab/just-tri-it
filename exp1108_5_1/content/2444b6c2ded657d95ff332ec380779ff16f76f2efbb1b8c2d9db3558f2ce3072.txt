@@ -1,0 +1,79 @@
+# signature: def minCost_simp_split_0_inv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> List[List[int]]
+from typing import List
+
+def minCost_simp_split_0_inv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> List[List[int]]:
+    if not cost_prefix:
+        if minimum_beautiful_painting_cost == 0:
+            return [[0, 0, 0]]
+        else:
+            raise ValueError("Invalid input")
+    
+    n = len(cost_prefix) + 1
+    if n % 2 != 0:
+        raise ValueError("Invalid input")
+    
+    if any(len(row) != 3 for row in cost_prefix):
+        raise ValueError("Invalid input")
+    
+    if any(not (0 <= cost <= 10**5) for row in cost_prefix for cost in row):
+        raise ValueError("Invalid input")
+    
+    if not (0 <= minimum_beautiful_painting_cost <= 10**5 * n):
+        raise ValueError("Invalid input")
+    
+    symmetric_pairs = [(i, n - 1 - i - 1) for i in range(n // 2 - 1)]
+    
+    dp_prev = [[0, 0, 0] for _ in range(3)]
+    
+    for i in range(3):
+        for j in range(3):
+            if i == j:
+                dp_prev[i][j] = float('inf')
+            else:
+                dp_prev[i][j] = cost_prefix[0][i] + cost_prefix[n - 2][j]
+    
+    for idx, (left, right) in enumerate(symmetric_pairs[1:], 1):
+        dp_curr = [[float('inf')] * 3 for _ in range(3)]
+        
+        for prev_color_left in range(3):
+            for prev_color_right in range(3):
+                if prev_color_left == prev_color_right:
+                    continue
+                
+                for curr_color_left in range(3):
+                    if curr_color_left == prev_color_left:
+                        continue
+                    
+                    for curr_color_right in range(3):
+                        if curr_color_right == prev_color_right or curr_color_left == curr_color_right:
+                            continue
+                        
+                        total_cost = dp_prev[prev_color_left][prev_color_right] + cost_prefix[left][curr_color_left] + cost_prefix[right][curr_color_right]
+                        dp_curr[curr_color_left][curr_color_right] = min(dp_curr[curr_color_left][curr_color_right], total_cost)
+        
+        dp_prev = dp_curr
+    
+    min_cost_without_last = float('inf')
+    for i in range(3):
+        for j in range(3):
+            if i != j:
+                min_cost_without_last = min(min_cost_without_last, dp_prev[i][j])
+    
+    if min_cost_without_last > minimum_beautiful_painting_cost:
+        raise ValueError("Invalid input")
+    
+    required_last_cost = minimum_beautiful_painting_cost - min_cost_without_last
+    
+    if required_last_cost < 0:
+        raise ValueError("Invalid input")
+    
+    cost_suffix_val = [required_last_cost // 3] * 3
+    remainder = required_last_cost % 3
+    for i in range(remainder):
+        cost_suffix_val[i] += 1
+    
+    for i in range(3):
+        if cost_suffix_val[i] > 10**5:
+            raise ValueError("Invalid input")
+    
+    return [cost_suffix_val]

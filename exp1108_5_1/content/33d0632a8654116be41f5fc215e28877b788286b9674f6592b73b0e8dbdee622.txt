@@ -1,0 +1,94 @@
+# signature: def minOperations(nums: List[int], x: int, k: int) -> int
+from typing import List
+import heapq
+
+def minOperations(nums: List[int], x: int, k: int) -> int:
+    if not nums or x <= 0 or k <= 0 or k * x > len(nums):
+        raise ValueError("Invalid input")
+    
+    n = len(nums)
+    
+    # Precompute the cost for each possible starting position of a subarray of length x
+    # The cost is the minimum operations to make all elements in that subarray equal
+    # The optimal target value is the median of the subarray
+    costs = []
+    
+    for start in range(n - x + 1):
+        subarray = nums[start:start + x]
+        
+        # Find the median efficiently using quickselect or sorting
+        # Since x can be large but k is small (<=15), we can sort
+        sorted_sub = sorted(subarray)
+        
+        # For odd length, median is middle element
+        # For even length, either middle element works (both give same cost)
+        median = sorted_sub[x // 2]
+        
+        # Calculate cost to make all elements equal to median
+        cost = sum(abs(num - median) for num in subarray)
+        costs.append((cost, start))
+    
+    # We need to select k non-overlapping subarrays
+    # Dynamic programming approach: dp[i][j] = min cost using first i positions to select j subarrays
+    
+    # Since k is small (<=15), we can use DP with state (position, count)
+    # But we need to handle non-overlapping constraint
+    
+    # Alternative approach: use DP where state is (mask of used subarrays, last_end_position)
+    # But this is too expensive
+    
+    # Better approach: use interval scheduling with DP
+    # Sort intervals by end position and use DP[i][j] = min cost using first i intervals for j subarrays
+    
+    intervals = []
+    for i, (cost, start) in enumerate(costs):
+        intervals.append((start, start + x - 1, cost))
+    
+    # Sort intervals by end position
+    intervals.sort(key=lambda interval: interval[1])
+    
+    # DP[i][j] = minimum cost to select j subarrays from first i intervals
+    # Initialize with infinity
+    INF = float('inf')
+    m = len(intervals)
+    dp = [[INF] * (k + 1) for _ in range(m + 1)]
+    
+    # Base case: 0 subarrays cost 0
+    for i in range(m + 1):
+        dp[i][0] = 0
+    
+    # Fill DP table
+    for i in range(1, m + 1):
+        end_i, cost_i = intervals[i-1][1], intervals[i-1][2]
+        
+        for j in range(1, k + 1):
+            # Option 1: don't take current interval
+            dp[i][j] = min(dp[i][j], dp[i-1][j])
+            
+            # Option 2: take current interval
+            # Find the last interval that doesn't overlap with current one
+            # Since intervals are sorted by end, we can binary search
+            low, high = 0, i - 1
+            prev_idx = -1
+            
+            while low <= high:
+                mid = (low + high) // 2
+                if intervals[mid][1] < intervals[i-1][0]:  # doesn't overlap
+                    prev_idx = mid
+                    low = mid + 1
+                else:
+                    high = mid - 1
+            
+            if prev_idx != -1:
+                dp[i][j] = min(dp[i][j], dp[prev_idx + 1][j-1] + cost_i)
+            else:
+                # No previous non-overlapping interval
+                if j == 1:
+                    dp[i][j] = min(dp[i][j], cost_i)
+    
+    result = dp[m][k]
+    
+    if result == INF:
+        raise ValueError("Invalid input")
+    
+    return int(result)

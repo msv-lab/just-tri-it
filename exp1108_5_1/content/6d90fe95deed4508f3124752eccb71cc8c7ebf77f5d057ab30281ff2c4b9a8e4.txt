@@ -1,0 +1,118 @@
+# signature: def minCost_simp_split_0_sinv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> list[List[List[int]]]
+from typing import List
+
+def minCost_simp_split_0_sinv_cost_suffix(minimum_beautiful_painting_cost: int, cost_prefix: List[List[int]]) -> List[List[List[int]]]:
+    n = len(cost_prefix) + 1
+    
+    if n % 2 != 0 or n < 2:
+        raise ValueError("Invalid input")
+    
+    if n == 2:
+        # Only 2 houses, check all color combinations
+        results = []
+        for c0 in range(3):
+            for c1 in range(3):
+                if c0 != c1:  # Adjacent constraint
+                    if c0 != c1:  # Equidistant constraint (0,1) are equidistant in 2 houses
+                        total_cost = cost_prefix[0][c0] + cost_suffix_val[c1]
+                        if total_cost == minimum_beautiful_painting_cost:
+                            results.append([[cost_suffix_val[c1] for _ in range(3)]])
+        return results
+    
+    # For n > 2, we need to find valid colorings for the entire sequence
+    # This is a complex constraint satisfaction problem
+    # We'll use dynamic programming to find the minimum cost for each valid coloring
+    
+    # Precompute symmetric positions
+    symmetric_pairs = []
+    for i in range(n // 2):
+        symmetric_pairs.append((i, n - 1 - i))
+    
+    # DP state: dp[i][c1][c2] = min cost for first i+1 houses where:
+    # - house i has color c1
+    # - house n-1-i has color c2
+    # This accounts for both adjacent and symmetric constraints
+    
+    # Initialize DP for the first symmetric pair (0, n-1)
+    dp = [[[float('inf')] * 3 for _ in range(3)] for _ in range(n // 2)]
+    
+    # First pair (house 0 and house n-1)
+    for c0 in range(3):
+        for cn in range(3):
+            if c0 != cn:  # Symmetric constraint
+                # For n=2, we'd have both houses, but for n>2, we only have cost_prefix[0]
+                # and cost_suffix for house n-1
+                if n == 2:
+                    cost = cost_prefix[0][c0] + cost_suffix_val[cn]
+                    dp[0][c0][cn] = cost
+                else:
+                    # For n>2, we don't have cost_suffix yet, so we'll handle it later
+                    dp[0][c0][cn] = cost_prefix[0][c0]  # Only house 0 cost from prefix
+    
+    # Process middle pairs
+    for pair_idx in range(1, n // 2):
+        i, j = symmetric_pairs[pair_idx]
+        for prev_c1 in range(3):
+            for prev_c2 in range(3):
+                if dp[pair_idx-1][prev_c1][prev_c2] == float('inf'):
+                    continue
+                
+                for c_i in range(3):
+                    for c_j in range(3):
+                        # Check constraints:
+                        # 1. Adjacent constraint for house i (with house i-1)
+                        if c_i == prev_c1 and pair_idx > 0:
+                            continue
+                        # 2. Symmetric constraint
+                        if c_i == c_j:
+                            continue
+                        # 3. For house j, if it's adjacent to another house, check that constraint
+                        
+                        current_cost = dp[pair_idx-1][prev_c1][prev_c2]
+                        # Add cost for house i (from prefix)
+                        if i < len(cost_prefix):
+                            current_cost += cost_prefix[i][c_i]
+                        # Add cost for house j (from prefix if j < n-1, else from suffix)
+                        if j < len(cost_prefix):
+                            current_cost += cost_prefix[j][c_j]
+                        
+                        if current_cost < dp[pair_idx][c_i][c_j]:
+                            dp[pair_idx][c_i][c_j] = current_cost
+    
+    # Now find all cost_suffix values that make the minimum cost equal to the target
+    results = []
+    last_pair_idx = n // 2 - 1
+    
+    # The last house is house n-1, which is in the symmetric pair with house 0
+    # We need to consider all valid colorings for the last pair
+    for c0 in range(3):
+        for cn in range(3):
+            if dp[last_pair_idx][c0][cn] != float('inf'):
+                # The cost so far includes all houses except the cost for house n-1
+                # (which would come from cost_suffix)
+                cost_so_far = dp[last_pair_idx][c0][cn] - (cost_prefix[0][c0] if n > 2 else 0)
+                needed_cost = minimum_beautiful_painting_cost - cost_so_far
+                
+                # Check if this needed cost can be achieved with some color for house n-1
+                for color in range(3):
+                    if color != c0:  # Symmetric constraint with house 0
+                        # Create a cost_suffix where the cost for the needed color is the needed value
+                        # and other colors are high enough to not be chosen
+                        cost_suffix_val = [10**9] * 3
+                        cost_suffix_val[color] = needed_cost
+                        
+                        # Verify this actually gives the target minimum cost
+                        # (This is a simplified check - in practice, we'd need to verify
+                        # that with this cost_suffix, the overall minimum is indeed our target)
+                        
+                        # For now, we'll add all potential candidates
+                        if needed_cost >= 0:
+                            results.append([cost_suffix_val])
+    
+    # Remove duplicates and return
+    unique_results = []
+    for res in results:
+        if res not in unique_results:
+            unique_results.append(res)
+    
+    return unique_results

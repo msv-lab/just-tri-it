@@ -1,0 +1,15 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+# test name: test_symmetric_pairs_force_compromise
+def test_symmetric_pairs_force_compromise():
+    """Test where symmetric pairs force suboptimal local choices"""
+    n = 4
+    cost = [
+        [1, 100, 200],  # Strongly prefers color 1
+        [100, 1, 200],  # Strongly prefers color 2
+        [200, 100, 1],  # Strongly prefers color 3  
+        [1, 200, 100]   # Strongly prefers color 1 (conflicts with house 0)
+    ]
+    result = minCost(n, cost)
+    # Houses 0 and 3 both prefer color 1 but can't use same color
+    # Optimal compromise needed
+    assert result == 1 + 1 + 1 + 200  # [1, 2, 3, 3] = 1 + 1 + 1 + 200 = 203

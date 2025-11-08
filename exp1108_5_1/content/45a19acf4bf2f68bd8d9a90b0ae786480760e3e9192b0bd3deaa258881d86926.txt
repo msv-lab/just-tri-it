@@ -1,0 +1,86 @@
+# signature: def minCost(n: int, cost: List[List[int]]) -> int
+from typing import List
+
+def minCost(n: int, cost: List[List[int]]) -> int:
+    if n % 2 != 0 or n < 2 or n > 10**5:
+        raise ValueError("Invalid input")
+    if len(cost) != n or any(len(house) != 3 for house in cost):
+        raise ValueError("Invalid input")
+    if any(not (0 <= c <= 10**5) for house in cost for c in house):
+        raise ValueError("Invalid input")
+    
+    # Precompute the minimum costs for each pair of symmetric positions
+    total_cost = 0
+    for i in range(n // 2):
+        j = n - 1 - i
+        if i == j:
+            break  # This case shouldn't happen since n is even
+        # For positions i and j, choose colors that are different and minimize the sum
+        min_sum = float('inf')
+        for color_i in range(3):
+            for color_j in range(3):
+                if color_i != color_j:
+                    current_sum = cost[i][color_i] + cost[j][color_j]
+                    if current_sum < min_sum:
+                        min_sum = current_sum
+        total_cost += min_sum
+    
+    # Now, ensure that adjacent houses (i and i+1) do not have the same color
+    # We need to adjust the colors chosen for adjacent pairs in the symmetric pairs
+    # This is more complex and requires dynamic programming
+    
+    # The previous approach may not satisfy adjacent constraints, so we need a better method
+    # Let's think differently: for each pair (i, n-1-i), the colors must be different, and adjacent pairs must also be different
+    
+    # We'll use dynamic programming to track the minimum cost for each possible color choice for the current pair,
+    # ensuring that the color is different from the previous pair's colors
+    
+    # Initialize DP for the first pair
+    if n == 0:
+        return 0
+    
+    # The problem is similar to two separate chains of houses, each with the constraint that adjacent houses in the chain cannot have the same color
+    # The two chains are the first half and the second half, but with the additional constraint that symmetric houses must have different colors
+    
+    # However, the problem can be simplified by realizing that the houses can be divided into two separate sequences:
+    # One sequence is the first half (0 to n//2 -1), and the other is the second half (n//2 to n-1), but with the constraint that house i and house n-1-i must have different colors
+    
+    # Therefore, the problem reduces to selecting colors for each position in the first half and the second half, with:
+    # 1. Adjacent houses in each half cannot have the same color
+    # 2. The color of house i must be different from the color of house n-1-i
+    
+    # This is complex, so another approach is to realize that the problem can be split into two separate problems for the first and second half, with the additional constraint that the i-th house in the first half and the i-th house in the second half must have different colors
+    
+    # Let's think of the first half and second half as two separate rows, with the constraint that the i-th house in the first row and the i-th house in the second row must have different colors, and adjacent houses in each row must have different colors
+    
+    # This is similar to the original paint house problem but with an additional constraint between the two rows
+    
+    # We can use dynamic programming where the state is (i, c1, c2), representing the minimum cost up to the i-th pair, with the first house in the pair having color c1 and the second house having color c2
+    # However, this would be O(n * 3 * 3) time, which is acceptable for n up to 1e5
+    
+    # Initialize DP for the first pair (0 and n-1)
+    dp = [[[float('inf')] * 3 for _ in range(3)] for __ in range(n // 2)]
+    for c1 in range(3):
+        for c2 in range(3):
+            if c1 != c2:
+                dp[0][c1][c2] = cost[0][c1] + cost[n-1][c2]
+    
+    for i in range(1, n // 2):
+        pos1 = i
+        pos2 = n - 1 - i
+        for prev_c1 in range(3):
+            for prev_c2 in range(3):
+                if dp[i-1][prev_c1][prev_c2] == float('inf'):
+                    continue
+                for curr_c1 in range(3):
+                    if curr_c1 == prev_c1:
+                        continue
+                    for curr_c2 in range(3):
+                        if curr_c2 == prev_c2 or curr_c1 == curr_c2:
+                            continue
+                        new_cost = dp[i-1][prev_c1][prev_c2] + cost[pos1][curr_c1] + cost[pos2][curr_c2]
+                        if new_cost < dp[i][curr_c1][curr_c2]:
+                            dp[i][curr_c1][curr_c2] = new_cost
+    
+    min_total = min(min(row) for row in dp[-1])
+    return min_total

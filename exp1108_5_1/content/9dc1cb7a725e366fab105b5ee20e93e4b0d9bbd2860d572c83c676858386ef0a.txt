@@ -1,0 +1,76 @@
+# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
+from typing import List
+from collections import defaultdict
+
+def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]:
+    n = len(nums)
+    if n < 2:
+        raise ValueError("Invalid input")
+    
+    # Build adjacency list
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Find root (node 0) and build parent-child relationships
+    parent = [-1] * n
+    depth = [0] * n
+    dist_from_root = [0] * n
+    
+    stack = [0]
+    parent[0] = -1
+    depth[0] = 0
+    dist_from_root[0] = 0
+    
+    while stack:
+        node = stack.pop()
+        for neighbor, length in graph[node]:
+            if neighbor != parent[node]:
+                parent[neighbor] = node
+                depth[neighbor] = depth[node] + 1
+                dist_from_root[neighbor] = dist_from_root[node] + length
+                stack.append(neighbor)
+    
+    # Result variables
+    max_length = 0
+    min_nodes_for_max_length = float('inf')
+    
+    # For each node as the lowest node in the path
+    for i in range(n):
+        # Check paths from all ancestors to current node i
+        current = i
+        seen_values = set()
+        path_nodes = 0
+        path_valid = True
+        
+        # Traverse upwards from i to root
+        temp = i
+        while temp != -1 and path_valid:
+            if nums[temp] in seen_values:
+                path_valid = False
+                break
+            seen_values.add(nums[temp])
+            path_nodes += 1
+            
+            # Calculate path length from temp to i
+            path_length = dist_from_root[i] - dist_from_root[temp]
+            
+            # Update results if this is a valid special path
+            if path_valid:
+                if path_length > max_length:
+                    max_length = path_length
+                    min_nodes_for_max_length = path_nodes
+                elif path_length == max_length:
+                    if path_nodes < min_nodes_for_max_length:
+                        min_nodes_for_max_length = path_nodes
+            
+            temp = parent[temp]
+    
+    # Handle case where no path with positive length found (single nodes)
+    if max_length == 0:
+        min_nodes_for_max_length = 1
+    
+    return [max_length, min_nodes_for_max_length]

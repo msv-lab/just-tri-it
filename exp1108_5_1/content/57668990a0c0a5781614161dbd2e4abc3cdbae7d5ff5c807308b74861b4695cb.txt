@@ -1,0 +1,86 @@
+# signature: def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]
+from typing import List
+from collections import defaultdict, deque
+
+def longestSpecialPath_inv_nums(longest_special_path_info: List[int], edges: List[List[int]]) -> List[int]:
+    if not longest_special_path_info or len(longest_special_path_info) != 2:
+        raise ValueError("Invalid input")
+    
+    target_length, target_min_nodes = longest_special_path_info
+    
+    if target_length < 0 or target_min_nodes < 1:
+        raise ValueError("Invalid input")
+    
+    n = len(edges) + 1
+    
+    # Build the tree
+    graph = defaultdict(list)
+    for u, v, length in edges:
+        if u < 0 or u >= n or v < 0 or v >= n or length <= 0:
+            raise ValueError("Invalid input")
+        graph[u].append((v, length))
+        graph[v].append((u, length))
+    
+    # Find parent-child relationships using BFS from root 0
+    parent = [-1] * n
+    children = defaultdict(list)
+    visited = [False] * n
+    queue = deque([0])
+    visited[0] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, _ in graph[node]:
+            if not visited[neighbor]:
+                visited[neighbor] = True
+                parent[neighbor] = node
+                children[node].append(neighbor)
+                queue.append(neighbor)
+    
+    # Handle the case where we need a path of length 0 (single node)
+    if target_length == 0:
+        # All nodes can have the same value since path length is 0
+        return [0] * n
+    
+    # For paths with length > 0, we need at least target_min_nodes nodes
+    # We'll create a path with exactly target_min_nodes nodes having unique values
+    # and ensure the path length equals target_length
+    
+    # Find a chain of nodes from root to leaf with at least target_min_nodes nodes
+    path_nodes = []
+    
+    def dfs_find_path(node, current_path):
+        nonlocal path_nodes
+        if len(path_nodes) >= target_min_nodes:
+            return
+        current_path.append(node)
+        if len(current_path) > len(path_nodes):
+            path_nodes = current_path.copy()
+        for child in children[node]:
+            dfs_find_path(child, current_path)
+        current_path.pop()
+    
+    dfs_find_path(0, [])
+    
+    if len(path_nodes) < target_min_nodes:
+        raise ValueError("Invalid input")
+    
+    # Take exactly target_min_nodes nodes from the found path
+    path_nodes = path_nodes[:target_min_nodes]
+    
+    # Assign unique values to these path nodes
+    nums = [0] * n
+    for i, node in enumerate(path_nodes):
+        nums[node] = i
+    
+    # For nodes not in the path, assign values that won't create longer paths
+    # We can assign values that are already used in the path to ensure uniqueness
+    # is maintained only in our desired path
+    
+    # Fill remaining nodes with values from the path to avoid creating longer unique paths
+    for i in range(n):
+        if nums[i] == 0 and i not in path_nodes:
+            # Use a value that's already in the path but won't extend it
+            nums[i] = nums[path_nodes[0]]
+    
+    return nums

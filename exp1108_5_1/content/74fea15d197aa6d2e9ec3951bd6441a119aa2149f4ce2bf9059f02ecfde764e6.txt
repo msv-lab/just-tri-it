@@ -1,0 +1,87 @@
+# signature: def postcondition(cost: List[List[int]], minimum_cost_symmetric_painting: int) -> bool
+from typing import List
+
+def postcondition(cost: List[List[int]], minimum_cost_symmetric_painting: int) -> bool:
+    n = len(cost)
+    
+    # Check constraints
+    if n < 2 or n > 100000 or n % 2 != 0:
+        raise ValueError("Invalid input")
+    
+    for i in range(n):
+        if len(cost[i]) != 3:
+            raise ValueError("Invalid input")
+        for j in range(3):
+            if cost[i][j] < 0 or cost[i][j] > 100000:
+                raise ValueError("Invalid input")
+    
+    # Check if minimum_cost_symmetric_painting is achievable
+    # We'll use dynamic programming to find the actual minimum cost
+    
+    # For symmetric constraint, we need to consider pairs of symmetric houses
+    # Let's define dp[i][c1][c2] = min cost for first i symmetric pairs where
+    # the left house has color c1 and right house has color c2
+    
+    # Since n can be up to 10^5, we need an efficient approach
+    # We'll process symmetric pairs and track the minimum costs
+    
+    # Initialize DP for the first symmetric pair
+    left_idx = 0
+    right_idx = n - 1
+    
+    # For each symmetric pair, we need to find valid color combinations
+    # where colors are different for adjacent houses and symmetric houses
+    
+    # Let's calculate the actual minimum cost using DP
+    INF = float('inf')
+    
+    # We'll use a DP that tracks the minimum cost for the current symmetric pair
+    # with different color combinations
+    dp_prev = [[INF for _ in range(3)] for _ in range(3)]
+    
+    # Initialize for the first pair
+    for c1 in range(3):
+        for c2 in range(3):
+            if c1 != c2:  # Symmetric houses cannot have same color
+                dp_prev[c1][c2] = cost[left_idx][c1] + cost[right_idx][c2]
+    
+    left_idx += 1
+    right_idx -= 1
+    
+    # Process remaining symmetric pairs
+    while left_idx < right_idx:
+        dp_curr = [[INF for _ in range(3)] for _ in range(3)]
+        
+        for prev_c1 in range(3):
+            for prev_c2 in range(3):
+                if dp_prev[prev_c1][prev_c2] == INF:
+                    continue
+                
+                # Try all color combinations for current pair
+                for curr_c1 in range(3):
+                    for curr_c2 in range(3):
+                        # Check constraints:
+                        # 1. Adjacent houses cannot have same color
+                        #    (curr_c1 != prev_c1 for left side)
+                        #    (curr_c2 != prev_c2 for right side) 
+                        # 2. Symmetric houses cannot have same color
+                        #    (curr_c1 != curr_c2)
+                        if curr_c1 != prev_c1 and curr_c2 != prev_c2 and curr_c1 != curr_c2:
+                            total_cost = dp_prev[prev_c1][prev_c2] + cost[left_idx][curr_c1] + cost[right_idx][curr_c2]
+                            if total_cost < dp_curr[curr_c1][curr_c2]:
+                                dp_curr[curr_c1][curr_c2] = total_cost
+        
+        dp_prev = dp_curr
+        left_idx += 1
+        right_idx -= 1
+    
+    # Find the minimum cost from all valid configurations
+    actual_min_cost = INF
+    for c1 in range(3):
+        for c2 in range(3):
+            if dp_prev[c1][c2] < actual_min_cost:
+                actual_min_cost = dp_prev[c1][c2]
+    
+    # Check if the given minimum_cost_symmetric_painting is valid
+    # It should be equal to the actual minimum cost we calculated
+    return actual_min_cost == minimum_cost_symmetric_painting
