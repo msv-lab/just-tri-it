@@ -26,6 +26,8 @@ from just_tri_it.selection import Selected, Abstained
 from just_tri_it.input_generator import generate_inputs
 import just_tri_it.config
 
+GET_CORRECT = True
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -272,10 +274,15 @@ def execute_experiment(model, executor, dataset, db, data_dir, correctness_only=
         print_annotated_hr(f"{index+1}/{task_num} —— Task {task.id}")
 
         print("\n[Sample correctness]", end="", file=sys.stderr, flush=True)
-        samples = list(islice(Vanilla().generate(model, task.requirements, just_tri_it.config.NUM_LEFT_SAMPLES), just_tri_it.config.NUM_LEFT_SAMPLES))
-        for s in samples:
-            status, details = s.passes(executor, task.tests)
-            obj["sample_correctness"].append((s, status, details))
+        if GET_CORRECT:
+            samples = list(islice(Vanilla().generate(model, task.requirements, just_tri_it.config.NUM_LEFT_SAMPLES), just_tri_it.config.NUM_LEFT_SAMPLES))
+            for s in samples:
+                status, details = s.passes(executor, task.tests)
+                obj["sample_correctness"].append((s, status, details))
+        else:
+            samples = list(islice(Vanilla().generate(model, task.requirements, just_tri_it.config.NUM_LEFT_SAMPLES), just_tri_it.config.NUM_LEFT_SAMPLES))
+            for s in samples:
+                obj["sample_correctness"].append((s, None, []))
 
         if not correctness_only:
 
