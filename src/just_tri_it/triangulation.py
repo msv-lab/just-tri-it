@@ -139,30 +139,32 @@ class Triangulator:
         if hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam", "common_generator", "cool_graph"]):
             stream_processing = True
 
+        right = []
         match self.triangulation_mode:
             case TriangulationMode.FWD_INV:
                 if stream_processing:
                     _, _, result = self.stream_fwd_inv(fwd_problem, fwd_inputs, fwd_solutions)
                 else: 
-                    _, _, result = self.fwd_inv(fwd_problem, fwd_inputs, fwd_solutions)
+                    _, _, result, right = self.fwd_inv(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.FWD_SINV:
                 if stream_processing:
                     _, _, result = self.stream_fwd_sinv(fwd_problem, fwd_inputs, fwd_solutions)
                 else: 
-                    _, _, result = self.fwd_sinv(fwd_problem, fwd_inputs, fwd_solutions)
+                    _, _, result, right = self.fwd_sinv(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.ENUM_SINV:
                 if stream_processing:
                     _, _, result = self.stream_enum_sinv(fwd_problem, fwd_inputs, fwd_solutions)
                 else: 
-                    _, _, result = self.cascade_enum_sinv(fwd_problem, fwd_inputs, fwd_solutions)
+                    _, _, result, right = self.cascade_enum_sinv(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.Postcondition:
-                _, _, result = self.postcondition(fwd_problem, fwd_inputs, fwd_solutions)
+                _, _, result, right = self.postcondition(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.OffByOne:
-                _, _, result = self.off_by_one(fwd_problem, fwd_inputs, fwd_solutions)
+                _, _, result, right = self.off_by_one(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.Syntactic:
-                _, _, result = self.syntactic(fwd_problem, fwd_inputs, fwd_solutions)
+                _, _, result, right = self.syntactic(fwd_problem, fwd_inputs, fwd_solutions)
         raw_data = {
-            "method": self.triangulation_mode.value
+            "method": self.triangulation_mode.value,
+            "right": right
         }
 
         for _ in range(num_adapters):
@@ -1374,7 +1376,7 @@ def {new_sig.name}(el):
                                                       [],
                                                       post_solutions,
                                                       bijective=False)
-        return fwd_problem, fwd_inputs, triangulated_fwd_solutions
+        return fwd_problem, fwd_inputs, triangulated_fwd_solutions, post_solutions
 
     def off_by_one(self, fwd_problem, fwd_inputs, fwd_solutions):
         off_by_one_problem = self.transform_off_by_one(fwd_problem)
@@ -1386,7 +1388,7 @@ def {new_sig.name}(el):
                                                       [],
                                                       off_by_one_solutions,
                                                       bijective=False)
-        return fwd_problem, fwd_inputs, triangulated_fwd_solutions
+        return fwd_problem, fwd_inputs, triangulated_fwd_solutions, off_by_one_solutions
 
     def syntactic(self, fwd_problem, fwd_inputs, fwd_solutions):
         syntactic_problem = self.transform_syntactic(fwd_problem)
@@ -1398,7 +1400,7 @@ def {new_sig.name}(el):
                                                       [],
                                                       syntactic_solutions,
                                                       bijective=False)
-        return fwd_problem, fwd_inputs, triangulated_fwd_solutions
+        return fwd_problem, fwd_inputs, triangulated_fwd_solutions, syntactic_solutions
 
     def fwd_inv(self, fwd_problem, fwd_inputs, fwd_solutions):
         print(f"\n[fwd_inv]", file=sys.stderr, flush=True)
@@ -1430,7 +1432,7 @@ def {new_sig.name}(el):
                                      bijective=True)
                 triangulated_fwd_solutions = self.unwrap(triangulated_split_arg_solutions)
 
-        return fwd_problem, fwd_inputs, triangulated_fwd_solutions
+        return fwd_problem, fwd_inputs, triangulated_fwd_solutions, inv_solutions
 
     def fwd_sinv(self, fwd_problem, fwd_inputs, fwd_solutions):
 
@@ -1462,7 +1464,7 @@ def {new_sig.name}(el):
                                      bijective=True)
                 triangulated_fwd_solutions = self.unwrap(triangulated_split_arg_solutions)
 
-        return fwd_problem, fwd_inputs, triangulated_fwd_solutions
+        return fwd_problem, fwd_inputs, triangulated_fwd_solutions, sinv_solutions
 
 
     def enum_sinv(self, fwd_problem, fwd_inputs, fwd_solutions):
@@ -1517,7 +1519,7 @@ def {new_sig.name}(el):
                 
                 triangulated_enum_solutions = self.unwrap(triangulated_split_arg_enum_solutions)
 
-        return enum_problem, enum_inputs, triangulated_enum_solutions
+        return enum_problem, enum_inputs, triangulated_enum_solutions, sinv_solutions
 
 
     def cascade_enum_sinv(self, fwd_problem, fwd_inputs, fwd_solutions):
