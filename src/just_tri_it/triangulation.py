@@ -391,6 +391,14 @@ Problem:
             return ParameterInversion(1)
         if hack(task="xorificator"):
             return SuffixInversion(2, 1, "list")
+        if hack(task="and_reconstruction"):
+            return SuffixInversion(1, 1, "list")
+        if hack(task="slavics_exam"):
+            return ParameterInversion(1)
+        if hack(task="leetcode_3770"):
+            return ParameterInversion(0)
+        if hack(task="leetcode_3793"):
+            return SuffixInversion(0, 1, "str")
         if len(req.signature.params) == 1:
             if req.signature.params[0].type.lower().startswith('list'):
                 return SuffixInversion(0, 1, "list")

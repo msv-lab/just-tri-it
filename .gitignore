@@ -24,4 +24,7 @@ log_*
 atcoder_*/
 leetcode_*/
 datasets/failed_task.txt
-out_of_25_half_*/
+out_of_25_*/
+out_of_32_*/
+correct_*/
+.jti_log/

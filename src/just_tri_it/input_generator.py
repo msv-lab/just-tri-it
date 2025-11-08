@@ -183,6 +183,8 @@ target_function(argument1, argument2, ...)
                     if hack(task="slavics_exam"):
                         seq_bound = 3
                     inputs = [i for i in inputs if not value_is_too_large(i, 10000, seq_bound)]
+                if hack(task=["leetcode_3759", "leetcode_3793"]):
+                    inputs = range_checker(executor, model, req, inputs)
                 if gen_large:
                     inputs = range_checker(executor, model, req, inputs)
                 break
