@@ -1529,7 +1529,7 @@ def {new_sig.name}(el):
 
         print(f"\n[cascade_enum_sinv]", file=sys.stderr, flush=True)
 
-        _, _, triangulated_enum_solutions = self.enum_sinv(fwd_problem, fwd_inputs, fwd_solutions)
+        _, _, triangulated_enum_solutions, _ = self.enum_sinv(fwd_problem, fwd_inputs, fwd_solutions)
 
         print(f"\n[enum solutions: {len(triangulated_enum_solutions)}]", file=sys.stderr, flush=True)
 
