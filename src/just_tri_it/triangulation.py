@@ -96,7 +96,7 @@ class Triangulator:
 
         num_adapters = 0
 
-        if hack(task="11_binary_string") or hack(task="atcoder_abc393_d") or hack(task="atcoder_abc395_e") or hack(task="atcoder_abc396_c") or hack(task="atcoder_arc194_b"):
+        if hack(task="11_binary_string") or hack(task="atcoder_abc393_d") or hack(task="atcoder_abc395_e") or hack(task="atcoder_abc396_c") or hack(task="atcoder_arc194_b") or hack(task="atcoder_abc391_e") or hack(task="atcoder_abc391_g") or hack(task="atcoder_abc394_f"):
             pass
         elif hack(task="2_list_sum"):
             fwd_problem, fwd_inputs, fwd_solutions = \
@@ -357,7 +357,12 @@ Problem:
             return SuffixInversion(1, 2, "list")
         if hack(task="atcoder_arc195_a"):
             return SuffixInversion(0, 2, "list")
-
+        if hack(task="atcoder_abc391_e"):
+            return SuffixInversion(1, 1, "str")
+        if hack(task="atcoder_abc391_g"):
+            return SuffixInversion(2, 1, "str")
+        if hack(task="atcoder_abc394_f"):
+            return SuffixInversion(1, 1, "list")
         # CodeElo:
         if hack(task="absolute_zero"):
             return SuffixInversion(1, 1, "list") # array
