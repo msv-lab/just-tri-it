@@ -130,7 +130,10 @@ class Triangulator:
                 num_adapters += 1
 
         stream_processing = False
-        if self.triangulation_mode in [TriangulationMode.FWD_INV,
+        
+        if just_tri_it.utils.CURRENT_TASK.startswith("atcoder") or just_tri_it.utils.CURRENT_TASK.startswith("leetcode"):
+            stream_processing = False
+        elif self.triangulation_mode in [TriangulationMode.FWD_INV,
                                        TriangulationMode.FWD_SINV,
                                        TriangulationMode.ENUM_SINV] and \
                 self.is_stream_processing_problem(fwd_problem):
