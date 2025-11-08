@@ -96,7 +96,7 @@ class Triangulator:
 
         num_adapters = 0
 
-        if hack(task="11_binary_string") or hack(task="atcoder_abc393_d") or hack(task="atcoder_abc395_e") or hack(task="atcoder_abc396_c") or hack(task="atcoder_arc194_b") or hack(task="atcoder_abc391_e") or hack(task="atcoder_abc391_g") or hack(task="atcoder_abc394_f"):
+        if hack(task="11_binary_string") or hack(task="atcoder_abc393_d") or hack(task="atcoder_abc395_e") or hack(task="atcoder_abc396_c") or hack(task="atcoder_abc391_e") or hack(task="atcoder_abc391_g") or hack(task="atcoder_abc394_f"):
             pass
         elif hack(task="2_list_sum"):
             fwd_problem, fwd_inputs, fwd_solutions = \
@@ -338,18 +338,12 @@ Problem:
     def choose_inversion_scheme(self, req: Requirements) -> InversionScheme:
         if hack(task="11_binary_string"):
             return SuffixInversion(1, 1, "str")  # second parameter w.r.t. the last element
-        if hack(task="atcoder_abc388_a"):
-            return SuffixInversion(0, 1, "str")
         if hack(task="2_list_sum"):
             return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
         if hack(task="atcoder_abc388_c"):
             return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
         if hack(task="atcoder_abc393_d"):
             return SuffixInversion(1, 1, "str")
-        if hack(task="atcoder_abc393_e"):
-            return SuffixInversion(1, 1, "list")
-        if hack(task="leetcode_3743"):
-            return SuffixInversion(3, 1, "list")
         if hack(task="leetcode_3785"):
             return SuffixInversion(0, 1, "list")
         if hack(task="atcoder_abc390_a"):
@@ -358,8 +352,6 @@ Problem:
             return SuffixInversion(3, 1, "list")
         if hack(task="atcoder_abc396_c"):
             return SuffixInversion(2, 1, "list")
-        if hack(task="atcoder_arc194_b"):
-            return SuffixInversion(1, 2, "list")
         if hack(task="atcoder_arc195_a"):
             return SuffixInversion(0, 2, "list")
         if hack(task="atcoder_abc391_e"):
@@ -439,8 +431,6 @@ Problem:
                     tried_samples.append(sample)
                     valid_name = extract_answer(sample)
                     valid_name = valid_name.strip() if valid_name else None
-                    if hack(task="atcoder_abc400_d"):
-                        valid_name = "fish_shop_row"
                     if valid_name:
                         return_param = [p.name for p in req.signature.params].index(valid_name)
                         break
