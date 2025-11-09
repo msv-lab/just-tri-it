@@ -158,7 +158,7 @@ class Triangulator:
                 if stream_processing:
                     _, _, result = self.stream_enum_sinv(fwd_problem, fwd_inputs, fwd_solutions)
                 else: 
-                    _, _, result, right = self.cascade_enum_sinv(fwd_problem, fwd_inputs, fwd_solutions)
+                    _, _, result, _ = self.cascade_enum_sinv(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.Postcondition:
                 _, _, result, right = self.postcondition(fwd_problem, fwd_inputs, fwd_solutions)
             case TriangulationMode.OffByOne:
