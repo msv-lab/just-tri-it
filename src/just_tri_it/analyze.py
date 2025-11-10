@@ -99,6 +99,7 @@ def tasks_where_jti_outperforms_majority(decisions):
 
 SELECTOR_PAPER_NAMES = {
     "JUST-TRI-IT": "JUST-TRI-IT",
+    "JTI-MAJ": "JTI-MAJ",    
     "MajorityVote": "Majority0.5",
     "Plurality": "Plurality",
     "Postcondition": "Postcondition",
@@ -143,7 +144,7 @@ def plot_sorted_percentages_compress(probs, label, output_file, change_order, ab
     methods, values = zip(*sorted_items, strict=True)
     percentages = [v * 100 for v in values]
 
-    colors = ["lightsalmon" if m == "JUST-TRI-IT" else "skyblue" for m in methods]
+    colors = ["lightsalmon" if m == "JUST-TRI-IT" else ("lightpink" if m == "JTI-MAJ" else "skyblue") for m in methods]
 
     if change_order:
         methods = methods[::-1]
@@ -174,6 +175,74 @@ def plot_sorted_percentages_compress(probs, label, output_file, change_order, ab
     plt.close()
 
 
+def plot_sorted_selected_correct_counts(probs_json, label, output_file, change_order):
+    plt.rcParams.update({
+        "text.usetex": True,   # LaTeX rendering
+        "font.family": "serif",
+        "axes.labelsize": 14,
+        "axes.titlesize": 14,
+        "legend.fontsize": 12,
+        "xtick.labelsize": 12,
+        "ytick.labelsize": 12
+    })
+
+    TARGET_LABEL = "selected_correct"
+
+    # Aggregate counts per method from the JSON-like structure: {problem: {method: outcome_str}}
+    method_counts = {}
+    for problem, outcomes in probs_json.items():
+        if not isinstance(outcomes, dict):
+            continue
+        for m, outcome in outcomes.items():
+            if outcome == TARGET_LABEL:
+                method_counts[m] = method_counts.get(m, 0) + 1
+
+    # Early exit if nothing to plot
+    if not method_counts:
+        return
+
+    paper_skip = ["ENUM_SINV", "FWD_SINV", "FWD_INV", "OffByOne", "CodeT_IO", "MaxTest_Assert", "MaxTest_IO", "Syntactic"]
+    method_counts = {SELECTOR_PAPER_NAMES.get(k, k): v for k, v in method_counts.items() if k not in paper_skip}
+
+    plt.figure(figsize=(5, 4))
+
+    # Sort by count desc
+    sorted_items = sorted(method_counts.items(), key=lambda x: x[1], reverse=True)
+    methods, counts = zip(*sorted_items)
+
+    # Colors consistent with your pastel palette rule (swap names as needed)
+    colors = ["lightsalmon" if m == "JUST-TRI-IT" else ("lightpink" if m == "JTI-MAJ" else "skyblue") for m in methods]
+
+    # Optionally reverse order (top-to-bottom)
+    if change_order:
+        methods = methods[::-1]
+        counts = counts[::-1]
+        colors = colors[::-1]
+
+    # Plot horizontal bars
+    bars = plt.barh(methods, counts, color=colors, edgecolor=colors, height=0.6)
+
+    # Annotate counts to the right of each bar
+    for bar, val in zip(bars, counts, strict=True):
+        plt.text(bar.get_width() + max(1, 0.01 * max(counts)),  # small offset
+                 bar.get_y() + bar.get_height() / 2,
+                 f"{val}", va='center', fontsize=12)
+
+    # Clean spines
+    ax = plt.gca()
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    plt.xlabel(f"{label} (count)")
+    # Nice x-limits: from 0 to a bit over max
+    xmax = max(counts) if counts else 1
+    plt.xlim(0, xmax * 1.1)
+
+    plt.tight_layout()
+    plt.savefig(output_file, format="pdf", dpi=300)
+    plt.close()   
+
+
 AGREEMENT_PAPER_NAMES = {
     "enum-sinv": "ENUM-SINV",
     "fwd-inv": "FWD-INV",    
@@ -201,7 +270,7 @@ def plot_sorted_percentages(probs, label, output_file, abs_prop=None):
     probs = {k: v for k, v in probs.items() if v is not None}
 
     if label == "prob_correct_under_agreement":
-        probs = {AGREEMENT_PAPER_NAMES[k]: v for k, v in probs.items() if k not in ["plurality_0.5", "test_IO", "JUST-TRI-IT"]}
+        probs = {AGREEMENT_PAPER_NAMES[k]: v for k, v in probs.items() if k not in ["plurality_0.5", "test_IO", "JUST-TRI-IT", "JTI-MAJ"]}
         label = "Probability"
     
     if len(probs) == 0:
@@ -500,6 +569,7 @@ def add_just_tri_it(db):
         selection_by_method["FWD_INV"] = None
         selection_by_method["FWD_SINV"] = None
         selection_by_method["ENUM_SINV"] = None
+        selection_by_method["MajorityVote"] = None        
         
         for selector_data in obj["selectors"]:
             method = selector_data["id"]
@@ -525,7 +595,26 @@ def add_just_tri_it(db):
         else:
             just_tri_it_data["outcome"] = "selected"
             just_tri_it_data["selected"] = just_tri_it_selection
-        obj["selectors"].append(just_tri_it_data)
+
+        obj["selectors"].append(just_tri_it_data)            
+
+        jti_maj_selection = None
+        if just_tri_it_selection is not None:
+            jti_maj_selection = just_tri_it_selection
+        elif selection_by_method["MajorityVote"] is not None:
+            jti_maj_selection = selection_by_method["MajorityVote"]
+
+        jti_maj_data = {
+            "id": "JTI-MAJ",
+            "witnesses": []
+        }
+        if jti_maj_selection is None:
+            jti_maj_data["outcome"] = "abstained"
+        else:
+            jti_maj_data["outcome"] = "selected"
+            jti_maj_data["selected"] = jti_maj_selection
+        
+        # obj["selectors"].append(jti_maj_data)
 
 def main():
     args = parse_args()
@@ -545,6 +634,8 @@ def main():
     add_just_tri_it(db)
 
     method_to_measures, decisions, abs_prop = abstention_measures(db)
+
+    plot_sorted_selected_correct_counts(decisions, "Correct solutions", report_dir / "correct_solutions.pdf", False)    
 
     if len(method_to_measures) > 0:
         task_list = tasks_where_jti_outperforms_majority(decisions)
