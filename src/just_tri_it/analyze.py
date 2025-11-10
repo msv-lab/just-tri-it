@@ -122,23 +122,52 @@ def plot_sorted_percentages_compress(probs, label, output_file, change_order, ab
     plt.savefig(output_file, dpi=300)
     plt.close()
 
+
+AGREEMENT_PAPER_NAMES = {
+    "enum-sinv": "ENUM-SINV",
+    "fwd-inv": "FWD-INV",    
+    "fwd-sinv": "FWD-SINV",
+    "plurality_0.0": "Another solution",
+    "postcondition": "Postcondition",
+    "off-by-one": "OffByOne",
+    "syntactic": "Syntactic",
+    "unconditional": "Unconditional",
+    "test_assert": "Test (Assert)",
+    "test_IO": "Test (IO)"
+}
+
+
 def plot_sorted_percentages(probs, label, output_file, abs_prop=None):
-    plt.rcParams.update({'font.size': 11})
+    plt.rcParams.update({
+        "text.usetex": True,  # LaTeX rendering
+        "font.family": "serif",  # Academic serif font
+        "axes.labelsize": 14,  # Axis label size
+        "axes.titlesize": 14,  # Title size
+        "legend.fontsize": 12,  # Legend size
+        "xtick.labelsize": 12,
+        "ytick.labelsize": 12
+    })
+
     probs = {k: v for k, v in probs.items() if v is not None}
+
+    if label == "prob_correct_under_agreement":
+        probs = {AGREEMENT_PAPER_NAMES[k]: v for k, v in probs.items() if k != "plurality_0.5"}
+        label = "Probability"
+    
     if len(probs) == 0:
         return
     sorted_items = sorted(probs.items(), key=lambda x: x[1], reverse=True)
     methods, values = zip(*sorted_items, strict=True)
     percentages = [v * 100 for v in values]
 
-    colors = ["grey" if m == "unconditional" else "skyblue" for m in methods]
+    colors = ["grey" if m == "Unconditional" else "skyblue" for m in methods]
 
     plt.figure(figsize=(8, 4.5))
-    bars = plt.bar(methods, percentages, color=colors, edgecolor='black', width=0.7)
+    bars = plt.bar(methods, percentages, color=colors, edgecolor=colors, width=0.7)
 
     for bar, pct in zip(bars, percentages, strict=True):
         plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 1,
-                 f"{pct:.1f}%", ha='center', va='bottom', fontsize=11)
+                 f"{pct:.1f}%", ha='center', va='bottom', fontsize=12)
 
     if abs_prop is not None:
         abs_percentage = abs_prop * 100
@@ -146,12 +175,16 @@ def plot_sorted_percentages(probs, label, output_file, abs_prop=None):
                     label=f'Ground Truth ({abs_percentage:.1f}%)')
         plt.legend()
 
+    ax = plt.gca()
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
     plt.xticks(rotation=45)
-    plt.ylabel(f"{label} (%)")
+    plt.ylabel(f"{label} (\%)")
     plt.ylim(0, 100)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300)
+    plt.savefig(output_file, format="pdf", dpi=300)
     plt.close()
 
 
@@ -200,17 +233,17 @@ def plot_distribution_with_separate_zero(data, output_file):
     fig, ax = plt.subplots(figsize=(4.5, 3))
 
     # Plot histogram
-    ax.hist(high_probs, bins=bins, color='seagreen', edgecolor='seagreen', alpha=0.7, label=r'$P \geq 0.5$')
-    ax.hist(low_probs, bins=bins, color='skyblue', edgecolor='skyblue', alpha=0.7, label=r'$0 < P < 0.5$')
+    ax.hist(high_probs, bins=bins, color='seagreen', edgecolor='seagreen', label=r'$P \geq 0.5$')
+    ax.hist(low_probs, bins=bins, color='skyblue', edgecolor='skyblue', label=r'$0 < P < 0.5$')
     ax.hist(zeros, bins=[-0.001, 0.001], color='darkred', edgecolor='darkred', alpha=0.8, label=r'$P = 0$')
     # Labels
     ax.set_xlabel(r"Probability", labelpad=6)
-    ax.set_ylabel(r"Count", labelpad=6)
+    ax.set_ylabel(r"Problem count", labelpad=6)
     # ax.set_title(r"Distribution of Probabilities of Correctness")
 
     # Academic look: clean spines
     for spine in ["top", "right"]:
-        ax.spines[spine].set_visible(False)
+        ax.spines[spine].set_visible(False)    
 
     # Ticks outward
     ax.tick_params(axis="both", direction="out", length=5)
@@ -437,7 +470,7 @@ def main():
             if measure == "prob_correct_under_agreement":
                 plot_sorted_percentages(measure_to_methods[measure],
                                         measure,
-                                        report_dir / f"{measure}.png")
+                                        report_dir / f"{measure}.pdf")
             else:
                 if measure != "abstention_rate":
                     plot_sorted_percentages_compress(measure_to_methods[measure],
