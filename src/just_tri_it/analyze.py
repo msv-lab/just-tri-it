@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from collections import defaultdict
 from statistics import mean
-from typing import Dict
+from typing import Dict, Tuple
 
 import math
 import matplotlib.pyplot as plt
@@ -616,6 +616,45 @@ def add_just_tri_it(db):
         
         # obj["selectors"].append(jti_maj_data)
 
+
+def nonbijective_postconditions(db) -> Tuple[float, float]:
+    total_selection_count = 0
+    non_bijective_count = 0
+    non_bijective_causing_wrong_selection_count = 0
+    
+    for obj in db.objects:
+        correct_samples = [p for p, correct, _ in obj["sample_correctness"] if correct]
+        seen_methods = set()
+
+        for selector_data in obj["selectors"]:
+            if selector_data["outcome"] == "abstained":
+                continue
+            if "raw_data" not in selector_data:
+                continue
+            method = selector_data["raw_data"]["agreement_raw_data"]["method"]
+            if method != "postcondition":
+                continue
+
+            total_selection_count += 1
+
+            incorrect_matches = []
+            correct_matches = []
+            
+            for (program, witnesses) in selector_data["raw_data"]["agreement"]:
+                if program in correct_samples:
+                    correct_matches.extend(witnesses)
+                else:
+                    incorrect_matches.extend(witnesses)
+
+            if bool(set(correct_matches) & set(incorrect_matches)):
+                non_bijective_count += 1
+                if selector_data["selected"] not in correct_samples:
+                    non_bijective_causing_wrong_selection_count += 1
+
+    return (non_bijective_count / total_selection_count,
+            non_bijective_causing_wrong_selection_count / total_selection_count)
+
+
 def main():
     args = parse_args()
     data_dir = Path(args.data)
@@ -632,6 +671,12 @@ def main():
     plot_distribution_with_separate_zero(list(corr_dist.values()), report_dir / "prob_correct_distribution.pdf")
 
     add_just_tri_it(db)
+
+
+    a, b = nonbijective_postconditions(db)
+    with (report_dir / "noobijective_postconditions.txt").open("w", encoding="utf-8") as f:
+        f.write(str(a) + "\n")
+        f.write(str(b))
 
     method_to_measures, decisions, abs_prop = abstention_measures(db)
 
