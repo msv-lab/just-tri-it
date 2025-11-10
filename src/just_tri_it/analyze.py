@@ -86,6 +86,17 @@ def abstention_measures(db):
             matrix_per_method.items()}, decisions_per_method_per_task, prop
 
 
+def tasks_where_jti_outperforms_majority(decisions):
+    result = []
+    for task, per_method in decisions.items():
+        if "JUST-TRI-IT" in per_method and\
+           "MajorityVote" in per_method and\
+           per_method["JUST-TRI-IT"] == "selected_correct" and\
+           per_method["MajorityVote"] != "selected_correct":
+            result.append(task)
+    return result
+
+
 SELECTOR_PAPER_NAMES = {
     "JUST-TRI-IT": "JUST-TRI-IT",
     "MajorityVote": "Majority0.5",
@@ -132,7 +143,7 @@ def plot_sorted_percentages_compress(probs, label, output_file, change_order, ab
     methods, values = zip(*sorted_items, strict=True)
     percentages = [v * 100 for v in values]
 
-    colors = ["salmon" if m  == "JUST-TRI-IT" else "skyblue" for m in methods]
+    colors = ["lightsalmon" if m == "JUST-TRI-IT" else "skyblue" for m in methods]
 
     if change_order:
         methods = methods[::-1]
@@ -190,7 +201,7 @@ def plot_sorted_percentages(probs, label, output_file, abs_prop=None):
     probs = {k: v for k, v in probs.items() if v is not None}
 
     if label == "prob_correct_under_agreement":
-        probs = {AGREEMENT_PAPER_NAMES[k]: v for k, v in probs.items() if k not in ["plurality_0.5", "test_IO"]}
+        probs = {AGREEMENT_PAPER_NAMES[k]: v for k, v in probs.items() if k not in ["plurality_0.5", "test_IO", "JUST-TRI-IT"]}
         label = "Probability"
     
     if len(probs) == 0:
@@ -317,6 +328,8 @@ def prob_correct_under_agreement(db) -> Dict[str, float]:
 
         for selector_data in obj["selectors"]:
             if selector_data["outcome"] == "abstained":
+                continue
+            if "raw_data" not in selector_data:
                 continue
             method = selector_data["raw_data"]["agreement_raw_data"]["method"]
             if method not in seen_methods:
@@ -480,6 +493,40 @@ def plot_box(data, output_file):
     plt.close()
 
 
+def add_just_tri_it(db):
+
+    for obj in db.objects:
+        selection_by_method = {}
+        selection_by_method["FWD_INV"] = None
+        selection_by_method["FWD_SINV"] = None
+        selection_by_method["ENUM_SINV"] = None
+        
+        for selector_data in obj["selectors"]:
+            method = selector_data["id"]
+            if method in selection_by_method:
+                if selector_data["outcome"] == "selected":
+                    selection_by_method[method] = selector_data["selected"]
+                else:
+                    assert selector_data["outcome"] == "abstained"
+
+        just_tri_it_selection = None
+        if selection_by_method["ENUM_SINV"] is not None:
+            just_tri_it_selection = selection_by_method["ENUM_SINV"]
+        elif selection_by_method["FWD_SINV"] is not None:
+            just_tri_it_selection = selection_by_method["FWD_SINV"]
+        elif selection_by_method["FWD_INV"] is not None:
+            just_tri_it_selection = selection_by_method["FWD_INV"]
+        just_tri_it_data = {
+            "id": "JUST-TRI-IT",
+            "witnesses": []
+        }
+        if just_tri_it_selection is None:
+            just_tri_it_data["outcome"] = "abstained"
+        else:
+            just_tri_it_data["outcome"] = "selected"
+            just_tri_it_data["selected"] = just_tri_it_selection
+        obj["selectors"].append(just_tri_it_data)
+
 def main():
     args = parse_args()
     data_dir = Path(args.data)
@@ -495,9 +542,16 @@ def main():
 
     plot_distribution_with_separate_zero(list(corr_dist.values()), report_dir / "prob_correct_distribution.pdf")
 
+    add_just_tri_it(db)
+
     method_to_measures, decisions, abs_prop = abstention_measures(db)
 
     if len(method_to_measures) > 0:
+        task_list = tasks_where_jti_outperforms_majority(decisions)
+        
+        with (report_dir / "tasks_where_jti_outperforms_majority.txt").open("w", encoding="utf-8") as f:
+            f.write("\n".join(task_list))
+        
         # transposing table:
         measure_to_methods = {
             k2: {k1: method_to_measures[k1][k2] for k1 in method_to_measures}
