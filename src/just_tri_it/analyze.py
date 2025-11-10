@@ -45,10 +45,13 @@ def abstention_measures(db):
     """
     matrix_per_method = {}
     decisions_per_method_per_task = {}
+    no_answer_prop_p = 0
 
     for obj in db.objects:
         decisions_per_method_per_task[obj["task_id"]] = {}
         correct_samples = [p for p, correct, _ in obj["sample_correctness"] if correct]
+        if len(correct_samples) == 0:
+            no_answer_prop_p += 1
         ground_truth_is_select = len(correct_samples) > 0
         for selector_data in obj["selectors"]:
             method = selector_data["id"]
@@ -77,10 +80,15 @@ def abstention_measures(db):
                     matrix_per_method[method][4] += 1
                     decisions_per_method_per_task[obj["task_id"]][method] = "correctly_abstained"
 
-    return {method: all_abstention_metrics(*matrix) for method, matrix in matrix_per_method.items()}, decisions_per_method_per_task
+    no_answer_prop_q = len(db.objects)
+    prop = no_answer_prop_p / no_answer_prop_q
+    return {method: all_abstention_metrics(*matrix) for method, matrix in
+            matrix_per_method.items()}, decisions_per_method_per_task, prop
 
 
-def plot_sorted_percentages(probs, label, output_file):
+def plot_sorted_percentages_compress(probs, label, output_file, change_order, abs_prop=None):
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({'font.size': 12})
     probs = {k: v for k, v in probs.items() if v is not None}
     if len(probs) == 0:
         return
@@ -90,12 +98,53 @@ def plot_sorted_percentages(probs, label, output_file):
 
     colors = ["grey" if m == "unconditional" else "skyblue" for m in methods]
 
-    plt.figure(figsize=(8, 5))
-    bars = plt.bar(methods, percentages, color=colors, edgecolor='black')
+    if change_order:
+        methods = methods[::-1]
+        percentages = percentages[::-1]
+        colors = colors[::-1]
+
+    plt.figure(figsize=(5.5, 5))
+    bars = plt.barh(methods, percentages, color=colors, edgecolor='black', height=0.6)  # ★ 改为水平条形图
+
+    for bar, pct in zip(bars, percentages, strict=True):
+        plt.text(bar.get_width() + 1, bar.get_y() + bar.get_height() / 2,
+                 f"{pct:.1f}%", va='center', fontsize=11.5)  # ★ 调整文字位置为右侧
+
+    if abs_prop is not None:
+        abs_percentage = abs_prop * 100
+        plt.axvline(x=abs_percentage, color='blue', linestyle='--', linewidth=2,
+                    label=f'Ground Truth ({abs_percentage:.1f}%)')  # ★ 改为垂直线
+        plt.legend()
+
+    plt.xlabel(f"{label} (%)")  # ★ 改成 X 轴标签
+    plt.xlim(0, 100)
+    plt.tight_layout()
+    plt.savefig(output_file, dpi=300)
+    plt.close()
+
+def plot_sorted_percentages(probs, label, output_file, abs_prop=None):
+    plt.rcParams.update({'font.size': 11})
+    probs = {k: v for k, v in probs.items() if v is not None}
+    if len(probs) == 0:
+        return
+    sorted_items = sorted(probs.items(), key=lambda x: x[1], reverse=True)
+    methods, values = zip(*sorted_items, strict=True)
+    percentages = [v * 100 for v in values]
+
+    colors = ["grey" if m == "unconditional" else "skyblue" for m in methods]
+
+    plt.figure(figsize=(8, 4.5))
+    bars = plt.bar(methods, percentages, color=colors, edgecolor='black', width=0.7)
 
     for bar, pct in zip(bars, percentages, strict=True):
         plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 1,
-                 f"{pct:.1f}%", ha='center', va='bottom', fontsize=9)
+                 f"{pct:.1f}%", ha='center', va='bottom', fontsize=11)
+
+    if abs_prop is not None:
+        abs_percentage = abs_prop * 100
+        plt.axhline(y=abs_percentage, color='blue', linestyle='--', linewidth=2,
+                    label=f'Ground Truth ({abs_percentage:.1f}%)')
+        plt.legend()
 
     plt.xticks(rotation=45)
     plt.ylabel(f"{label} (%)")
@@ -124,12 +173,11 @@ def prob_correct_by_task(db) -> Dict[str, float]:
         if p > 0 and p < 0.5:
             between_zero_and_half += 1
         probs[obj["task_id"]] = p
-    #print(f"difficult but feasible: {between_zero_and_half}/{len(probs)}")
+    # print(f"difficult but feasible: {between_zero_and_half}/{len(probs)}")
     return probs
 
 
 def plot_distribution_with_separate_zero(data, output_file):
-
     data = np.array(data)
 
     zeros = data[data == 0]
@@ -140,11 +188,11 @@ def plot_distribution_with_separate_zero(data, output_file):
     bins = np.linspace(0, 1, 11)  # 10 bins from 0 to 1
 
     plt.rcParams.update({
-        "text.usetex": True,       # LaTeX rendering
-        "font.family": "serif",    # Academic serif font
-        "axes.labelsize": 12,      # Axis label size
-        "axes.titlesize": 13,      # Title size
-        "legend.fontsize": 10,     # Legend size
+        "text.usetex": True,  # LaTeX rendering
+        "font.family": "serif",  # Academic serif font
+        "axes.labelsize": 12,  # Axis label size
+        "axes.titlesize": 13,  # Title size
+        "legend.fontsize": 10,  # Legend size
         "xtick.labelsize": 10,
         "ytick.labelsize": 10
     })
@@ -158,7 +206,7 @@ def plot_distribution_with_separate_zero(data, output_file):
     # Labels
     ax.set_xlabel(r"Probability", labelpad=6)
     ax.set_ylabel(r"Count", labelpad=6)
-    #ax.set_title(r"Distribution of Probabilities of Correctness")
+    # ax.set_title(r"Distribution of Probabilities of Correctness")
 
     # Academic look: clean spines
     for spine in ["top", "right"]:
@@ -191,9 +239,9 @@ def prob_correct_under_agreement(db) -> Dict[str, float]:
         correct_samples = [p for p, correct, _ in obj["sample_correctness"] if correct]
         seen_methods = set()
 
-        num_inputs = get_num_inputs(obj)
-        if num_inputs < 10:
-            print(f"{obj['task_id']}: has only {num_inputs} inputs")
+        # num_inputs = get_num_inputs(obj)
+        # if num_inputs < 10:
+        #     print(f"{obj['task_id']}: has only {num_inputs} inputs")
 
         for selector_data in obj["selectors"]:
             if selector_data["outcome"] == "abstained":
@@ -207,7 +255,6 @@ def prob_correct_under_agreement(db) -> Dict[str, float]:
                     num_total_agreements += len(witnesses)
                     if program in correct_samples:
                         num_faithful_agreements += len(witnesses)
-                prob = num_faithful_agreements / num_total_agreements
                 agreements_per_method[method].append((num_faithful_agreements, num_total_agreements))
 
     probs = {}
@@ -373,10 +420,10 @@ def main():
         writer = csv.writer(file)
         for task_id, prob in corr_dist.items():
             writer.writerow([task_id, prob])
-    
+
     plot_distribution_with_separate_zero(list(corr_dist.values()), report_dir / "prob_correct_distribution.pdf")
 
-    method_to_measures, decisions = abstention_measures(db)
+    method_to_measures, decisions, abs_prop = abstention_measures(db)
 
     if len(method_to_measures) > 0:
         # transposing table:
@@ -387,9 +434,22 @@ def main():
         measure_to_methods["prob_correct_under_agreement"] = prob_correct_under_agreement(db)
 
         for measure in measure_to_methods:
-            plot_sorted_percentages(measure_to_methods[measure],
-                                    measure,
-                                    report_dir / f"{measure}.png")
+            if measure == "prob_correct_under_agreement":
+                plot_sorted_percentages(measure_to_methods[measure],
+                                        measure,
+                                        report_dir / f"{measure}.png")
+            else:
+                if measure != "abstention_rate":
+                    plot_sorted_percentages_compress(measure_to_methods[measure],
+                                                     measure,
+                                                     report_dir / f"{measure}.png",
+                                                     True)
+                else:
+                    plot_sorted_percentages_compress(measure_to_methods[measure],
+                                                     measure,
+                                                     report_dir / f"{measure}.png",
+                                                     False,
+                                                     abs_prop)
 
         interval_data, box_data = cal_class_size_info(db)
         if interval_data and box_data:

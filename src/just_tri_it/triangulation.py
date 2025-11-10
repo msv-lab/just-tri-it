@@ -96,7 +96,7 @@ class Triangulator:
 
         num_adapters = 0
 
-        if hack(task="11_binary_string") or hack(task="atcoder_abc393_d") or hack(task="atcoder_abc395_e") or hack(task="atcoder_abc396_c") or hack(task="atcoder_abc391_e") or hack(task="atcoder_abc391_g") or hack(task="atcoder_abc394_f"):
+        if hack(task=["11_binary_string", "atcoder_abc393_d" "atcoder_abc395_e", "atcoder_abc396_c", "atcoder_abc391_e", "atcoder_abc391_g", "atcoder_abc394_f", "atcoder_abc396_a", "atcoder_abc398_c", "atcoder_abc397_c", "atcoder_abc390_b", "atcoder_abc399_b", "atcoder_abc399_f"]):
             pass
         elif hack(task="2_list_sum"):
             fwd_problem, fwd_inputs, fwd_solutions = \
@@ -401,9 +401,29 @@ Problem:
             return ParameterInversion(0)
         if hack(task="leetcode_3793"):
             return SuffixInversion(0, 1, "str")
+        if hack(task="atcoder_abc396_a"):
+            return SuffixInversion(1, 1, "list")
+        if hack(task="atcoder_abc398_c"):
+            return SuffixInversion(1, 1, "list")
+        if hack(task="leetcode_3793"):
+            return SuffixInversion(0, 1, "str")
+        if hack(task="leetcode_3832"):
+            return ParameterInversion(0)
+        if hack(task=["atcoder_abc400_a", "atcoder_abc400_b"]):
+            return ParameterInversion(1)
+        if hack(task="atcoder_abc390_b"):
+            return SuffixInversion(1, 1, "list")
+        if hack(task="atcoder_abc399_b"):
+            return SuffixInversion(1, 1, "list")
+        if hack(task="leetcode_3709"):
+            return SuffixInversion(0, 1, "str")
+        if hack(task="atcoder_abc399_f"):
+            return SuffixInversion(2, 1, "list")
         if len(req.signature.params) == 1:
             if req.signature.params[0].type.lower().startswith('list'):
                 return SuffixInversion(0, 1, "list")
+            elif req.signature.params[0].type.lower() == "str":
+                return SuffixInversion(0, 1, "str")
             return ParameterInversion(0)
         else:
             PROMPT = f"""\
