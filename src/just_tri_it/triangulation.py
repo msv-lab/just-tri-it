@@ -107,7 +107,7 @@ class Triangulator:
             fwd_problem, fwd_inputs, fwd_solutions = \
                 self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
             num_adapters += 1
-        elif hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam"]):
+        elif hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam", "stardew_valley"]):
             len_par = (0, 1)
             fwd_problem, fwd_inputs, fwd_solutions = \
                 self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
@@ -139,7 +139,7 @@ class Triangulator:
                 self.is_stream_processing_problem(fwd_problem):
             stream_processing = True
 
-        if hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam", "common_generator", "cool_graph"]):
+        if hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam", "common_generator", "cool_graph", "stardew_valley"]):
             stream_processing = True
 
         right = []
