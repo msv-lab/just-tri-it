@@ -86,40 +86,80 @@ def abstention_measures(db):
             matrix_per_method.items()}, decisions_per_method_per_task, prop
 
 
+SELECTOR_PAPER_NAMES = {
+    "JUST-TRI-IT": "JUST-TRI-IT",
+    "MajorityVote": "Majority0.5",
+    "Plurality": "Plurality",
+    "Postcondition": "Postcondition",
+    "CodeT_Assert": "CodeT"
+}
+
+
 def plot_sorted_percentages_compress(probs, label, output_file, change_order, abs_prop=None):
-    import matplotlib.pyplot as plt
-    plt.rcParams.update({'font.size': 12})
+    plt.rcParams.update({
+        "text.usetex": True,  # LaTeX rendering
+        "font.family": "serif",  # Academic serif font
+        "axes.labelsize": 14,  # Axis label size
+        "axes.titlesize": 14,  # Title size
+        "legend.fontsize": 12,  # Legend size
+        "xtick.labelsize": 12,
+        "ytick.labelsize": 12
+    })
     probs = {k: v for k, v in probs.items() if v is not None}
+
+    paper_skip = ["FWD_SINV", "FWD_INV", "OffByOne", "CodeT_IO", "MaxTest_Assert", "MaxTest_IO", "Syntactic"]
+
+    if label in ["reliable_accuracy", "abstention_accuracy", "abstention_rate", "abstention_f1"]:
+        plt.figure(figsize=(5, 4))
+    else:
+        plt.figure(figsize=(5.5, 5))
+    
+    if label in ["reliable_accuracy", "abstention_accuracy", "abstention_rate", "abstention_f1"]:
+        probs = {SELECTOR_PAPER_NAMES[k]: v for k, v in probs.items() if k not in paper_skip}
+        match label:
+            case "reliable_accuracy":
+                label = "Reliable Accuracy"
+            case "abstention_accuracy":
+                label = "Overall Accuracy"
+            case "abstention_rate":
+                label = "Abstention Rate"
+            case "abstention_f1":
+                label = "Abstention F1"
+                
     if len(probs) == 0:
         return
     sorted_items = sorted(probs.items(), key=lambda x: x[1], reverse=True)
     methods, values = zip(*sorted_items, strict=True)
     percentages = [v * 100 for v in values]
 
-    colors = ["grey" if m == "unconditional" else "skyblue" for m in methods]
+    colors = ["salmon" if m  == "JUST-TRI-IT" else "skyblue" for m in methods]
 
     if change_order:
         methods = methods[::-1]
         percentages = percentages[::-1]
         colors = colors[::-1]
-
-    plt.figure(figsize=(5.5, 5))
-    bars = plt.barh(methods, percentages, color=colors, edgecolor='black', height=0.6)  # ★ 改为水平条形图
+       
+    bars = plt.barh(methods, percentages, color=colors, edgecolor=colors, height=0.6)  # ★ 改为水平条形图
 
     for bar, pct in zip(bars, percentages, strict=True):
         plt.text(bar.get_width() + 1, bar.get_y() + bar.get_height() / 2,
-                 f"{pct:.1f}%", va='center', fontsize=11.5)  # ★ 调整文字位置为右侧
+                 f"{pct:.1f}%", va='center', fontsize=12)  # ★ 调整文字位置为右侧
 
     if abs_prop is not None:
         abs_percentage = abs_prop * 100
-        plt.axvline(x=abs_percentage, color='blue', linestyle='--', linewidth=2,
-                    label=f'Ground Truth ({abs_percentage:.1f}%)')  # ★ 改为垂直线
-        plt.legend()
+        ax = plt.gca()        
+        ax.axvline(x=abs_percentage, color='blue', linestyle='--', linewidth=2,
+                   label=f'Ground Truth ({abs_percentage:.1f}\%)')  # ★ 改为垂直线
+        ax.legend(loc='upper right', bbox_to_anchor=(1.0, 1.0))
 
-    plt.xlabel(f"{label} (%)")  # ★ 改成 X 轴标签
+    ax = plt.gca()
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    plt.xlabel(f"{label} (\%)")  # ★ 改成 X 轴标签
     plt.xlim(0, 100)
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300)
+    plt.savefig(output_file, format="pdf", dpi=300)
     plt.close()
 
 
@@ -132,8 +172,7 @@ AGREEMENT_PAPER_NAMES = {
     "off-by-one": "OffByOne",
     "syntactic": "Syntactic",
     "unconditional": "Unconditional",
-    "test_assert": "Test (Assert)",
-    "test_IO": "Test (IO)"
+    "test_assert": "Test"
 }
 
 
@@ -151,7 +190,7 @@ def plot_sorted_percentages(probs, label, output_file, abs_prop=None):
     probs = {k: v for k, v in probs.items() if v is not None}
 
     if label == "prob_correct_under_agreement":
-        probs = {AGREEMENT_PAPER_NAMES[k]: v for k, v in probs.items() if k != "plurality_0.5"}
+        probs = {AGREEMENT_PAPER_NAMES[k]: v for k, v in probs.items() if k not in ["plurality_0.5", "test_IO"]}
         label = "Probability"
     
     if len(probs) == 0:
@@ -160,7 +199,7 @@ def plot_sorted_percentages(probs, label, output_file, abs_prop=None):
     methods, values = zip(*sorted_items, strict=True)
     percentages = [v * 100 for v in values]
 
-    colors = ["grey" if m == "Unconditional" else "skyblue" for m in methods]
+    colors = ["grey" if m == "Unconditional" else ("lightsalmon" if m in ["FWD-INV", "FWD-SINV", "ENUM-SINV"] else "skyblue") for m in methods]
 
     plt.figure(figsize=(8, 4.5))
     bars = plt.bar(methods, percentages, color=colors, edgecolor=colors, width=0.7)
@@ -475,12 +514,12 @@ def main():
                 if measure != "abstention_rate":
                     plot_sorted_percentages_compress(measure_to_methods[measure],
                                                      measure,
-                                                     report_dir / f"{measure}.png",
+                                                     report_dir / f"{measure}.pdf",
                                                      True)
                 else:
                     plot_sorted_percentages_compress(measure_to_methods[measure],
                                                      measure,
-                                                     report_dir / f"{measure}.png",
+                                                     report_dir / f"{measure}.pdf",
                                                      False,
                                                      abs_prop)
 
