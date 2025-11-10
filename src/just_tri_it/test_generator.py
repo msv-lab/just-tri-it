@@ -32,7 +32,7 @@ class InputOutputGenerator(TestGenerator):
         tests = self._generate_initial_tests(model, req)
         tests = self._fix_and_filter_bad_tests(tests, req.signature)
 
-        max_attempts = 3
+        max_attempts = 10
         attempt = 0
         
         while len(tests) < MINIMUM_NUM_TESTS and attempt < max_attempts:
@@ -259,7 +259,7 @@ def test_boundary_condition():
         target_signature = req.signature
         tests = self._generate_initial_tests(model, req)
 
-        max_attempts = 3
+        max_attempts = 10
         attempt = 0
         
         while len(tests) < MINIMUM_NUM_TESTS and attempt < max_attempts:
