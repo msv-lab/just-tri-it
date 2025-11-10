@@ -107,7 +107,7 @@ class Triangulator:
             fwd_problem, fwd_inputs, fwd_solutions = \
                 self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
             num_adapters += 1
-        elif hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam", "stardew_valley", "xorificator"]):
+        elif hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam", "stardew_valley", "xorificator", "find_k_distinct_points", "strong_password"]):
             len_par = (0, 1)
             fwd_problem, fwd_inputs, fwd_solutions = \
                 self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
@@ -139,7 +139,7 @@ class Triangulator:
                 self.is_stream_processing_problem(fwd_problem):
             stream_processing = True
 
-        if hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam", "common_generator", "cool_graph", "stardew_valley", "xorificator"]):
+        if hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam", "common_generator", "cool_graph", "stardew_valley", "xorificator", "find_k_distinct_points", "strong_password"]):
             stream_processing = True
 
         right = []
@@ -365,10 +365,12 @@ Problem:
             return SuffixInversion(1, 1, "list") # array
         if hack(task="alices_adventures_in_cards"):
             return SuffixInversion(1, 1, "list") # queen preferences
-        if hack(task=["alya_and_permutation", "binary_colouring", "different_string", "find_k_distinct_points", "fixing_binary_string", "generate_permutation", "gorilla_and_permutation", "grid_reset", "increasing_sequence_fixed_or", "manhattan_permutations", "medians_2032", "minimise_oneness", "perpendicular_segments", "prime_xor_coloring", "strong_password", "turtle_multiplication"]):
+        if hack(task=["alya_and_permutation", "binary_colouring", "different_string", "fixing_binary_string", "generate_permutation", "gorilla_and_permutation", "grid_reset", "increasing_sequence_fixed_or", "manhattan_permutations", "medians_2032", "minimise_oneness", "perpendicular_segments", "prime_xor_coloring", "turtle_multiplication"]):
             pass # default
+        if hack(task="strong_password"):
+            return SuffixInversion(0, 1, "str")
         if hack(task="and_reconstruction"):
-            return SuffixInversion(1, 1, "list")
+            return SuffixInversion(1, 2, "list")
         if hack(task="choose_your_queries"):
             return SuffixInversion(1, 1, "list") # this requires a more subtle approach
         if hack(task="common_generator"):
