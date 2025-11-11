@@ -11,8 +11,6 @@ structure Triangulation (D D' P Q : Type) where
   Phi   : P → Q → Prop
   /-semantic equivalence on the original side -/
   EP    : Setoid P
-  /-coarser relation on the transformed side -/
-  EQ    : Setoid Q
 
   /- Injectivity on classes: if the same q matches two p’s by Φ, then those two p’s are EP-equivalent. -/
   injective  :
@@ -56,7 +54,7 @@ def CorrectRespects (D P : Type) (EP : Setoid P)
 def pluralityTriangulation
   (D P : Type)(EP : Setoid P)(Correct : D → P → Prop)(resp : CorrectRespects D P EP Correct)
   : Triangulation D D P P :=
-{ T := id , Phi := fun p q => EP.r p q , EP  := EP , EQ  := EP,
+{ T := id , Phi := fun p q => EP.r p q , EP  := EP ,
     injective := by
     intro p₁ p₂ q h1 h2
     -- h1: Phi p₁ q (p₁ ≡ q) , h2: Phi p₂ q (p₂ ≡ q)
@@ -113,14 +111,6 @@ def tri_FULL_FWD_INV
 { r := fun (e₁ e₂ : Equiv A B) => e₁ = e₂
 , iseqv := by
     refine ⟨?refl, ?symm, ?trans⟩
-    · intro x; rfl
-    · intro x y h; simpa using h.symm
-    · intro x y z h₁ h₂; simpa using h₁.trans h₂
-}
-, EQ :=
-{ r := fun (e₁ e₂ : Equiv B A) => e₁ = e₂
-, iseqv := by
-    refine ⟨?_, ?_, ?_⟩
     · intro x; rfl
     · intro x y h; simpa using h.symm
     · intro x y z h₁ h₂; simpa using h₁.trans h₂
@@ -189,13 +179,6 @@ def setoidPFwd {I₁ I₂ O : Type} : Setoid (PFwd I₁ I₂ O) where
     symm := fun h i₂ i₁ => (h i₂ i₁).symm
     trans := fun h₁ h₂ i₂ i₁ => (h₁ i₂ i₁).trans (h₂ i₂ i₁)
   }
-def setoidPInv {I₁ I₂ O : Type} : Setoid (PInv I₁ I₂ O) where
-  r q₁ q₂ := ∀ i₂ o, (q₁ i₂) o = (q₂ i₂) o
-  iseqv := {
-    refl := fun _ _ _ => rfl
-    symm := fun h i₂ o => (h i₂ o).symm
-    trans := fun h₁ h₂ i₂ o => (h₁ i₂ o).trans (h₂ i₂ o)
-  }
 
 
 
@@ -211,12 +194,11 @@ def CorrectQ (d' : Spec (O × I₂) I₁) (q : PInv I₁ I₂ O) : Prop :=
 
 def tri_partial_FWD_INV
   : Triangulation (Spec (I₁ × I₂) O) (Spec (O × I₂) I₁) (PFwd I₁ I₂ O) (PInv I₁ I₂ O) :=
-{ T := T_inv1, Phi := Phi_partial, EP := setoidPFwd, EQ := setoidPInv
+{ T := T_inv1, Phi := Phi_partial, EP := setoidPFwd
 
 
 , injective := by
-    intro p₁ p₂ q h1 h2
-    intro i₂ i₁
+    intro p₁ p₂ q h1 h2 i₂ i₁
     have inj : Function.Injective (q i₂) := (q i₂).injective
     have e : (q i₂) ((p₁ i₂) i₁) = (q i₂) ((p₂ i₂) i₁) := by
       calc
@@ -243,8 +225,7 @@ def tri_partial_FWD_INV
 
 , CorrectP := CorrectP, CorrectQ := CorrectQ
 , correctness_coupling := by
-    intro d p q hQ hPhi
-    intro i₁ i₂
+    intro d p q hQ hPhi i₁ i₂
     have := hQ ((p i₂) i₁) i₂
     simpa [T_inv1, hPhi i₁ i₂] using this
 }
@@ -283,14 +264,6 @@ def setoidFun (X Y : Type) : Setoid (X → Y) where
     { refl  := by intro f x; rfl
       symm  := by intro f g h x; simpa using (h x).symm
       trans := by intro f g h h₁ h₂ x; exact (h₁ x).trans (h₂ x) }
-def setoidSINV : Setoid (SINV I O) where
-  r q₁ q₂ := ∀ o i, i ∈ q₁.q o ↔ i ∈ q₂.q o
-  iseqv :=
-    { refl  := by intro q o i; exact Iff.rfl
-      symm  := by intro q₁ q₂ h o i; simpa [Iff.comm] using h o i
-      trans := by
-        intro q₁ q₂ q₃ h₁ h₂ o i
-        exact Iff.trans (h₁ o i) (h₂ o i) }
 
 
 
@@ -334,11 +307,10 @@ lemma pOfSINV_L2 (q : SINV I O) :
 
 def tri_FWD_SINV
   : Triangulation (Spec I O) (Spec O I) (I → O) (SINV I O) :=
-{ T := T_swap, Phi := Phi_SINV, EP := setoidFun I O, EQ := setoidSINV
+{ T := T_swap, Phi := Phi_SINV, EP := setoidFun I O
 
 , injective := by
-    intro p₁ p₂ q h1 h2
-    intro i
+    intro p₁ p₂ q h1 h2 i
     have hi1 : i ∈ q.q (p₁ i) := h1.left i
     have hi2 : i ∈ q.q (p₂ i) := h2.left i
     exact q.unique i (p₁ i) (p₂ i) hi1 hi2
@@ -364,8 +336,7 @@ def tri_FWD_SINV
 , CorrectP := CorrectPSINV, CorrectQ := CorrectQSINV
 
 , correctness_coupling := by
-    intro d p q hQ hPhi
-    intro i
+    intro d p q hQ hPhi i
     have hi : i ∈ q.q (p i) := hPhi.left i
     simpa [T_swap] using hQ (p i) i hi
 }
@@ -415,10 +386,6 @@ def EP_Fwd2 : Setoid (Fwd A Y B) :=
 { r := fun f₁ f₂ => ∀ x y, f₁ x y = f₂ x y,
   iseqv := ⟨(fun _ _ _ => rfl), (fun h x y => (h x y).symm),
             (fun h₁ h₂ x y => (h₁ x y).trans (h₂ x y))⟩ }
-def EQ_Res2 : Setoid (Resonator A Y B) :=
-{ r := fun g₁ g₂ => ∀ b y, g₁.g b y = g₂.g b y,
-  iseqv := ⟨(fun _ _ _ => rfl), (fun h b y => (h b y).symm),
-            (fun h₁ h₂ b y => (h₁ b y).trans (h₂ b y))⟩ }
 
 
 
@@ -433,11 +400,10 @@ def triang_PARTIAL_FWD_SINV :
   Triangulation (Spec A Y B) (SpecPSINV A Y B)
                 (Fwd A Y B) (Resonator A Y B) :=
 { T := T_pfib_partial
-, Phi := fun f g => Phi_pSINV f g.g, EP := EP_Fwd2, EQ := EQ_Res2
+, Phi := fun f g => Phi_pSINV f g.g, EP := EP_Fwd2
 
 , injective := by
-    intro f₁ f₂ g h1 h2
-    intro x y
+    intro f₁ f₂ g h1 h2 x y
     -- L1: x ∈ g (f₁ x y) y
     have hx : x ∈ g.g (f₁ x y) y := h1.left x y
     have hx2 : x ∈ g.g (f₂ x y) y := h2.left x y
@@ -535,13 +501,6 @@ def EP : Setoid (I → Set O) :=
 , iseqv := ⟨(fun _ _ => rfl),
             (fun h i => (h i).symm),
             (fun h₁ h₂ i => (h₁ i).trans (h₂ i))⟩ }
-def EQ : Setoid (O → Set I) :=
-{ r := fun q₁ q₂ => ∀ o, q₁ o = q₂ o
-, iseqv := ⟨(fun _ _ => rfl),
-            (fun h o => (h o).symm),
-            (fun h₁ h₂ o => (h₁ o).trans (h₂ o))⟩ }
-
-
 
 
 
@@ -555,11 +514,10 @@ def CorrectSInv (ds : SInvDesc I O) (q : O → Set I) : Prop :=
 
 def tri_Full_ENUM_SINV
   : Triangulation (EnumDesc I O) (SInvDesc I O) (I → Set O) (O → Set I) :=
-{ T := T_enum_sinv, Phi := Phi, EP := EP, EQ := EQ
+{ T := T_enum_sinv, Phi := Phi, EP := EP
 
 , injective := by
-    intro p₁ p₂ q h1 h2
-    intro i
+    intro p₁ p₂ q h1 h2 i
     apply Set.ext
     intro o
     exact (h1 i o).trans (Iff.symm (h2 i o))
@@ -659,11 +617,6 @@ def EP : Setoid (I₁ → I₂ → Set O) :=
 , iseqv := ⟨(fun _ _ _ => rfl),
             (fun h i₁ i₂ => (h i₁ i₂).symm),
             (fun h₁ h₂ i₁ i₂ => (h₁ i₁ i₂).trans (h₂ i₁ i₂))⟩ }
-def EQ : Setoid (O → I₂ → Set I₁) :=
-{ r := fun q₁ q₂ => ∀ o i₂, q₁ o i₂ = q₂ o i₂
-, iseqv := ⟨(fun _ _ _ => rfl),
-            (fun h o i₂ => (h o i₂).symm),
-            (fun h₁ h₂ o i₂ => (h₁ o i₂).trans (h₂ o i₂))⟩ }
 
 
 
@@ -678,11 +631,10 @@ def CorrectSInv (ds : SInvDesc I₁ I₂ O) (q : O → I₂ → Set I₁) : Prop
 
 def tri_Partial_ENUM_SINV
   : Triangulation (EnumDesc I₁ I₂ O) (SInvDesc I₁ I₂ O) (I₁ → I₂ → Set O) (O → I₂ → Set I₁) :=
-{ T := T_enum_sinv, Phi := Phi, EP := EP, EQ := EQ
+{ T := T_enum_sinv, Phi := Phi, EP := EP
 
 , injective := by
-    intro p₁ p₂ q h1 h2
-    intro i₁ i₂
+    intro p₁ p₂ q h1 h2 i₁ i₂
     apply Set.ext; intro o
     exact (h1 i₁ i₂ o).trans (Iff.symm (h2 i₁ i₂ o))
 
@@ -720,3 +672,111 @@ def tri_Partial_ENUM_SINV
 }
 
 end Partial_ENUM_SINV
+
+
+
+
+
+
+
+/-
+ Proposition 5.12 - STREAM
+-/
+
+
+namespace STREAM
+
+variable {I O : Type}
+
+
+structure SpecDesc (I O : Type) where
+  R : I → O → Prop
+
+
+structure SpecSeqDesc (I O : Type) where
+  R : List I → List O → Prop
+  stateless : ∀ (p0 : I → O), (∀ i, R [i] [p0 i]) → ∀ l, R l (l.map p0)
+
+
+structure StreamHom (I O : Type) where
+  p : List I → List O
+  p0   : I → O
+  hom  : ∀ l, p l = l.map p0
+
+
+
+def EP_STREAM {D' Q : Type}
+  (base_tri : Triangulation (SpecDesc I O) D' (I → O) Q) :
+  Setoid (StreamHom I O) where
+  r h1 h2 := base_tri.EP.r h1.p0 h2.p0
+  iseqv :=
+  { refl  := by
+      intro h
+      exact base_tri.EP.refl h.p0
+    symm  := by
+      intro h1 h2 h
+      exact base_tri.EP.symm h
+    trans := by
+      intro h1 h2 h3 h12 h23
+      exact base_tri.EP.trans h12 h23 }
+
+
+
+
+variable {D' Q : Type}
+variable (tri_pt : Triangulation (SpecDesc I O) D' (I → O) Q)
+
+
+
+def T_pointwise (d : SpecSeqDesc I O) : SpecDesc I O := { R := fun i o => d.R [i] [o] }
+def T := fun d => tri_pt.T (T_pointwise d)
+def Phi (h : StreamHom I O) (q : Q) := tri_pt.Phi h.p0 q ∧ ∀ l, h.p l = l.map h.p0
+
+
+def CorrectP_STREAM (d : SpecSeqDesc I O) (h : StreamHom I O) : Prop := ∀ l, d.R l (h.p l)
+def CorrectQ_STREAM (d' : D') (q : Q) : Prop := tri_pt.CorrectQ d' q
+
+
+
+def triangulation_STREAM (base_tri : Triangulation (SpecDesc I O) D' (I → O) Q)
+
+(h_CorrectP_def : ∀ (d : SpecDesc I O) (p : I → O), base_tri.CorrectP d p ↔ (∀ i, d.R i (p i)))
+
+  : Triangulation (SpecSeqDesc I O) D' (StreamHom I O) Q :=
+{ T  := fun d => base_tri.T (T_pointwise d)
+, Phi := fun h q => base_tri.Phi h.p0 q ∧ ∀ l, h.p l = l.map h.p0
+, EP  := EP_STREAM base_tri
+
+
+, injective := by
+    intro h1 h2 q h1q h2q
+    exact base_tri.injective (p₁:=h1.p0) (p₂:=h2.p0) (q:=q) h1q.left h2q.left
+
+, surjective := by
+    intro q; rcases base_tri.surjective q with ⟨p0, hp⟩
+    exact ⟨⟨fun l => l.map p0, p0, by intro l; rfl⟩, And.intro hp (by intro l; rfl)⟩
+
+, totality := by
+    intro h; rcases base_tri.totality h.p0 with ⟨q, hp⟩
+    exact ⟨q, And.intro hp h.hom⟩
+
+, CorrectP := CorrectP_STREAM
+, CorrectQ := fun d' q => base_tri.CorrectQ d' q
+
+, correctness_coupling := by
+      intro d h q hQ hΦ l
+      have maplaw : ∀ l, h.p l = l.map h.p0 := hΦ.right
+      have pc0 : base_tri.CorrectP (T_pointwise d) h.p0 :=
+        base_tri.correctness_coupling hQ hΦ.left
+      rw [h_CorrectP_def] at pc0
+      have singletons : ∀ i, d.R [i] [h.p0 i] := by
+        intro i
+        simpa [T_pointwise] using pc0 i
+      have stream_ok : d.R l (l.map h.p0) :=
+        d.stateless h.p0 singletons l
+      simpa [maplaw l] using stream_ok
+
+}
+
+
+end STREAM
