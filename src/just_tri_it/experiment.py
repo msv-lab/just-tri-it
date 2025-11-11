@@ -26,7 +26,7 @@ from just_tri_it.selection import Selected, Abstained
 from just_tri_it.input_generator import generate_inputs
 import just_tri_it.config
 
-GET_CORRECT = True
+GET_CORRECT = False
 
 
 def parse_args():
