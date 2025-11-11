@@ -26,7 +26,7 @@ from just_tri_it.selection import Selected, Abstained
 from just_tri_it.input_generator import generate_inputs
 import just_tri_it.config
 
-GET_CORRECT = False
+GET_CORRECT = True
 
 
 def parse_args():
@@ -97,10 +97,10 @@ def parse_args():
 SKIP_SELECTORS = [
     # "Plurality",
     # "MajorityVote",
-    "MaxTest_Assert",
-    "MaxTest_IO",
+    # "MaxTest_Assert",
+    # "MaxTest_IO",
     # "CodeT_Assert",
-    "CodeT_IO",
+    # "CodeT_IO",
     # "Syntactic",
     # "OffByOne",
     # "Postcondition",
