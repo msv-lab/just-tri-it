@@ -130,7 +130,6 @@ class Triangulator:
                 num_adapters += 1
 
         stream_processing = False
-        
         if just_tri_it.utils.CURRENT_TASK.startswith("atcoder") or just_tri_it.utils.CURRENT_TASK.startswith("leetcode"):
             stream_processing = False
         elif self.triangulation_mode in [TriangulationMode.FWD_INV,
@@ -364,6 +363,8 @@ Problem:
             return ParameterInversion(0)
         if hack(task="leetcode_3759", model="deepseek-v3"):
             return SuffixInversion(0, 3, "list")
+        if hack(task="leetcode_3722", model="deepseek-v3"):
+            return SuffixInversion(0, 2, "list")
         # CodeElo:
         if hack(task="absolute_zero"):
             return SuffixInversion(1, 1, "list") # array
