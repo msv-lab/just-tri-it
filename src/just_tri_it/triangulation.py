@@ -360,9 +360,9 @@ Problem:
             return SuffixInversion(2, 1, "str")
         if hack(task="atcoder_abc394_f"):
             return SuffixInversion(1, 1, "list")
-        if hack(task="atcoder_arc196_a"):
+        if hack(task="atcoder_arc196_a", model="deepseek-v3"):
             return ParameterInversion(0)
-        if hack(task="leetcode_3759"):
+        if hack(task="leetcode_3759", model="deepseek-v3"):
             return SuffixInversion(0, 3, "list")
         # CodeElo:
         if hack(task="absolute_zero"):
