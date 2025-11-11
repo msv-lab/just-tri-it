@@ -279,5 +279,23 @@
             }
         ],
         "metadata": { }
+    },
+    {
+        "id": "12_non_bijective_length",
+        "requirements": {
+            "signature": "def gen_list(n: int) -> list[int]",
+            "description": "given a non-negative n, generate a list from 1 to n."
+        },
+        "tests": [
+            {
+                "type": "TestFunction",
+                "code": "def test_1():\n    assert gen_list(1) == [1]"
+            },
+            {
+                "type": "TestFunction",
+                "code": "def test_2():\n    assert gen_list(5) == [1, 2, 3, 4, 5]"
+            }
+        ],
+        "metadata": { }
     }
 ]

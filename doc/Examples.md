@@ -52,4 +52,6 @@ stream(enum-sinv):
 
     uv run benchmark --dataset datasets/test.json --selector ENUM_SINV --model gpt-4o --task 7_stream_smaller_number
 
+fwd-inv (should abstain):
 
+    uv run benchmark --dataset datasets/test.json --selector FWD_INV --model gpt-4o --task 12_non_bijective_length

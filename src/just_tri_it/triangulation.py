@@ -18,7 +18,7 @@ from just_tri_it.selection import Agreement, AgreementOutcome
 from just_tri_it.input_generator import generate_inputs, remove_duplicates, MINIMUM_NUM_INPUTS, MAXIMUM_NUM_INPUTS
 
 from just_tri_it.logic import (
-    Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, TolerateInvalid, TimeoutGuard, FullOrPartial, FlattenMap
+    Formula, Side, Var, Func, ForAll, Equals, SetEquals, OffByOne, And, Map, Member, TolerateInvalid, TimeoutGuard, FullOrPartial, FlattenMap, CartesianSquare, Not, Implies
 )
 from just_tri_it.program import Program, Requirements, NamedReturnSignature, Signature, Parameter
 from just_tri_it.utils import (
@@ -1332,16 +1332,26 @@ def {new_sig.name}(el):
         return ForAll(arg, Side.LEFT,
                       Equals([TolerateInvalid([p(arg)]), FlattenMap(q, arg)]))
 
-    def make_fwd_inv(self, req, inversion_index):
+    def make_fwd_inv(self, req, inversion_index, bijective=True):
         arity = len(req.signature.params)
         args = [Var(f"i_{i}") for i in range(arity)]
         inv_arg = Var(f"i_{inversion_index}")
         remaining_args = args[:inversion_index] + args[inversion_index + 1:]
         p = Func(Side.LEFT)
         q = Func(Side.RIGHT)
-        
-        return ForAll(args, Side.LEFT,
-                      Equals([inv_arg, q([TolerateInvalid([p(args)])] + remaining_args)]))
+
+        args_inv = [Var(f"o_{i}") for i in range(arity)]        
+        args_inv_other = [Var(f"oo_{i}") for i in range(arity)]
+        args_inv_replaced = args_inv[:inversion_index] + [args_inv_other[inversion_index]] + args_inv[inversion_index + 1:]
+
+        if not bijective:
+            return ForAll(args, Side.LEFT,
+                          Equals([inv_arg, q([TolerateInvalid([p(args)])] + remaining_args)]))
+        else:
+            return And(ForAll(args, Side.LEFT,
+                              Equals([inv_arg, q([TolerateInvalid([p(args)])] + remaining_args)])),
+                       ForAll((args_inv, args_inv_other), CartesianSquare(Side.RIGHT),
+                              Implies(Not(Equals([args_inv, args_inv_replaced])), Not(TolerateInvalid([Equals([q(args_inv), q(args_inv_replaced)])])))))
 
     def make_fwd_sinv(self, req, inversion_index):
         arity = len(req.signature.params)
@@ -1426,12 +1436,13 @@ def {new_sig.name}(el):
             case ParameterInversion(i):
                 inv_problem = self.transform_inv(fwd_problem, i)
                 inv_solutions = self.sample_solutions(inv_problem, self.num_right_samples)
+                inv_inputs = self.generate_inputs(inv_problem)
                 fwd_inv_prop = self.make_fwd_inv(fwd_problem, i)
                 triangulated_fwd_solutions = \
                     self.triangulate(fwd_inv_prop,
                                      fwd_inputs,
                                      fwd_solutions,
-                                     [],
+                                     inv_inputs,
                                      inv_solutions,
                                      bijective=True)
             case SuffixInversion(i, l, type):
@@ -1439,12 +1450,13 @@ def {new_sig.name}(el):
                     self.split_arg_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l, type)
                 inv_problem = self.transform_inv(split_arg_problem, i+1)
                 inv_solutions = self.sample_solutions(inv_problem, self.num_right_samples)
+                inv_inputs = self.generate_inputs(inv_problem)
                 fwd_inv_prop = self.make_fwd_inv(split_arg_problem, i+1)
                 triangulated_split_arg_solutions = \
                     self.triangulate(fwd_inv_prop,
                                      split_arg_inputs,
                                      split_arg_solutions,
-                                     [],
+                                     inv_inputs,
                                      inv_solutions,
                                      bijective=True)
                 triangulated_fwd_solutions = self.unwrap(triangulated_split_arg_solutions)

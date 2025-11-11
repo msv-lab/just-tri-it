@@ -14,7 +14,8 @@ from just_tri_it.logic import (
     Func, Equals, SetEquals, OffByOne, Member, TolerateInvalid,
     SpecialValue, Angelic, Demonic, Undefined,
     FuncWithTimeoutGuard,
-    FullAnswer, PartialAnswer
+    FullAnswer, PartialAnswer,
+    CartesianSquare
 )
 from just_tri_it.utils import hack
 import just_tri_it.utils
@@ -131,9 +132,19 @@ class Interpreter(Checker):
                 if SpecialValue.in_list([result_left, result_right]):
                     return SpecialValue.strongest([result_left, result_right])
                 raise ValueError("unexpected operand type")
+            case Implies(left, right):
+                result_left = self._is_formula_true(env, inputs, programs, left)
+                result_right = self._is_formula_true(env, inputs, programs, right)
+                if isinstance(result_left, bool) and isinstance(result_right, bool):
+                    return (not result_left) or result_right
+                if SpecialValue.in_list([result_left, result_right]):
+                    return SpecialValue.strongest([result_left, result_right])
+                raise ValueError("unexpected operand type")
             case ForAll(ele, domain, body):
-                num_angelic = 0
-                if isinstance(domain, Side):
+                num_angelic = 0 
+                if isinstance(domain, CartesianSquare):
+                    computed_domain = list(zip(inputs[domain.side][1:], inputs[domain.side][:-1]))
+                elif isinstance(domain, Side):
                     computed_domain = inputs[domain]
                 else:
                     computed_domain = self._eval_term(env, programs, domain)
@@ -160,6 +171,20 @@ class Interpreter(Checker):
                     new_env = env.copy()
                     if isinstance(ele, Var):
                         new_env[ele.name] = inp
+                    elif isinstance(ele, Tuple):
+                        assert isinstance(domain, CartesianSquare) and len(ele) == 2
+                        args1, args2 = ele
+                        if isinstance(args1, Var):
+                            new_env[args1.name] = inp[0]
+                            new_env[args2.name] = inp[1]
+                        else:
+                            if len(inp[0]) != len(args1) or len(inp[1]) != len(args2):
+                                print(f"\nInput length mismatch: {ele} {inp}", file=sys.stderr, flush=True)
+                                return False
+                            for index, var in enumerate(args1):
+                                new_env[var.name] = inp[0][index]
+                            for index, var in enumerate(args2):
+                                new_env[var.name] = inp[1][index]
                     else:
                         if len(inp) != len(ele):
                             print(f"\nInput length mismatch: {ele} {inp}", file=sys.stderr, flush=True)

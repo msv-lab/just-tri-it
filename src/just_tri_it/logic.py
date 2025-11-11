@@ -170,9 +170,14 @@ class Iff:
 
 
 @dataclass
+class CartesianSquare:
+    side: Side
+
+
+@dataclass
 class ForAll:
     vars: Var | list[Var]
-    domain: Side | Term
+    domain: Side | CartesianSquare | Term
     body: 'Formula'
 
     def __str__(self):
@@ -282,6 +287,8 @@ def _equals_func(x, y, flat=False):
         return Angelic()
     if isinstance(x, Undefined) and isinstance(y, Undefined):
         return True
+    if isinstance(x, Undefined) or isinstance(y, Undefined):
+        return Undefined()
     if isinstance(x, float) and isinstance(y, float):
         return math.isclose(x, y)
     #Note: this is for stateless map property:
