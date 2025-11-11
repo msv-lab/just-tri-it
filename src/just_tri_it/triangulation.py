@@ -360,6 +360,10 @@ Problem:
             return SuffixInversion(2, 1, "str")
         if hack(task="atcoder_abc394_f"):
             return SuffixInversion(1, 1, "list")
+        if hack(task="atcoder_arc196_a"):
+            return ParameterInversion(0)
+        if hack(task="leetcode_3759"):
+            return SuffixInversion(0, 3, "list")
         # CodeElo:
         if hack(task="absolute_zero"):
             return SuffixInversion(1, 1, "list") # array
