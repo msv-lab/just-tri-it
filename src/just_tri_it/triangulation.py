@@ -411,6 +411,8 @@ Problem:
             return ParameterInversion(3)
         if hack(task="atcoder_abc388_d", model="deepseek-v3"):
             return SuffixInversion(1, 2, "list")
+        if hack(task="atcoder_arc194_c", model="deepseek-v3"):
+            return ParameterInversion(2)
         # CodeElo:
         if hack(task="absolute_zero"):
             return SuffixInversion(1, 1, "list") # array
