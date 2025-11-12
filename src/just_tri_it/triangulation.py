@@ -395,6 +395,8 @@ Problem:
             return SuffixInversion(2, 3, "str")
         if hack(task="atcoder_arc194_b", model="deepseek-v3"):
             return SuffixInversion(0, 3, "list")
+        if hack(task="atcoder_abc387_f", model="deepseek-v3"):
+            return SuffixInversion(1, 3, "list")
         # CodeElo:
         if hack(task="absolute_zero"):
             return SuffixInversion(1, 1, "list") # array
