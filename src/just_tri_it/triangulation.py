@@ -385,11 +385,11 @@ Problem:
             return ParameterInversion(0)
         if hack(task="leetcode_3789", model="deepseek-v3"):
             return SuffixInversion(1, 1, "list")
-        if hack(task="atcoder_abc397_g"):
+        if hack(task="atcoder_abc397_g", model="deepseek-v3"):
             return SuffixInversion(3, 3, "list")
-        if hack(task="atcoder_abc399_d"):
+        if hack(task="atcoder_abc399_d", model="deepseek-v3"):
             return SuffixInversion(1, 3, "list")
-        if hack(task="atcoder_arc192_a"):
+        if hack(task="atcoder_arc192_a", model="deepseek-v3"):
             return SuffixInversion(1, 3, "list")
         # CodeElo:
         if hack(task="absolute_zero"):
