@@ -1,9 +1,0 @@
-# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
-# test name: test_single_node_paths_in_large_tree
-def test_single_node_paths_in_large_tree():
-    """Test emphasis on single node paths when they are valid longest paths"""
-    edges = [[0,1,10],[0,2,10],[1,3,10],[2,4,10]]
-    nums = [1,1,1,1,1]  # All same values
-    result = longestSpecialPath(edges, nums)
-    # Only single node paths are valid, all have length 0
-    assert result == [0, 1]

@@ -1,9 +1,0 @@
-# signature: def longestSpecialPath(edges: List[List[int]], nums: List[int]) -> List[int]
-# test name: test_all_nodes_unique_but_short_paths
-def test_all_nodes_unique_but_short_paths():
-    """Test where all values are unique but tree structure limits path lengths"""
-    edges = [[0,1,1],[0,2,1],[0,3,1]]  # Star structure
-    nums = [1,2,3,4]  # All unique values
-    result = longestSpecialPath(edges, nums)
-    # All paths are root to leaves: length 1, 2 nodes
-    assert result == [1, 2]

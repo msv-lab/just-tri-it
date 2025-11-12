@@ -1,9 +1,0 @@
-# signature: def minOperations(nums: List[int], x: int, k: int) -> int
-# test name: test_all_zeros_edge_case
-def test_all_zeros_edge_case():
-    nums = [0, 0, 0, 0, 0, 0, 0, 0]
-    x = 4
-    k = 2
-    result = minOperations(nums, x, k)
-    # All elements already zero, any subarray is valid
-    assert result == 0
