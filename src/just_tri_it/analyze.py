@@ -122,7 +122,7 @@ def plot_sorted_percentages_compress(probs, label, output_file, change_order, ab
     paper_skip = ["ENUM_SINV", "FWD_SINV", "FWD_INV", "OffByOne", "CodeT_IO", "MaxTest_Assert", "MaxTest_IO", "Syntactic"]
 
     if label in ["reliable_accuracy", "abstention_accuracy", "abstention_rate", "abstention_f1"]:
-        plt.figure(figsize=(5, 4))
+        plt.figure(figsize=(5, 3))
     else:
         plt.figure(figsize=(5.5, 5))
     
