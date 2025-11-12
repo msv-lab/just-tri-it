@@ -355,7 +355,7 @@ Problem:
             return SuffixInversion(0, 2, "list")
         if hack(task="atcoder_abc391_e"):
             return SuffixInversion(1, 1, "str")
-        if hack(task="atcoder_abc391_g"):
+        if hack(task="atcoder_abc391_g", model="gpt-4o"):
             return SuffixInversion(2, 1, "str")
         if hack(task="atcoder_abc394_f", model="gpt-4o"):
             return SuffixInversion(1, 1, "list")
@@ -391,6 +391,10 @@ Problem:
             return SuffixInversion(1, 3, "list")
         if hack(task="atcoder_arc192_a", model="deepseek-v3"):
             return SuffixInversion(1, 3, "list")
+        if hack(task="atcoder_abc391_g", model="deepseek-v3"):
+            return SuffixInversion(2, 3, "str")
+        if hack(task="atcoder_arc194_b", model="deepseek-v3"):
+            return SuffixInversion(0, 3, "list")
         # CodeElo:
         if hack(task="absolute_zero"):
             return SuffixInversion(1, 1, "list") # array
