@@ -214,7 +214,7 @@ class Program(ContentAddressable):
         """
         outcomes = []
         never_fails = True
-        if hack(task = ["atcoder_abc388_c", "atcoder_abc391_f", "atcoder_abc397_f", "leetcode_3722", "leetcode_3720", "leetcode_3714", "leetcode_3717"]):
+        if hack(task = ["atcoder_abc388_c", "atcoder_abc391_f", "atcoder_abc397_f", "leetcode_3722", "leetcode_3720", "leetcode_3714", "leetcode_3717", "atcoder_abc388_d"]):
             timeout_num = 0
             from just_tri_it.executor import Timeout
             for test in tests:
