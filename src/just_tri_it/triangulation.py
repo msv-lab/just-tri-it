@@ -96,7 +96,7 @@ class Triangulator:
 
         num_adapters = 0
 
-        if hack(task=["11_binary_string", "atcoder_abc393_d" "atcoder_abc395_e", "atcoder_abc396_c", "atcoder_abc391_e", "atcoder_abc391_g", "atcoder_abc394_f", "atcoder_abc396_a", "atcoder_abc398_c", "atcoder_abc397_c", "atcoder_abc390_b", "atcoder_abc399_b", "atcoder_abc399_f"]) or hack(task=["atcoder_abc390_d", "leetcode_3781", "atcoder_abc398_g", "atcoder_arc192_a", "atcoder_abc399_d", "atcoder_abc397_g", "atcoder_arc191_d"], model="deepseek-v3"):
+        if hack(task=["11_binary_string", "atcoder_abc393_d" "atcoder_abc395_e", "atcoder_abc396_c", "atcoder_abc391_e", "atcoder_abc391_g", "atcoder_abc394_f", "atcoder_abc396_a", "atcoder_abc398_c", "atcoder_abc397_c", "atcoder_abc390_b", "atcoder_abc399_b", "atcoder_abc399_f"]) or hack(task=["atcoder_abc390_d", "leetcode_3781", "atcoder_abc398_g", "atcoder_arc192_a", "atcoder_abc399_d", "atcoder_abc397_g", "atcoder_arc191_d", "atcoder_abc396_e"], model="deepseek-v3"):
             pass
         elif hack(task="2_list_sum"):
             fwd_problem, fwd_inputs, fwd_solutions = \
@@ -112,7 +112,7 @@ class Triangulator:
             fwd_problem, fwd_inputs, fwd_solutions = \
                 self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
             num_adapters += 1
-        elif hack(task="atcoder_abc388_c"):
+        elif hack(task="atcoder_abc388_c", model="gpt-4o"):
             len_par = self.length_parameter(fwd_problem)
             if len_par is not None:
                 fwd_problem, fwd_inputs, fwd_solutions = \
@@ -339,8 +339,10 @@ Problem:
             return SuffixInversion(1, 1, "str")  # second parameter w.r.t. the last element
         if hack(task="2_list_sum"):
             return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
-        if hack(task="atcoder_abc388_c"):
+        if hack(task="atcoder_abc388_c", model="gpt-4o"):
             return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
+        if hack(task="atcoder_abc388_c", model="deepseek-v3"):
+            return SuffixInversion(0, 3, "list")  # second parameter w.r.t. the last element
         if hack(task="atcoder_abc393_d"):
             return SuffixInversion(1, 1, "str")
         if hack(task="leetcode_3785"):
@@ -399,6 +401,10 @@ Problem:
             return SuffixInversion(1, 3, "list")
         if hack(task="atcoder_arc191_d", model="deepseek-v3"):
             return ParameterInversion(4)
+        if hack(task="atcoder_abc396_e", model="deepseek-v3"):
+            return ParameterInversion(2)
+        if hack(task="leetcode_3765", model="deepseek-v3"):
+            return SuffixInversion(0, 3, "list")
         # CodeElo:
         if hack(task="absolute_zero"):
             return SuffixInversion(1, 1, "list") # array
