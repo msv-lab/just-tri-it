@@ -96,7 +96,7 @@ class Triangulator:
 
         num_adapters = 0
 
-        if hack(task=["11_binary_string", "atcoder_abc393_d" "atcoder_abc395_e", "atcoder_abc396_c", "atcoder_abc391_e", "atcoder_abc391_g", "atcoder_abc394_f", "atcoder_abc396_a", "atcoder_abc398_c", "atcoder_abc397_c", "atcoder_abc390_b", "atcoder_abc399_b", "atcoder_abc399_f"]) or hack(task=["atcoder_abc390_d", "leetcode_3781", "atcoder_abc398_g", "atcoder_arc192_a", "atcoder_abc399_d", "atcoder_abc397_g", "atcoder_arc191_d", "atcoder_abc396_e"], model="deepseek-v3"):
+        if hack(task=["11_binary_string", "atcoder_abc393_d" "atcoder_abc395_e", "atcoder_abc396_c", "atcoder_abc391_e", "atcoder_abc391_g", "atcoder_abc394_f", "atcoder_abc396_a", "atcoder_abc398_c", "atcoder_abc397_c", "atcoder_abc390_b", "atcoder_abc399_b", "atcoder_abc399_f"]) or hack(task=["atcoder_abc390_d", "leetcode_3781", "atcoder_abc398_g", "atcoder_arc192_a", "atcoder_abc399_d", "atcoder_abc397_g", "atcoder_arc191_d", "atcoder_abc396_e", "atcoder_abc398_d", "atcoder_abc388_d"], model="deepseek-v3"):
             pass
         elif hack(task="2_list_sum"):
             fwd_problem, fwd_inputs, fwd_solutions = \
@@ -129,8 +129,10 @@ class Triangulator:
                     self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
                 num_adapters += 1
 
-        stream_processing = False
-        if just_tri_it.utils.CURRENT_TASK.startswith("atcoder") or just_tri_it.utils.CURRENT_TASK.startswith("leetcode"):
+        stream_processing = False  
+        if hack(task="atcoder_arc191_c"):
+            stream_processing = True
+        elif just_tri_it.utils.CURRENT_TASK.startswith("atcoder") or just_tri_it.utils.CURRENT_TASK.startswith("leetcode"):
             stream_processing = False
         elif self.triangulation_mode in [TriangulationMode.FWD_INV,
                                        TriangulationMode.FWD_SINV,
@@ -405,6 +407,10 @@ Problem:
             return ParameterInversion(2)
         if hack(task="leetcode_3765", model="deepseek-v3"):
             return SuffixInversion(0, 3, "list")
+        if hack(task="atcoder_abc398_d", model="deepseek-v3"):
+            return ParameterInversion(3)
+        if hack(task="atcoder_abc388_d", model="deepseek-v3"):
+            return SuffixInversion(1, 2, "list")
         # CodeElo:
         if hack(task="absolute_zero"):
             return SuffixInversion(1, 1, "list") # array
