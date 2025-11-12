@@ -478,6 +478,8 @@ Problem:
             return SuffixInversion(0, 1, "str")
         if hack(task="atcoder_abc399_f"):
             return SuffixInversion(2, 1, "list")
+        if hack(task="atcoder_abc391_a", model="gpt-4o"):
+            return SuffixInversion(0, 3, "str")
         if len(req.signature.params) == 1:
             if req.signature.params[0].type.lower().startswith('list'):
                 return SuffixInversion(0, 1, "list")
