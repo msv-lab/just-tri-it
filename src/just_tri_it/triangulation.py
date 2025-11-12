@@ -428,9 +428,9 @@ Problem:
             return ParameterInversion(1)
         if hack(task="leetcode_3770"):
             return ParameterInversion(0)
-        if hack(task="atcoder_abc395_a"):
+        if hack(task="atcoder_abc395_a", model="deepseek-v3"):
             return ParameterInversion(0)
-        if hack(task="atcoder_abc398_g"):
+        if hack(task="atcoder_abc398_g", model="deepseek-v3"):
             return ParameterInversion(2)
         if hack(task="leetcode_3793"):
             return SuffixInversion(0, 1, "str")
