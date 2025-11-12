@@ -96,7 +96,7 @@ class Triangulator:
 
         num_adapters = 0
 
-        if hack(task=["11_binary_string", "atcoder_abc393_d" "atcoder_abc395_e", "atcoder_abc396_c", "atcoder_abc391_e", "atcoder_abc391_g", "atcoder_abc394_f", "atcoder_abc396_a", "atcoder_abc398_c", "atcoder_abc397_c", "atcoder_abc390_b", "atcoder_abc399_b", "atcoder_abc399_f"]) or hack(task=["atcoder_abc390_d", "leetcode_3781", "atcoder_abc398_g"], model="deepseek-v3"):
+        if hack(task=["11_binary_string", "atcoder_abc393_d" "atcoder_abc395_e", "atcoder_abc396_c", "atcoder_abc391_e", "atcoder_abc391_g", "atcoder_abc394_f", "atcoder_abc396_a", "atcoder_abc398_c", "atcoder_abc397_c", "atcoder_abc390_b", "atcoder_abc399_b", "atcoder_abc399_f"]) or hack(task=["atcoder_abc390_d", "leetcode_3781", "atcoder_abc398_g", "atcoder_arc192_a", "atcoder_abc399_d", "atcoder_abc397_g"], model="deepseek-v3"):
             pass
         elif hack(task="2_list_sum"):
             fwd_problem, fwd_inputs, fwd_solutions = \
@@ -385,6 +385,12 @@ Problem:
             return ParameterInversion(0)
         if hack(task="leetcode_3789", model="deepseek-v3"):
             return SuffixInversion(1, 1, "list")
+        if hack(task="atcoder_abc397_g"):
+            return SuffixInversion(3, 3, "list")
+        if hack(task="atcoder_abc399_d"):
+            return SuffixInversion(1, 3, "list")
+        if hack(task="atcoder_arc192_a"):
+            return SuffixInversion(1, 3, "list")
         # CodeElo:
         if hack(task="absolute_zero"):
             return SuffixInversion(1, 1, "list") # array
