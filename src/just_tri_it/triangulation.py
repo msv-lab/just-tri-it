@@ -413,6 +413,12 @@ Problem:
             return SuffixInversion(1, 2, "list")
         if hack(task="atcoder_arc194_c", model="deepseek-v3"):
             return ParameterInversion(2)
+        if hack(task="atcoder_abc399_e", model="deepseek-v3"):
+            return ParameterInversion(1)
+        if hack(task="atcoder_arc191_a", model="deepseek-v3"):
+            return ParameterInversion(0)
+        if hack(task="leetcode_3788", model="deepseek-v3"):
+            return ParameterInversion(0)
         # CodeElo:
         if hack(task="absolute_zero"):
             return SuffixInversion(1, 1, "list") # array
