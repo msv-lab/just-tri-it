@@ -381,8 +381,10 @@ Problem:
             return SuffixInversion(0, 3, "list")
         if hack(task="leetcode_3751", model="deepseek-v3"):
             return SuffixInversion(0, 3, "list")
-        if hack(task="leetcode_3717", model="deepseek-v3")):
+        if hack(task="leetcode_3717", model="deepseek-v3"):
             return ParameterInversion(0)
+        if hack(task="leetcode_3789", model="deepseek-v3"):
+            return SuffixInversion(1, 1, "list")
         # CodeElo:
         if hack(task="absolute_zero"):
             return SuffixInversion(1, 1, "list") # array
