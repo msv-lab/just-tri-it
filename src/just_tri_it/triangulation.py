@@ -1256,7 +1256,7 @@ def {new_sig.name}(el):
                        ForAll((args_inv, args_inv_other), CartesianSquare(Side.RIGHT),
                               Implies(Not(Equals([args_inv, args_inv_replaced])), Not(TolerateInvalid([Equals([q(args_inv), q(args_inv_replaced)])])))))
 
-    def make_fwd_sinv(self, req, inversion_index):
+    def make_fwd_sinv(self, req, inversion_index, bijective=True):
         arity = len(req.signature.params)
         args = [Var(f"i_{i}") for i in range(arity)]
         inv_arg = Var(f"i_{inversion_index}")
@@ -1266,12 +1266,16 @@ def {new_sig.name}(el):
         p = Func(Side.LEFT)
         q = Func(Side.RIGHT)
 
-        return ForAll(args, Side.LEFT,
-                      And(Member([inv_arg, FullOrPartial([q([TolerateInvalid([p(args)])] + remaining_args)])]),
-                          ForAll(arg_prime, FullOrPartial([q([TolerateInvalid([p(args)])] + remaining_args)]),
-                                 Equals([p(args), TimeoutGuard(p)(args_with_prime)]))))
+        if bijective:
+            return ForAll(args, Side.LEFT,
+                          And(Member([inv_arg, FullOrPartial([q([TolerateInvalid([p(args)])] + remaining_args)])]),
+                              ForAll(arg_prime, FullOrPartial([q([TolerateInvalid([p(args)])] + remaining_args)]),
+                                     Equals([p(args), TimeoutGuard(p)(args_with_prime)]))))
+        else:
+            return ForAll(args, Side.LEFT,
+                          Member([inv_arg, FullOrPartial([q([TolerateInvalid([p(args)])] + remaining_args)])]))
 
-    def make_enum_sinv(self, req, inversion_index):
+    def make_enum_sinv(self, req, inversion_index, bijective=True):
         arity = len(req.signature.params)
         left_args = [Var(f"i_{i}") for i in range(arity)]
         inv_arg = Var(f"i_{inversion_index}")
@@ -1281,13 +1285,19 @@ def {new_sig.name}(el):
         p = Func(Side.LEFT)
         q = Func(Side.RIGHT)
 
-        return And(ForAll(left_args, Side.LEFT,
+        if bijective:
+            return And(ForAll(left_args, Side.LEFT,
+                              ForAll(out, FullOrPartial([TolerateInvalid([p(left_args)])]),
+                                     Member([inv_arg, FullOrPartial([TimeoutGuard(q)(right_args)])]))),
+                       ForAll(right_args, Side.RIGHT,
+                              ForAll(inv_arg, FullOrPartial([TolerateInvalid([q(right_args)])]),
+                                     Member([out, FullOrPartial([TimeoutGuard(p)(left_args)])]))))
+        else:
+            return ForAll(left_args, Side.LEFT,
                           ForAll(out, FullOrPartial([TolerateInvalid([p(left_args)])]),
-                                 Member([inv_arg, FullOrPartial([TimeoutGuard(q)(right_args)])]))),
-                   ForAll(right_args, Side.RIGHT,
-                          ForAll(inv_arg, FullOrPartial([TolerateInvalid([q(right_args)])]),
-                                 Member([out, FullOrPartial([TimeoutGuard(p)(left_args)])]))))
-
+                                 Member([inv_arg, FullOrPartial([TimeoutGuard(q)(right_args)])])))
+        
+        
     def make_fwd_enum(self, req):
         arity = len(req.signature.params)
         args = [Var(f"i_{i}") for i in range(arity)]
