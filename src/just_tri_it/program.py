@@ -8,8 +8,9 @@ from just_tri_it.cached_llm import Model
 from just_tri_it.utils import (
     gen_and_extract_answer_with_retry,
     ContentAddressable,
-    gen_and_extract_code_with_retry, hack
+    gen_and_extract_code_with_retry
 )
+from just_tri_it.inverse_config import config
 
 
 EXECUTION_TIMEOUT_SECONDS = 8
@@ -153,10 +154,9 @@ Problem:
 {req.description}
         """
         valid_name = gen_and_extract_answer_with_retry(model, PROMPT, 3)
-        if hack(task="atcoder_abc393_e"):
-            valid_name = "maximum_gcd_list"
-        if hack(task="slavics_exam"):
-            valid_name = "no_or_yes_and_replaced_string"
+        flag, spec_name = config("return_spec")
+        if flag:
+            valid_name = spec_name
         valid_name = NamedReturnSignature._make_name_unique(valid_name, req.signature.params)
         return NamedReturnSignature(req.signature.name,
                                     req.signature.params,
@@ -214,7 +214,7 @@ class Program(ContentAddressable):
         """
         outcomes = []
         never_fails = True
-        if hack(task = ["atcoder_abc388_c", "atcoder_abc391_f", "atcoder_abc397_f", "leetcode_3722", "leetcode_3720", "leetcode_3714", "leetcode_3717", "atcoder_abc388_d", "atcoder_abc400_e", "atcoder_abc388_f", "atcoder_abc387_c", "atcoder_abc392_g", "leetcode_3674", "leetcode_3725"]):
+        if config("only_timeout")[0]:
             timeout_num = 0
             from just_tri_it.executor import Timeout
             for test in tests:

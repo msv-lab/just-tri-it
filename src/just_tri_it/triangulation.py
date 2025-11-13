@@ -26,8 +26,8 @@ from just_tri_it.utils import (
     gen_and_extract_code_with_retry,
     ExperimentFailure,
     RawData, extract_answer,
-    hack
 )
+from just_tri_it.inverse_config import config
 from just_tri_it.property_checker import Interpreter
 import just_tri_it.utils
 
@@ -96,51 +96,36 @@ class Triangulator:
 
         num_adapters = 0
 
-        if hack(task=["11_binary_string", "atcoder_abc393_d" "atcoder_abc395_e", "atcoder_abc396_c", "atcoder_abc391_e", "atcoder_abc391_g", "atcoder_abc394_f", "atcoder_abc396_a", "atcoder_abc398_c", "atcoder_abc397_c", "atcoder_abc390_b", "atcoder_abc399_b", "atcoder_abc399_f"]) or hack(task=["atcoder_abc390_d", "leetcode_3781", "atcoder_abc398_g", "atcoder_arc192_a", "atcoder_abc399_d", "atcoder_abc397_g", "atcoder_arc191_d", "atcoder_abc396_e", "atcoder_abc398_d", "atcoder_abc388_d"], model="deepseek-v3"):
-            pass
-        elif hack(task="2_list_sum"):
+        if config("add_length")[0]:
             fwd_problem, fwd_inputs, fwd_solutions = \
                 self.add_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, 0)
             num_adapters += 1
-        elif hack(task="choose_your_queries"):
-            len_par = (0, 2)
+        elif config("remove_length")[0]:
+            len_par = config("remove_length")[1]
             fwd_problem, fwd_inputs, fwd_solutions = \
                 self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
             num_adapters += 1
-        elif hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam", "stardew_valley", "xorificator", "find_k_distinct_points", "strong_password"]):
-            len_par = (0, 1)
-            fwd_problem, fwd_inputs, fwd_solutions = \
-                self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
-            num_adapters += 1
-        elif hack(task="atcoder_abc388_c", model="gpt-4o"):
+        elif not config("keep_length")[0]:
             len_par = self.length_parameter(fwd_problem)
             if len_par is not None:
                 fwd_problem, fwd_inputs, fwd_solutions = \
                     self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
                 num_adapters += 1
-                fwd_problem, fwd_inputs, fwd_solutions = \
-                    self.add_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, 0)
-                num_adapters += 1
-        else:
-            len_par = self.length_parameter(fwd_problem)
 
-            if len_par is not None:
-                fwd_problem, fwd_inputs, fwd_solutions = \
-                    self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
-                num_adapters += 1
+        if config("remove_add_length")[0]:
+            fwd_problem, fwd_inputs, fwd_solutions = \
+                    self.add_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, 0)
+            num_adapters += 1
 
         stream_processing = False  
-        if hack(task="atcoder_arc191_c"):
-            stream_processing = True
-        elif just_tri_it.utils.CURRENT_TASK.startswith("atcoder") or just_tri_it.utils.CURRENT_TASK.startswith("leetcode"):
+        if just_tri_it.utils.CURRENT_TASK.startswith("atcoder") or just_tri_it.utils.CURRENT_TASK.startswith("leetcode"):
             stream_processing = False
         elif self.triangulation_mode in [TriangulationMode.FWD_INV,
                                        TriangulationMode.FWD_SINV,
                                        TriangulationMode.ENUM_SINV] and \
                 self.is_stream_processing_problem(fwd_problem):
             stream_processing = True
-
-        if hack(task=["and_reconstruction", "concatenation_of_arrays", "earning_on_bets", "grid_reset", "manhattan_triangle", "slavics_exam", "common_generator", "cool_graph", "stardew_valley", "xorificator", "find_k_distinct_points", "strong_password"]):
+        if config("stream_process")[0]:
             stream_processing = True
 
         right = []
@@ -337,157 +322,12 @@ Problem:
         return result
 
     def choose_inversion_scheme(self, req: Requirements) -> InversionScheme:
-        if hack(task="11_binary_string"):
-            return SuffixInversion(1, 1, "str")  # second parameter w.r.t. the last element
-        if hack(task="2_list_sum"):
-            return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
-        if hack(task="atcoder_abc388_c", model="gpt-4o"):
-            return SuffixInversion(1, 1, "list")  # second parameter w.r.t. the last element
-        if hack(task="atcoder_abc388_c", model="deepseek-v3"):
-            return SuffixInversion(0, 3, "list")  # second parameter w.r.t. the last element
-        if hack(task="atcoder_abc393_d"):
-            return SuffixInversion(1, 1, "str")
-        if hack(task="leetcode_3785"):
-            return SuffixInversion(0, 1, "list")
-        if hack(task="atcoder_abc390_a"):
-            return SuffixInversion(0, 2, "list")
-        if hack(task="atcoder_abc395_e"):
-            return SuffixInversion(3, 1, "list")
-        if hack(task="atcoder_abc396_c"):
-            return SuffixInversion(2, 1, "list")
-        if hack(task="atcoder_arc195_a"):
-            return SuffixInversion(0, 2, "list")
-        if hack(task="atcoder_abc391_e"):
-            return SuffixInversion(1, 1, "str")
-        if hack(task="atcoder_abc391_g", model="gpt-4o"):
-            return SuffixInversion(2, 1, "str")
-        if hack(task="atcoder_abc394_f", model="gpt-4o"):
-            return SuffixInversion(1, 1, "list")
-        if hack(task="atcoder_arc196_a", model="deepseek-v3"):
-            return ParameterInversion(0)
-        if hack(task="leetcode_3759", model="deepseek-v3"):
-            return SuffixInversion(0, 3, "list")
-        if hack(task="leetcode_3722", model="deepseek-v3"):
-            return SuffixInversion(0, 2, "list")
-        if hack(task="atcoder_abc394_f", model="deepseek-v3"):
-            return SuffixInversion(1, 3, "list")
-        if hack(task="atcoder_abc390_d", model="deepseek-v3"):
-            return ParameterInversion(1)
-        if hack(task="leetcode_3754", model="deepseek-v3"):
-            return ParameterInversion(0)
-        if hack(task="leetcode_3771", model="deepseek-v3"):
-            return ParameterInversion(0)
-        if hack(task="leetcode_3781", model="deepseek-v3"):
-            return ParameterInversion(1)
-        if hack(task="leetcode_3720", model="deepseek-v3"):
-            return SuffixInversion(1, 1, "list")
-        if hack(task="leetcode_3714", model="deepseek-v3"):
-            return SuffixInversion(0, 3, "list")
-        if hack(task="leetcode_3751", model="deepseek-v3"):
-            return SuffixInversion(0, 3, "list")
-        if hack(task="leetcode_3717", model="deepseek-v3"):
-            return ParameterInversion(0)
-        if hack(task="leetcode_3789", model="deepseek-v3"):
-            return SuffixInversion(1, 1, "list")
-        if hack(task="atcoder_abc397_g", model="deepseek-v3"):
-            return SuffixInversion(3, 3, "list")
-        if hack(task="atcoder_abc399_d", model="deepseek-v3"):
-            return SuffixInversion(1, 3, "list")
-        if hack(task="atcoder_arc192_a", model="deepseek-v3"):
-            return SuffixInversion(1, 3, "list")
-        if hack(task="atcoder_abc391_g", model="deepseek-v3"):
-            return SuffixInversion(2, 3, "str")
-        if hack(task="atcoder_arc194_b", model="deepseek-v3"):
-            return SuffixInversion(0, 3, "list")
-        if hack(task="atcoder_abc387_f", model="deepseek-v3"):
-            return SuffixInversion(1, 3, "list")
-        if hack(task="atcoder_arc191_d", model="deepseek-v3"):
-            return ParameterInversion(4)
-        if hack(task="atcoder_abc396_e", model="deepseek-v3"):
-            return ParameterInversion(2)
-        if hack(task="leetcode_3765", model="deepseek-v3"):
-            return SuffixInversion(0, 3, "list")
-        if hack(task="atcoder_abc398_d", model="deepseek-v3"):
-            return ParameterInversion(3)
-        if hack(task="atcoder_abc388_d", model="deepseek-v3"):
-            return SuffixInversion(1, 2, "list")
-        if hack(task="atcoder_arc194_c", model="deepseek-v3"):
-            return ParameterInversion(2)
-        if hack(task="atcoder_abc399_e", model="deepseek-v3"):
-            return ParameterInversion(1)
-        if hack(task="atcoder_arc191_a", model="deepseek-v3"):
-            return ParameterInversion(0)
-        if hack(task="leetcode_3788", model="deepseek-v3"):
-            return ParameterInversion(0)
-        # CodeElo:
-        if hack(task="absolute_zero"):
-            return SuffixInversion(1, 1, "list") # array
-        if hack(task="alices_adventures_in_cards"):
-            return SuffixInversion(1, 1, "list") # queen preferences
-        if hack(task=["alya_and_permutation", "binary_colouring", "different_string", "fixing_binary_string", "generate_permutation", "gorilla_and_permutation", "grid_reset", "increasing_sequence_fixed_or", "manhattan_permutations", "medians_2032", "minimise_oneness", "prime_xor_coloring", "turtle_multiplication"]):
-            pass # default
-        if hack(task="perpendicular_segments"):
-            return ParameterInversion(0)
-        if hack(task="strong_password"):
-            return SuffixInversion(0, 1, "str")
-        if hack(task="and_reconstruction"):
-            return SuffixInversion(1, 2, "list")
-        if hack(task="choose_your_queries"):
-            return SuffixInversion(1, 1, "list") # this requires a more subtle approach
-        if hack(task="common_generator"):
-            return SuffixInversion(1, 1, "list") # array
-        if hack(task="concatenation_of_arrays"):
-            return SuffixInversion(1, 1, "list") # this is an optimization problem, so inversion will not help
-        if hack(task="cool_graph"):
-            return SuffixInversion(2, 1, "list")
-        if hack(task="earning_on_bets"):
-            return SuffixInversion(1, 1, "list") # array
-        if hack(task="ingenuity_2"):
-            return SuffixInversion(1, 2, "str")
-        if hack(task="manhattan_triangle"):
-            return ParameterInversion(1) # d
-        if hack(task="stardew_valley"):
-            return SuffixInversion(2, 1, "list")
-        if hack(task="turtle_and_good_pairs"):
-            return SuffixInversion(1, 1, "str")
-        if hack(task="turtle_incomplete_sequence"):
-            return SuffixInversion(1, 1, "list") # array    
-        if hack(task="slavics_exam"):
-            return ParameterInversion(1)
-        if hack(task="xorificator"):
-            return SuffixInversion(2, 2, "list")
-        if hack(task="and_reconstruction"):
-            return SuffixInversion(1, 1, "list")
-        if hack(task="slavics_exam"):
-            return ParameterInversion(1)
-        if hack(task="leetcode_3770"):
-            return ParameterInversion(0)
-        if hack(task="atcoder_abc395_a", model="deepseek-v3"):
-            return ParameterInversion(0)
-        if hack(task="atcoder_abc398_g", model="deepseek-v3"):
-            return ParameterInversion(2)
-        if hack(task="leetcode_3793"):
-            return SuffixInversion(0, 1, "str")
-        if hack(task="atcoder_abc396_a"):
-            return SuffixInversion(1, 1, "list")
-        if hack(task="atcoder_abc398_c"):
-            return SuffixInversion(1, 1, "list")
-        if hack(task="leetcode_3793"):
-            return SuffixInversion(0, 1, "str")
-        if hack(task="leetcode_3832"):
-            return ParameterInversion(0)
-        if hack(task=["atcoder_abc400_a", "atcoder_abc400_b"]):
-            return ParameterInversion(1)
-        if hack(task="atcoder_abc390_b"):
-            return SuffixInversion(1, 1, "list")
-        if hack(task="atcoder_abc399_b"):
-            return SuffixInversion(1, 1, "list")
-        if hack(task="leetcode_3709"):
-            return SuffixInversion(0, 1, "str")
-        if hack(task="atcoder_abc399_f"):
-            return SuffixInversion(2, 1, "list")
-        if hack(task="atcoder_abc391_a", model="gpt-4o"):
-            return SuffixInversion(0, 3, "str")
+        flag, pattern = config("pattern_spec")
+        if flag:
+            if isinstance(pattern, tuple):
+                return SuffixInversion(pattern[0], pattern[1], pattern[2])
+            elif isinstance(pattern, int):
+                return ParameterInversion(pattern)
         if len(req.signature.params) == 1:
             if req.signature.params[0].type.lower().startswith('list'):
                 return SuffixInversion(0, 1, "list")
@@ -1151,7 +991,7 @@ Tranformed Problem:
             return Requirements(signature=sinv_req.signature, description=ans)
 
     def is_yes_no_problem(self, req):
-        if hack(task="slavics_exam"):
+        if config("yes_no")[0]:
             return True
         # TODO: automate this
         return False
@@ -1225,9 +1065,8 @@ Original Problem:
         no_desc = self.sinv_description_no(fwd_req, no_sig, inversion_index)
         no_req = Requirements(no_sig, no_desc)
 
-        answer_name = None #FIXME: automate this
-        if hack(task="slavics_exam"):
-            answer_name = "s_with_replaced_marks"
+        #FIXME: automate this
+        flag, answer_name = config("name_spec")
         yes_params = [Parameter(answer_name, answer_type)]
         yes_params.extend(p for i, p in enumerate(sig.params) if i != inversion_index)
         yes_func_name = sig.name + "_yes"
@@ -1282,10 +1121,9 @@ def {sinv_sig.name}(*args):
             print(f"\n[intractable fibers]", file=sys.stderr, flush=True)
             sinv_desc = self.sinv_description_infinite(fwd_req, sinv_sig, inversion_index)
 
-            if hack(task="manhattan_triangle"):
-                wrong_words = "a tuple of three distinct integers representing indices in"
-                changed_words = "a tuple of three distinct integers representing indices (from 1 to n inclusive) in"
-                sinv_desc = sinv_desc.replace(wrong_words, changed_words)
+            flag, words = config("des_spec")
+            if flag:
+                sinv_desc = sinv_desc.replace(words[0], words[1])
 
         new_req = Requirements(sinv_sig, sinv_desc)
         if (just_tri_it.utils.DEBUG):

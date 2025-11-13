@@ -6,7 +6,8 @@ from just_tri_it.cached_llm import Independent
 from just_tri_it.executor import Executor, Success
 from just_tri_it.utils import extract_code
 from just_tri_it.program import Program, Requirements, Signature
-from just_tri_it.utils import extract_all_code, remove_duplicates, ExperimentFailure, hack, args_match_signature
+from just_tri_it.utils import extract_all_code, remove_duplicates, ExperimentFailure, args_match_signature
+from just_tri_it.inverse_config import config
 
 
 MINIMUM_NUM_INPUTS = 15
@@ -180,12 +181,11 @@ target_function(argument1, argument2, ...)
                 inputs = [ trans_to_list(executor, block.strip(), func_name) for block in blocks]
                 if not gen_large:
                     seq_bound = 20
-                    if hack(task="slavics_exam"):
-                        seq_bound = 3
+                    flag, bound_spec = config("bound_spec")
+                    if flag:
+                        seq_bound = bound_spec
                     inputs = [i for i in inputs if not value_is_too_large(i, 10000, seq_bound)]
-                if hack(task=["leetcode_3759", "leetcode_3793"]):
-                    inputs = range_checker(executor, model, req, inputs)
-                if gen_large:
+                if gen_large or config("enable_filter"):
                     inputs = range_checker(executor, model, req, inputs)
                 break
             except Exception as e:
@@ -210,8 +210,9 @@ target_function(argument1, argument2, ...)
         current_batch.extend(sample_and_extract_with_retry(PROMPT_BOUNDARY, ind_model, req.signature.name))
 
         current_batch = fix_and_filter_bad_inputs(current_batch, req.signature)
-        if hack(task="slavics_exam") and ['ba', 'a?'] in current_batch:
-            current_batch = [t for t in current_batch if t != ['ba', 'a?']]
+        flag, spec_in = config("in_spec")
+        if flag and spec_in in current_batch:
+            current_batch = [t for t in current_batch if t != spec_in]
 
         all_inputs.extend(current_batch)
         all_inputs = remove_duplicates(all_inputs)

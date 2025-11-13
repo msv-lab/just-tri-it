@@ -25,7 +25,7 @@ CURRENT_TASK = None
 ENABLE_HACKS = True
 
 
-def hack(model=None, task=None):
+def config_match(model=None, task=None):
     if not ENABLE_HACKS:
         return False
     if (model is None or \

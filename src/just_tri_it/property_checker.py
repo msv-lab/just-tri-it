@@ -17,10 +17,10 @@ from just_tri_it.logic import (
     FullAnswer, PartialAnswer,
     CartesianSquare
 )
-from just_tri_it.utils import hack
 import just_tri_it.utils
 from just_tri_it.input_generator import value_is_too_large
 from just_tri_it.program import EXECUTION_TIMEOUT_SECONDS
+from just_tri_it.inverse_config import config
 
 
 class Checker(ABC):
@@ -156,7 +156,7 @@ class Interpreter(Checker):
                         return False
                     if not isinstance(computed_domain, list):
                         computed_domain = [Demonic()]
-                    if hack(task="slavics_exam"):
+                    if config("small_filter"):
                         small_vals = []
                         for v in computed_domain:
                             if not value_is_too_large(v, 100, 3):
