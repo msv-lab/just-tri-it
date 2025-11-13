@@ -77,7 +77,7 @@ CONFIG_MAP = {
             "atcoder_abc394_f", "absolute_zero",
             "alices_adventures_in_cards", "choose_your_queries",
             "common_generator", "concatenation_of_arrays",
-            "earning_on_bets", "turtle_incomplete_sequence",
+            "turtle_incomplete_sequence",
             "and_reconstruction", "atcoder_abc396_a",
             "atcoder_abc398_c", "atcoder_abc390_b",
         ],
@@ -180,6 +180,11 @@ CONFIG_MAP = {
     },
     {
         "problems": ["and_reconstruction"],
+        "model": None,
+        "msg": (1, 2, "list")
+    },
+    {
+        "problems": ["earning_on_bets"],
         "model": None,
         "msg": (1, 2, "list")
     },
