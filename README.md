@@ -2,11 +2,24 @@
 
 This project aims to detect hallucinations in LLM-genarated code using semantic triangulation.
 
+Mechanized proofs: link here
+
+## Repository Layout
+
+- `src/`: Core library including our implementation of semantic triangulation and other methods used for comparison, as well as experiment scripts.
+- `proof/`: Proofs for semantic triangulation in Lean.
+- `datasets/`: Datasets used for experiment, including LiveCodeBench v6, CodeElo inexact problems and easy tasks for simple testing.
+- `results/`: Evaluation results and cache for LiveCodeBench and CodeElo.
+- Auxiliary Content:
+  - `scripts/`: Small cripts used for dataset processing, plotting, and evaluation of semantic entropy.
+  - `tests/`: Unit tests for our semantic triangulation implementation.
+  - `doc/`: Documents explaining how we preprocess the datasets to adapt to our framework and how to make a simple try on the evaluated methods.
+
 ## Preliminaries
 
 Set your 302.ai API key using the environment variable `AI302_API_KEY`.
 
-The project uses uv to manage dependencies.
+The project uses **uv** to manage dependencies.
 
 Run linter and type checker:
 
@@ -51,6 +64,7 @@ List of configurations:
 - `Postcondition`
 - `FWD_INV`
 - `FWD_SINV`
+- `ENUM_SINV`
 
 ### Experiments
 
@@ -62,24 +76,13 @@ To run LiveCodeBench v6, first decompress the dataset using:
     
 Then, to collect experimental results and save (append) into `data_dir`, execute
 
-    uv run experiment  --dataset datasets/lcb_part6.json --model gpt-4o --data data_dir
+    uv run experiment --dataset datasets/lcb_part6.json --model gpt-4o --data data_dir
 
 You can specify a specific task to run via the option `--only atcoder_abc387_b`.
 
 Then, to compute measures and generate plots, execute
 
     uv run analyze --data data_dir --report report_dir
-    
-## Extra options
-
-To execute generated progarms in isolated subprocesses, please create an environment for testing generated programs:
-
-    uv venv --no-project --seed --python 3.13 test_venv
-    source test_venv/bin/activate
-    pip install -r test_requirements.txt
-    deactivate
-    
-Adding the options `--test-venv test_venv/` to the above commands will run generated programs inside this environment.
 
 ## Reproducibility
 
@@ -90,21 +93,8 @@ just-tri-it provides the following options to manage LLM cache:
 - `--no-cache` to disable cache
 - `--replicate` to use only cache; fail in case of cache misses
 
-Any experiment should be reproducible if the following pieces of information are provided:
+To replicate our experiments, please unzip the corresponding cache in `/results`, and then:
+ - for LCB, add option `--cache-root PATH_TO_LCB_CACHE`
+ - for CodeElo, add option `--cache-root PATH_TO_CEl_CACHE`
 
-- A commit hash of this repository
-- A bash command to be executed from the root of this repository
 
-Additionally, to replicate the experiment, it is sufficient to provide:
-
-- The commit hash of your LLM cache
-
-Cache can be downloaded from
-
-    https://github.com/msv-lab/just-tri-it-cache-USER/archive/COMMIT.zip
-
-where `USER` can be `yihan`, `haotian`, `sijie`, `sergey`.
-
-## Experimental data
-
-Everything that is not trivially derivable from LLM cache, should be stored in https://github.com/msv-lab/just-tri-it-data

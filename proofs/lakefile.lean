@@ -5,7 +5,6 @@ package proofs
 
 @[default_target]
 lean_lib Proofs where
-  -- 你的四个证明文件都放在 Proofs/ 目录下
   srcDir := "."
 
 
