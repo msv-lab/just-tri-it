@@ -10,7 +10,7 @@ CONFIG_MAP = {
             "atcoder_abc394_f", "atcoder_abc396_a",
             "atcoder_abc398_c", "atcoder_abc397_c",
             "atcoder_abc390_b", "atcoder_abc399_b",
-            "atcoder_abc399_f"
+            "atcoder_abc399_f", "leetcode_3764"
         ],
         "model": None,
         "msg": None
