@@ -181,13 +181,6 @@ class CloseAI(OpenAICompatibleHTTPModel):
         super().__init__(base_url, api_key, model_name, temperature, alias, max_batch)
 
 
-class XMCP(OpenAICompatibleHTTPModel):
-    def __init__(self, model_name: str, temperature: float, alias: Optional[str] = None, max_batch: int = 1):
-        base_url = "https://llm.xmcp.ltd"
-        api_key = os.environ["XMCP_API_KEY"]
-        super().__init__(base_url, api_key, model_name, temperature, alias, max_batch)
-
-
 class Independent(Model):
     """Ensure that each call of sample returns an independent sequence"""
 

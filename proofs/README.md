@@ -1,6 +1,6 @@
 # README
 
-## 1. Install elan（Version Manager)
+## 1. Install elan(Version Manager)
 
 elan is a version manager for Lean.
 
@@ -25,7 +25,7 @@ Ensure that the version is ≥ 2.0.0.
 Navigate to the project directory (e.g., proofs):
 
 ```
-cd /mnt/g/Viberate/proofs
+cd proofs
 ```
 
 Since the lean-toolchain file already exists, running the following command will automatically install the Lean version corresponding to the toolchain:
@@ -40,19 +40,7 @@ Check whether lake version matches:
 lake --version
 ```
 
-## 3.Solve Network Issues (Optional)
-
-If Lean installation takes too long or encounters network issues, you can download the Lean binaries manually and decompress them:
-
-```
-wget -c https://releases.lean-lang.org/lean4/v4.22.0-rc4/lean-4.22.0-rc4-linux.tar.zst
-```
-
-```
-elan install 4.22.0-rc4
-```
-
-## 4. Build project
+## 3. Build project
 
 ```
 lake update
