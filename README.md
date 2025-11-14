@@ -2,12 +2,12 @@
 
 This project aims to detect hallucinations in LLM-genarated code using semantic triangulation.
 
-Mechanized proofs: link here
+Mechanized proofs: `proofs/SemanticTriangulation.lean`
 
 ## Repository Layout
 
 - `src/`: Core library including our implementation of semantic triangulation and other methods used for comparison, as well as experiment scripts.
-- `proof/`: Proofs for semantic triangulation in Lean.
+- `proofs/`: Proofs for semantic triangulation in Lean.
 - `datasets/`: Datasets used for experiment, including LiveCodeBench v6, CodeElo inexact problems and easy tasks for simple testing.
 - `results/`: Evaluation results and cache for LiveCodeBench and CodeElo.
 - Auxiliary Content:
