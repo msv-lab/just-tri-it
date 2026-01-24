@@ -4,7 +4,7 @@ LLM-generated code often contains bugs and vulnerabilities due to hallucinations
 
 <p align="center">
 <img src="./doc/elephant.png" alt="The parable of the blind men and an elephant" width="70%"/>
-</p>p
+</p>
 
 In our mathematical model of LLM hallucinations, we prove that such verification increases the probability that generated programs reflect accurate generalization rather than spurious statistical correlations. Details of the approach are discussed here:
 
