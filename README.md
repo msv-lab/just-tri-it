@@ -2,7 +2,9 @@
 
 LLM-generated code often contains bugs and vulnerabilities due to hallucinations. This is hard to fix in practice because expected behavior is rarely formally specified, hindering automatic verification. To alleviate this problem, JUST-TRI-IT implements __semantic triangulation__ that verifies cross-task solution consistency. Given a programming problem, JUST-TRI-IT first nontrivially transforms it while preserving an exact, verifiable mapping between solutions before and after transformation. In particular, it applies partial inversion, answer enumeration and problem decomposition. Then, it samples solutions to the original and transformed problems; their agreement increases confidence in correctness. This is because hallucinations rarely remain consistent under semantic transformations, as illustrated using the parable of the blind men and an elephant:
 
+<p align="center">
 <img src="./doc/elephant.png" alt="The parable of the blind men and an elephant" width="70%"/>
+</p>p
 
 In our mathematical model of LLM hallucinations, we prove that such verification increases the probability that generated programs reflect accurate generalization rather than spurious statistical correlations. Details of the approach are discussed here:
 
