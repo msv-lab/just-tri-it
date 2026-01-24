@@ -4,7 +4,7 @@ LLM-generated code often contains bugs and vulnerabilities due to hallucinations
 
 Just-tri-it nontrivially transforms a programming problem while preserving an exact, verifiable mapping between solutions before and after the transformation. In particular, it applies partial inversion, answer enumeration and decomposition to the original problem. Then, it samples solutions to both problems; their agreement increases the confidence in correctness. This is because hallucinations rarely remain consistent under semantic transformations, as illustrated using the parable of the blind men and an elephant:
 
-<img src="./doc/elephant.png" alt="The parable of the blind men and an elephant" width="100"/>
+<img src="./doc/elephant.png" alt="The parable of the blind men and an elephant" width="70%"/>
 
 Details of the approach are discussed here:
 
