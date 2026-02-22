@@ -1,12 +1,13 @@
 import os
 import sys
+import time
 import hashlib
 import json
 from pathlib import Path
 import math
 from collections import deque
 
-from typing import Iterator, List, Optional, Deque, TypeVar, Protocol, Union
+from typing import Iterator, List, Optional, Deque, TypeVar, Protocol, Union, Tuple
 from abc import ABC, abstractmethod
 
 from urllib.request import Request, urlopen
@@ -45,6 +46,14 @@ class Model(ABC):
     def sample(self, prompt: str, batch: int = 1) -> BatchedIterator[str]:
         raise NotImplementedError()
 
+    @abstractmethod
+    def total_query_time(self) -> float:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def total_token_count(self) -> Tuple[int, int]:
+        raise NotImplementedError()
+    
 
 class ReplicationCacheMiss(Exception):
     "Raised when a cache miss occurs in replication mode"
@@ -127,6 +136,8 @@ class OpenAICompatibleHTTPModel(_BaseBufferedModel):
         super().__init__(model_name, temperature, alias, max_batch)
         self.base_url = base_url
         self.api_key = api_key
+        self._total_token_count = (0,0)
+        self._total_query_time = 0.0
 
     def _post_json(self, path: str, payload: dict) -> dict:
         url = f"{self.base_url}{path}"
@@ -155,9 +166,113 @@ class OpenAICompatibleHTTPModel(_BaseBufferedModel):
             "n": n,
             "messages": [{"role": "user", "content": prompt}]
         }
+        start = time.perf_counter()
         resp = self._post_json("/chat/completions", payload)
         print("$", end="", file=sys.stderr, flush=True)
+        self._total_query_time += time.perf_counter() - start
+        current_prompt_tokens, current_completion_tokens = self._total_token_count
+        self._total_token_count = (resp["usage"]["prompt_tokens"] + current_prompt_tokens,
+                                   resp["usage"]["completion_tokens"] + current_completion_tokens)
         return [str(c["message"]["content"]) for c in resp["choices"]]
+
+    def total_query_time(self) -> float:
+        return self._total_query_time
+
+    def total_token_count(self) -> Tuple[int, int]:
+        return self._total_token_count
+
+
+class Ollama(_BaseBufferedModel):
+    """
+    Expected endpoint: POST {base_url}/api/chat
+    Body:
+      {
+        "model": "<model_id>",
+        "messages": [{"role": "user", "content": "<prompt>"}],
+        "stream": true|false,
+        "options": {"temperature": <float>}   # optional
+      }
+
+    Streaming response: newline-delimited JSON objects, with final line having:
+      done=true and token counts (prompt_eval_count, eval_count)
+    """
+
+    def __init__(
+        self,
+        model_name: str,
+        temperature: float,
+        base_url: str = "http://localhost:11434",        
+        alias: Optional[str] = None,
+        max_batch: int = 1,
+    ):
+        super().__init__(model_name, temperature, alias, max_batch)
+        self.base_url = base_url.rstrip("/")
+        self._total_token_count = (0, 0)  # (prompt, completion)
+        self._total_query_time = 0.0
+
+    def _post_json_stream(self, path: str, payload: dict):
+        url = f"{self.base_url}{path}"
+        data = json.dumps(payload).encode("utf-8")
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "Application",
+        }
+        req = Request(url, data=data, headers=headers, method="POST")
+        try:
+            return urlopen(req)  # caller must close
+        except HTTPError as e:
+            body = e.read().decode("utf-8", errors="ignore")
+            raise RuntimeError(f"HTTPError {e.code} {e.reason}: {body}") from e
+        except URLError as e:
+            raise RuntimeError(f"URLError: {e.reason}") from e
+
+    def _query(self, prompt: str, n: int) -> List[str]:
+        # Ollama /api/chat returns a single completion; emulate n by repeating calls.
+        out: List[str] = []
+        for _ in range(n):
+            payload = {
+                "model": self.model_name,
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": True,
+                "options": {"temperature": self.temperature},
+            }
+
+            start = time.perf_counter()
+            parts: List[str] = []
+            prompt_tokens = completion_tokens = 0
+
+            resp = self._post_json_stream("/api/chat", payload)
+            try:
+                for raw_line in resp:
+                    line = raw_line.decode("utf-8", errors="ignore").strip()
+                    if not line:
+                        continue
+                    obj = json.loads(line)
+
+                    msg = obj.get("message") or {}
+                    parts.append(msg.get("content", ""))
+
+                    if obj.get("done") is True:
+                        prompt_tokens = int(obj.get("prompt_eval_count") or 0)
+                        completion_tokens = int(obj.get("eval_count") or 0)
+                        break
+            finally:
+                resp.close()
+
+            self._total_query_time += time.perf_counter() - start
+            cur_p, cur_c = self._total_token_count
+            self._total_token_count = (cur_p + prompt_tokens, cur_c + completion_tokens)
+
+            out.append("".join(parts))
+
+        return out
+
+    def total_query_time(self) -> float:
+        return self._total_query_time
+
+    def total_token_count(self) -> Tuple[int, int]:
+        return self._total_token_count
 
 
 class FireworksAI(OpenAICompatibleHTTPModel):
@@ -208,6 +323,12 @@ class Independent(Model):
             self._inner_iters[pid] = self._inner.sample(prompt, batch)
         self._inner_iters[pid].set_batch_size(batch)
         return self._inner_iters[pid]
+
+    def total_query_time(self) -> float:
+        return self._inner.total_query_time()
+
+    def total_token_count(self) -> Tuple[int, int]:
+        return self._inner.total_token_count()
 
 
 class _BaseBatchedCache(Model):
@@ -260,7 +381,7 @@ class _BaseBatchedCache(Model):
     def sample(self, prompt: str, batch: int = 1) -> BatchedIterator[str]:
         i = _BaseBatchedCache._SharedCacheIterator(self, prompt)
         i.set_batch_size(batch)
-        return i
+        return i    
 
 
 class Repeatable(_BaseBatchedCache):
@@ -282,6 +403,12 @@ class Repeatable(_BaseBatchedCache):
         if isinstance(self._inner, Repeatable) or isinstance(self._inner, Persistent):
             return self._inner.sample(prompt, batch)
         return super().sample(prompt, batch)
+
+    def total_query_time(self) -> float:
+        return self._inner.total_query_time()
+
+    def total_token_count(self) -> Tuple[int, int]:
+        return self._inner.total_token_count()
     
 
 class Persistent(_BaseBatchedCache):
@@ -298,6 +425,7 @@ class Persistent(_BaseBatchedCache):
         super().__init__(inner, replication)
         if isinstance(cache_root, str):
             cache_root = Path(cache_root)
+        cache_root = cache_root.expanduser()
         self.cache_root = cache_root
         self.replication = replication
 
@@ -323,3 +451,10 @@ class Persistent(_BaseBatchedCache):
             return []
         md_files = list(path.glob('*.md'))
         return sorted(md_files, key=lambda f: int(f.stem))
+
+    def total_query_time(self) -> float:
+        return self._inner.total_query_time()
+
+    def total_token_count(self) -> Tuple[int, int]:
+        return self._inner.total_token_count()
+    
