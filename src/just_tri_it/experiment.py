@@ -6,6 +6,7 @@ from pathlib import Path
 from itertools import islice
 import jsonlines
 from typing import List, Any, Dict
+import time
 
 from just_tri_it.cached_llm import Repeatable, AI302
 from just_tri_it.executor import SubprocessExecutor, PersistentWorkerExecutor
@@ -245,6 +246,10 @@ def execute_experiment(model, executor, dataset, db, data_dir, correctness_only=
                 "outcome": ...,  # "selected" or "abstained"
                 "selected": ...,  # if selected
                 "witnesses": ...,  # if selected
+                "in_tokens": ...,
+                "out_tokens": ...,    
+                "time": ...,
+                "non_llm_time": ...,
                 "raw_data": ...
             },
         ]
@@ -290,6 +295,11 @@ def execute_experiment(model, executor, dataset, db, data_dir, correctness_only=
             selector_ids = all_selectors.keys()
 
             for selector_id in selector_ids:
+
+                start = time.perf_counter()
+                model_start = model.total_query_time()
+                start_in_tokens, start_out_tokens = model.total_token_count()
+                
                 if selector_id in SKIP_SELECTORS:
                     continue
 
@@ -312,7 +322,16 @@ def execute_experiment(model, executor, dataset, db, data_dir, correctness_only=
                             selector_data["witnesses"] = witnesses
                         case Abstained():
                             selector_data["outcome"] = "abstained"
+
+                    end_in_tokens, end_out_tokens = model.total_token_count()
+
+                    selector_data["in_tokens"] = end_in_tokens - start_in_tokens
+                    selector_data["out_tokens"] = end_out_tokens - start_out_tokens
+                    selector_data["time"] = time.perf_counter() - start
+                    selector_data["non_llm_time"] = selector_data["time"] - (model.total_query_time() - model_start)
+                            
                     obj["selectors"].append(selector_data)
+                    
                 except ExperimentFailure as e:
                     print(f"\n{selector_id} failed on {task.id} with {e}", file=sys.stderr, flush=True)
     

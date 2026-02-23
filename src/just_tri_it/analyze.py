@@ -655,6 +655,35 @@ def nonbijective_postconditions(db) -> Tuple[float, float]:
             non_bijective_causing_wrong_selection_count / total_selection_count)
 
 
+def time_cost(db) -> Dict[str, Tuple[int, int]]:
+    all_times: Dict[str, list] = {}
+    all_costs: Dict[str, list] = {}
+
+    for obj in db.objects:
+        for selector_data in obj["selectors"]:
+            if "time" not in selector_data:
+                continue
+            sid = selector_data["id"]
+            all_times.setdefault(sid, [])
+            all_costs.setdefault(sid, [])
+
+            non_llm_time = selector_data["non_llm_time"]
+            tokens = selector_data["in_tokens"] + selector_data["out_tokens"]
+
+            all_times[sid].append(non_llm_time)
+            all_costs[sid].append(tokens)
+
+    # average per selector, then return (avg_time, avg_tokens)
+    out: Dict[str, Tuple[int, int]] = {}
+    for sid in all_times:
+        avg_time = sum(all_times[sid]) / len(all_times[sid]) if all_times[sid] else 0
+        avg_tokens = sum(all_costs[sid]) / len(all_costs[sid]) if all_costs[sid] else 0
+        out[sid] = (int(round(avg_time)), int(round(avg_tokens)))
+
+    return out
+
+
+
 def main():
     args = parse_args()
     data_dir = Path(args.data)
@@ -677,6 +706,13 @@ def main():
     with (report_dir / "noobijective_postconditions.txt").open("w", encoding="utf-8") as f:
         f.write(str(a) + "\n")
         f.write(str(b))
+
+    time_cost_data = time_cost(db)
+    with (report_dir / "time_cost.csv").open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["method", "time", "tokens"])
+        for method, (time_val, tokens_val) in time_cost_data.items():
+            w.writerow([method, time_val, tokens_val])
 
     method_to_measures, decisions, abs_prop = abstention_measures(db)
 
