@@ -38,11 +38,11 @@ def value_is_too_large(data, int_bound, seq_bound):
     return False
 
 def trans_to_list(executor, call_string, func_name):
-    sig = Signature("f", [], "list")
+    sig = Signature("__f", [], "list")
     to_list_code = f"""
 def {func_name}(*args):
    return list(args)
-def f():
+def __f():
    return {call_string}
     """
     to_list = Program(sig, to_list_code)
