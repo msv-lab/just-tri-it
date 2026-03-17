@@ -570,14 +570,21 @@ def add_just_tri_it(db):
         selection_by_method["FWD_SINV"] = None
         selection_by_method["ENUM_SINV"] = None
         selection_by_method["MajorityVote"] = None        
+
+        just_tri_it_did_not_crash = 0
         
         for selector_data in obj["selectors"]:
             method = selector_data["id"]
+            if method in ["FWD_INV", "FWD_SINV", "ENUM_SINV"]:
+                just_tri_it_did_not_crash += 1
             if method in selection_by_method:
                 if selector_data["outcome"] == "selected":
                     selection_by_method[method] = selector_data["selected"]
                 else:
                     assert selector_data["outcome"] == "abstained"
+
+        if just_tri_it_did_not_crash < 3:
+            continue
 
         just_tri_it_selection = None
         if selection_by_method["ENUM_SINV"] is not None:

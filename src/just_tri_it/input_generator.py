@@ -124,7 +124,7 @@ confirming to the parameter types. Do not write any comments. Present
 each input as a function call inside a separate Markdown code block:
 
 ```
-target_function(argument1, argument2, ...)
+{req.signature.name}(argument1, argument2, ...)
 ```
 
 # **Function Signature**:
@@ -143,7 +143,7 @@ parameter types. Do not write any comments. Present each input as a
 function call inside a separate Markdown code block:
 
 ```
-target_function(argument1, argument2, ...)
+{req.signature.name}(argument1, argument2, ...)
 ```
 
 # **Function Signature**:
