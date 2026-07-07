@@ -322,6 +322,13 @@ class CloseAI(OpenAICompatibleHTTPModel):
         super().__init__(base_url, api_key, model_name, temperature, alias, max_batch, max_retries, retry_delay)
 
 
+class Yunwu(OpenAICompatibleHTTPModel):
+    def __init__(self, model_name: str, temperature: float, alias: Optional[str] = None, max_batch: int = 1, max_retries: int = 3, retry_delay: float = 5.0):
+        base_url = "https://yunwu.ai/v1"
+        api_key = os.environ["YUNWU_API_KEY"]
+        super().__init__(base_url, api_key, model_name, temperature, alias, max_batch, max_retries, retry_delay)
+
+
 class XMCP(OpenAICompatibleHTTPModel):
     def __init__(self, model_name: str, temperature: float, alias: Optional[str] = None, max_batch: int = 1, max_retries: int = 3, retry_delay: float = 5.0):
         base_url = "https://llm.xmcp.ltd"
