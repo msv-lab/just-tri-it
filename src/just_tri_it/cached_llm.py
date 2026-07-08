@@ -172,6 +172,20 @@ class OpenAICompatibleHTTPModel(_BaseBufferedModel):
                 time.sleep(self.retry_delay)
         raise last_error
 
+    @staticmethod
+    def _extract_contents(resp: dict) -> List[str]:
+        """Raise if the response is not a well-formed completion"""
+        choices = resp["choices"]
+        if not choices:
+            raise KeyError("empty choices")
+        contents = []
+        for c in choices:
+            content = c["message"]["content"]
+            if content is None:
+                raise KeyError("null message content")
+            contents.append(str(content))
+        return contents
+
     def _query(self, prompt: str, n: int) -> List[str]:
         payload = {
             "model": self.model_name,
@@ -179,14 +193,27 @@ class OpenAICompatibleHTTPModel(_BaseBufferedModel):
             "n": n,
             "messages": [{"role": "user", "content": prompt}]
         }
-        start = time.perf_counter()
-        resp = self._post_json("/chat/completions", payload)
-        print("$", end="", file=sys.stderr, flush=True)
-        self._total_query_time += time.perf_counter() - start
-        current_prompt_tokens, current_completion_tokens = self._total_token_count
-        self._total_token_count = (resp["usage"]["prompt_tokens"] + current_prompt_tokens,
-                                   resp["usage"]["completion_tokens"] + current_completion_tokens)
-        return [str(c["message"]["content"]) for c in resp["choices"]]
+        last_error = None
+        for attempt in range(self.max_retries):
+            start = time.perf_counter()
+            resp = self._post_json("/chat/completions", payload)
+            self._total_query_time += time.perf_counter() - start
+            try:
+                contents = self._extract_contents(resp)
+            except (KeyError, TypeError, IndexError) as e:
+                body = json.dumps(resp)[:2000]
+                last_error = RuntimeError(f"Malformed response ({e}): {body}")
+                last_error.__cause__ = e
+                if attempt < self.max_retries - 1:
+                    time.sleep(self.retry_delay)
+                continue
+            print("$", end="", file=sys.stderr, flush=True)
+            usage = resp.get("usage") or {}
+            current_prompt_tokens, current_completion_tokens = self._total_token_count
+            self._total_token_count = ((usage.get("prompt_tokens") or 0) + current_prompt_tokens,
+                                       (usage.get("completion_tokens") or 0) + current_completion_tokens)
+            return contents
+        raise last_error
 
     def total_query_time(self) -> float:
         return self._total_query_time
