@@ -586,13 +586,16 @@ def add_just_tri_it(db):
         if just_tri_it_did_not_crash < 3:
             continue
 
-        just_tri_it_selection = None
-        if selection_by_method["ENUM_SINV"] is not None:
-            just_tri_it_selection = selection_by_method["ENUM_SINV"]
-        elif selection_by_method["FWD_SINV"] is not None:
-            just_tri_it_selection = selection_by_method["FWD_SINV"]
-        elif selection_by_method["FWD_INV"] is not None:
-            just_tri_it_selection = selection_by_method["FWD_INV"]
+        # contradiction rule: if two triangulation modes select *different*
+        # programs, abstain (cross-mode consistency); otherwise take the
+        # unique selection if any
+        selections = [selection_by_method[m]
+                      for m in ["ENUM_SINV", "FWD_SINV", "FWD_INV"]
+                      if selection_by_method[m] is not None]
+        if len(set(selections)) == 1:
+            just_tri_it_selection = selections[0]
+        else:
+            just_tri_it_selection = None
         just_tri_it_data = {
             "id": "JUST-TRI-IT",
             "witnesses": []

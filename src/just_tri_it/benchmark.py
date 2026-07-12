@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 from itertools import islice
 
-from just_tri_it.cached_llm import AI302, XMCP
+from just_tri_it.cached_llm import AI302, XMCP, Yunwu
 from just_tri_it.executor import SubprocessExecutor, PersistentWorkerExecutor
 from just_tri_it.dataset import load_dataset
 from just_tri_it.code_generator import Vanilla
@@ -116,7 +116,7 @@ def main():
     model = {
         "gpt-4o": AI302("gpt-4o", 1.0, max_batch=50),
         "deepseek-v3": AI302("deepseek-v3.1", 1.0, alias="deepseek-v3"),
-        "gemini-2.5-flash": AI302("gemini-2.5-flash", 1.0)
+        "gemini-2.5-flash": Yunwu("gemini-2.5-flash", 1.0)
     }[args.model]
     # model = XMCP(args.model, 1.0)
 

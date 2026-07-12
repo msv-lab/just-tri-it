@@ -156,7 +156,9 @@ class OpenAICompatibleHTTPModel(_BaseBufferedModel):
         for attempt in range(self.max_retries):
             req = Request(url, data=data, headers=headers, method="POST")
             try:
-                with urlopen(req) as resp:
+                # timeout: a stalled connection must become a retryable error,
+                # not an indefinite hang
+                with urlopen(req, timeout=600) as resp:
                     raw = resp.read()
                     return json.loads(raw.decode("utf-8"))
             except HTTPError as e:
@@ -167,6 +169,9 @@ class OpenAICompatibleHTTPModel(_BaseBufferedModel):
                     raise last_error from e
             except URLError as e:
                 last_error = RuntimeError(f"URLError: {e.reason}")
+                last_error.__cause__ = e
+            except TimeoutError as e:
+                last_error = RuntimeError("request timed out after 600s")
                 last_error.__cause__ = e
             if attempt < self.max_retries - 1:
                 time.sleep(self.retry_delay)

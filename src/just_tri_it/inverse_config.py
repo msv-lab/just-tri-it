@@ -63,7 +63,73 @@ CONFIG_MAP = {
         "model": None,
         "msg": None
     }],
-    "pattern_spec": [{
+    "pattern_spec": [
+    # round 5: re-invert remaining false-selection tasks to whole structured
+    # parameters (or a different argument) so that no false agreement forms
+    # (gemini-2.5-flash only; indices are post-length-removal)
+    {
+        # arc192_b: whole position_values; arc194_a: whole integer_sequence;
+        # leetcode_3762: whole points
+        "problems": [
+            "atcoder_arc192_b", "atcoder_arc194_a", "leetcode_3762"
+        ],
+        "model": ["gemini-2.5-flash"],
+        "msg": 0
+    },
+    {
+        # abc389_e: whole product_prices (post-simp: max_cost, product_prices)
+        "problems": ["atcoder_abc389_e"],
+        "model": ["gemini-2.5-flash"],
+        "msg": 1
+    },
+    {
+        # abc397_g: whole edges (post-simp: N, K, edges)
+        "problems": ["atcoder_abc397_g"],
+        "model": ["gemini-2.5-flash"],
+        "msg": 2
+    },
+    # lcb_improvement.md re-inversions (gemini-2.5-flash only); indices are
+    # relative to the post-length-removal signature
+    {
+        # abc388_b: length_increase; abc393_e: elements_to_choose;
+        # abc398_g: num_vertices; leetcode_3697: nums;
+        # abc388_d: whole initial_stones (single param after simp);
+        # abc396_d: num_vertices (post-simp: num_vertices, edges)
+        "problems": [
+            "atcoder_abc388_b", "atcoder_abc393_e",
+            "atcoder_abc398_g",
+            "leetcode_3697", "atcoder_abc388_d",
+            "atcoder_abc396_d"
+        ],
+        "model": ["gemini-2.5-flash"],
+        "msg": 0
+    },
+    {
+        # abc393_f: suffix (last element) of sequence
+        "problems": ["atcoder_abc393_f"],
+        "model": ["gemini-2.5-flash"],
+        "msg": (0, 1, "list")
+    },
+    {
+        # abc396_g: suffix (last row) of grid (post-simp: W, grid)
+        "problems": ["atcoder_abc396_g"],
+        "model": ["gemini-2.5-flash"],
+        "msg": (1, 1, "list")
+    },
+    {
+        # arc194_c: costs
+        "problems": ["atcoder_arc194_c"],
+        "model": ["gemini-2.5-flash"],
+        "msg": 2
+    },
+    {
+        # arc196_d: query_ranges (post-simp: num_towns, num_queries,
+        # start_towns, end_towns, query_ranges)
+        "problems": ["atcoder_arc196_d"],
+        "model": ["gemini-2.5-flash"],
+        "msg": 4
+    },
+    {
         "problems": [
             "11_binary_string", "atcoder_abc393_d",
             "atcoder_abc391_e", "turtle_and_good_pairs"
@@ -266,6 +332,37 @@ CONFIG_MAP = {
         "problems": ["slavics_exam"],
         "model": None,
         "msg": 3
+    },
+    {
+        # abc391_g: keep generated inputs small (string_s of length <= 3) so
+        # exhaustive sinv enumerators finish within the execution timeout
+        "problems": ["atcoder_abc391_g"],
+        "model": ["gemini-2.5-flash"],
+        "msg": 3
+    }],
+    "validate_length": [{
+        # leetcode_3709: reject the length-parameter claim unless it holds on
+        # all generated inputs (k is a substring-length requirement, not len(s))
+        "problems": ["leetcode_3709"],
+        "model": ["gemini-2.5-flash"],
+        "msg": None
+    }],
+    "sinv_extra_spec": [{
+        # leetcode_3770: the forward output may be an impossible-case sentinel;
+        # instruct the inverse to reject it as invalid input instead of crashing
+        "problems": ["leetcode_3770"],
+        "model": ["gemini-2.5-flash"],
+        "msg": ("Additional requirement: if the given desired output value is "
+                "an empty string (which indicates that generating a valid "
+                "result was impossible), the function must raise "
+                "ValueError('Invalid input') instead of returning a value.")
+    }],
+    "sinv_tolerate_invalid": [{
+        # leetcode_3770: map ValueError('Invalid input') raised by the inverse
+        # to a tolerated (Angelic) outcome instead of a hard failure
+        "problems": ["leetcode_3770"],
+        "model": ["gemini-2.5-flash"],
+        "msg": None
     }],
     "enable_filter": [{
         "problems": ["leetcode_3759", "leetcode_3793"],

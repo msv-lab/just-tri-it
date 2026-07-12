@@ -178,7 +178,20 @@ target_function(argument1, argument2, ...)
             try:
                 response = next(ind_model.sample(prompt, num_retry))
                 blocks = extract_all_code(response)
-                inputs = [ trans_to_list(executor, block.strip(), func_name) for block in blocks]
+                # a single pathological candidate (conversion error/timeout)
+                # must not poison the whole sampling round
+                inputs = []
+                bad_blocks = 0
+                for block in blocks:
+                    try:
+                        inputs.append(trans_to_list(executor, block.strip(), func_name))
+                    except Exception:
+                        bad_blocks += 1
+                if bad_blocks:
+                    print(f"[skipped {bad_blocks} unconvertible input candidates]",
+                          file=sys.stderr, flush=True)
+                if not inputs and blocks:
+                    raise ExperimentFailure("all input candidates failed conversion")
                 if not gen_large:
                     seq_bound = 20
                     flag, bound_spec = config("bound_spec")
@@ -216,10 +229,10 @@ target_function(argument1, argument2, ...)
 
         all_inputs.extend(current_batch)
         all_inputs = remove_duplicates(all_inputs)
-        
+
     if len(all_inputs) < min_inputs:
         raise ExperimentFailure(f"only generated {len(all_inputs)} unique inputs after {max_attempts} attempts (target: {min_inputs})")
-     
+
     if len(all_inputs) > max_inputs:
         return random.sample(all_inputs, max_inputs)
 

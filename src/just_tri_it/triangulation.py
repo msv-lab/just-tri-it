@@ -107,6 +107,12 @@ class Triangulator:
             num_adapters += 1
         elif not config("keep_length")[0]:
             len_par = self.length_parameter(fwd_problem)
+            if len_par is not None and config("validate_length")[0]:
+                len_i, seq_i = len_par
+                if not all(isinstance(args[seq_i], (list, str)) and args[len_i] == len(args[seq_i])
+                           for args in fwd_inputs):
+                    print(f"\n[length-parameter claim rejected by input validation]", file=sys.stderr, flush=True)
+                    len_par = None
             if len_par is not None:
                 fwd_problem, fwd_inputs, fwd_solutions = \
                     self.remove_length_parameter_adapter(fwd_problem, fwd_inputs, fwd_solutions, len_par[0], len_par[1])
@@ -1125,6 +1131,10 @@ def {sinv_sig.name}(*args):
             if flag:
                 sinv_desc = sinv_desc.replace(words[0], words[1])
 
+        flag, extra = config("sinv_extra_spec")
+        if flag:
+            sinv_desc = sinv_desc + "\n\n" + extra
+
         new_req = Requirements(sinv_sig, sinv_desc)
         if (just_tri_it.utils.DEBUG):
             print(new_req.get_content(), file=sys.stderr, flush=True)
@@ -1266,14 +1276,22 @@ def {new_sig.name}(el):
         p = Func(Side.LEFT)
         q = Func(Side.RIGHT)
 
+        def q_fiber():
+            fiber = q([TolerateInvalid([p(args)])] + remaining_args)
+            if config("sinv_tolerate_invalid")[0]:
+                # the inverse may reject impossible/sentinel outputs with
+                # ValueError('Invalid input'); tolerate it (Angelic, capped)
+                return FullOrPartial([TolerateInvalid([fiber])])
+            return FullOrPartial([fiber])
+
         if bijective:
             return ForAll(args, Side.LEFT,
-                          And(Member([inv_arg, FullOrPartial([q([TolerateInvalid([p(args)])] + remaining_args)])]),
-                              ForAll(arg_prime, FullOrPartial([q([TolerateInvalid([p(args)])] + remaining_args)]),
+                          And(Member([inv_arg, q_fiber()]),
+                              ForAll(arg_prime, q_fiber(),
                                      Equals([p(args), TimeoutGuard(p)(args_with_prime)]))))
         else:
             return ForAll(args, Side.LEFT,
-                          Member([inv_arg, FullOrPartial([q([TolerateInvalid([p(args)])] + remaining_args)])]))
+                          Member([inv_arg, q_fiber()]))
 
     def make_enum_sinv(self, req, inversion_index, bijective=True):
         arity = len(req.signature.params)
@@ -1349,7 +1367,13 @@ def {new_sig.name}(el):
             case ParameterInversion(i):
                 inv_problem = self.transform_inv(fwd_problem, i)
                 inv_solutions = self.sample_solutions(inv_problem, self.num_right_samples)
-                inv_inputs = self.generate_inputs(inv_problem)
+                try:
+                    inv_inputs = self.generate_inputs(inv_problem)
+                except ExperimentFailure as e:
+                    # no verifiable inputs for the inverse problem: abstain
+                    # instead of crashing the whole selector
+                    print(f"\n[inverse input generation failed; abstaining: {e}]", file=sys.stderr, flush=True)
+                    return fwd_problem, fwd_inputs, [], inv_solutions
                 fwd_inv_prop = self.make_fwd_inv(fwd_problem, i)
                 triangulated_fwd_solutions = \
                     self.triangulate(fwd_inv_prop,
@@ -1363,7 +1387,11 @@ def {new_sig.name}(el):
                     self.split_arg_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l, type)
                 inv_problem = self.transform_inv(split_arg_problem, i+1)
                 inv_solutions = self.sample_solutions(inv_problem, self.num_right_samples)
-                inv_inputs = self.generate_inputs(inv_problem)
+                try:
+                    inv_inputs = self.generate_inputs(inv_problem)
+                except ExperimentFailure as e:
+                    print(f"\n[inverse input generation failed; abstaining: {e}]", file=sys.stderr, flush=True)
+                    return fwd_problem, fwd_inputs, [], inv_solutions
                 fwd_inv_prop = self.make_fwd_inv(split_arg_problem, i+1)
                 triangulated_split_arg_solutions = \
                     self.triangulate(fwd_inv_prop,
@@ -1414,12 +1442,20 @@ def {new_sig.name}(el):
         match self.choose_inversion_scheme(fwd_problem):
             case ParameterInversion(i):
                 enum_problem = self.transform_enum(fwd_problem)
-                
-                enum_inputs = self.generate_inputs(enum_problem)
+
+                try:
+                    enum_inputs = self.generate_inputs(enum_problem)
+                except ExperimentFailure as e:
+                    print(f"\n[enum input generation failed; abstaining: {e}]", file=sys.stderr, flush=True)
+                    return enum_problem, [], [], []
                 enum_solutions = self.sample_solutions(enum_problem, self.num_left_samples, time_predicates=True)
-                
+
                 sinv_problem = self.transform_sinv(fwd_problem, i)
-                sinv_inputs = self.generate_inputs(sinv_problem)
+                try:
+                    sinv_inputs = self.generate_inputs(sinv_problem)
+                except ExperimentFailure as e:
+                    print(f"\n[sinv input generation failed; abstaining: {e}]", file=sys.stderr, flush=True)
+                    return enum_problem, [], [], []
                 sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples, time_predicates=True)
                 
                 enum_sinv_prop = self.make_enum_sinv(fwd_problem, i)
@@ -1437,14 +1473,22 @@ def {new_sig.name}(el):
                     self.split_arg_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l, type)
 
                 enum_problem = self.transform_enum(fwd_problem)
-                enum_inputs = self.generate_inputs(enum_problem)
+                try:
+                    enum_inputs = self.generate_inputs(enum_problem)
+                except ExperimentFailure as e:
+                    print(f"\n[enum input generation failed; abstaining: {e}]", file=sys.stderr, flush=True)
+                    return enum_problem, [], [], []
                 enum_solutions = self.sample_solutions(enum_problem, self.num_left_samples, time_predicates=True)
-                
+
                 _, split_arg_enum_inputs, split_arg_enum_solutions = \
                     self.split_arg_adapter(enum_problem, enum_inputs, enum_solutions, i, l, type)
-                
+
                 sinv_problem = self.transform_sinv(split_arg_problem, i+1)
-                sinv_inputs = self.generate_inputs(sinv_problem)
+                try:
+                    sinv_inputs = self.generate_inputs(sinv_problem)
+                except ExperimentFailure as e:
+                    print(f"\n[sinv input generation failed; abstaining: {e}]", file=sys.stderr, flush=True)
+                    return enum_problem, [], [], []
                 sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples, time_predicates=True)
 
                 enum_sinv_prop = self.make_enum_sinv(split_arg_problem, i+1)
