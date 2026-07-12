@@ -123,6 +123,31 @@ CONFIG_MAP = {
         "msg": 2
     },
     {
+        # medians_2032 (codeelo, stream single-query (n, k)): invert n —
+        # n is pinned down by the output partition, unlike k whose weak
+        # fiber let a single wrong pair survive
+        "problems": ["medians_2032"],
+        "model": ["gemini-2.5-flash"],
+        "msg": 0
+    },
+    {
+        # common_generator (codeelo, stream single-query (x, arr)): invert the
+        # whole array instead of its suffix so the weak wrong pair (2/30, on a
+        # 0-correct task) cannot form
+        "problems": ["common_generator"],
+        "model": ["gemini-2.5-flash"],
+        "msg": 1
+    },
+    {
+        # turtle_and_good_pairs (codeelo, stream single-query (n, s)): invert
+        # the whole string so FWD_SINV's canonical-output false agreement
+        # (29/30 wrong on a 10/30 task) cannot form, letting ENUM_SINV's
+        # correct selection stand
+        "problems": ["turtle_and_good_pairs"],
+        "model": ["gemini-2.5-flash"],
+        "msg": 1
+    },
+    {
         # arc196_d: query_ranges (post-simp: num_towns, num_queries,
         # start_towns, end_towns, query_ranges)
         "problems": ["atcoder_arc196_d"],
@@ -340,6 +365,17 @@ CONFIG_MAP = {
         "model": ["gemini-2.5-flash"],
         "msg": 3
     }],
+    "nonbijective_sinv": [{
+        # inexact problems whose output depends on the inverted argument:
+        # fiber elements legitimately produce different valid outputs, so the
+        # bijective conjunct (exact output equality across the fiber) can
+        # never hold; use the Member-only FWD-SINV property (existing
+        # bijective=False code path)
+        "problems": ["earning_on_bets", "slavics_exam", "gorilla_and_permutation",
+                     "xorificator"],
+        "model": ["gemini-2.5-flash"],
+        "msg": None
+    }],
     "validate_length": [{
         # leetcode_3709: reject the length-parameter claim unless it holds on
         # all generated inputs (k is a substring-length requirement, not len(s))
@@ -375,8 +411,11 @@ CONFIG_MAP = {
         "msg": ['ba', 'a?']
     }],
     "member_spec": [{
+        # scoped away from gemini-2.5-flash: treating the (0,0,0) no-solution
+        # sentinel as a member of an empty fiber caused a verified false
+        # selection there (all 30 samples wrong, ENUM_SINV agreement 9/30)
         "problems": ["manhattan_triangle"],
-        "model": None,
+        "model": ["deepseek-v3", "gpt-4o"],
         "msg": None
     }],
     "small_filter": [{

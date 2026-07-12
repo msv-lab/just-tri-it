@@ -186,9 +186,10 @@ def gen_and_extract_answer_with_retry(model, prompt, num_retry=3, accepted_case_
                     ans = extract_answer(sample)
             else:
                 ans = extract_answer(sample)
-            if len(accepted_case_insensitive_answers) > 0 and\
-               ans.lower() not in accepted_case_insensitive_answers:
-                raise Exception("invalid answer")
+            if len(accepted_case_insensitive_answers) > 0:
+                ans = ans.strip()
+                if ans.lower() not in accepted_case_insensitive_answers:
+                    raise Exception("invalid answer")
             break
         except Exception as e:
             if attempt == num_retry - 1:

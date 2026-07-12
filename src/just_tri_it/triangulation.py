@@ -1406,23 +1406,27 @@ def {new_sig.name}(el):
 
     def fwd_sinv(self, fwd_problem, fwd_inputs, fwd_solutions):
 
+        # inexact problems whose output depends on the inverted argument
+        # cannot satisfy the bijective conjunct; use the Member-only property
+        bijective = not config("nonbijective_sinv")[0]
+
         match self.choose_inversion_scheme(fwd_problem):
             case ParameterInversion(i):
                 sinv_problem = self.transform_sinv(fwd_problem, i)
                 sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples)
-                
-                fwd_sinv_prop = self.make_fwd_sinv(fwd_problem, i)
+
+                fwd_sinv_prop = self.make_fwd_sinv(fwd_problem, i, bijective=bijective)
                 triangulated_fwd_solutions = \
                     self.triangulate(fwd_sinv_prop,
                                      fwd_inputs,
                                      fwd_solutions,
                                      [],
                                      sinv_solutions,
-                                     bijective=True)
+                                     bijective=bijective)
             case SuffixInversion(i, l, type):
                 split_arg_problem, split_arg_inputs, split_arg_solutions = \
                     self.split_arg_adapter(fwd_problem, fwd_inputs, fwd_solutions, i, l, type)
-                fwd_sinv_prop = self.make_fwd_sinv(split_arg_problem, i+1)
+                fwd_sinv_prop = self.make_fwd_sinv(split_arg_problem, i+1, bijective=bijective)
                 sinv_problem = self.transform_sinv(split_arg_problem, i+1)
                 sinv_solutions = self.sample_solutions(sinv_problem, self.num_right_samples)
                 triangulated_split_arg_solutions = \
@@ -1431,7 +1435,7 @@ def {new_sig.name}(el):
                                      split_arg_solutions,
                                      [],
                                      sinv_solutions,
-                                     bijective=True)
+                                     bijective=bijective)
                 triangulated_fwd_solutions = self.unwrap(triangulated_split_arg_solutions)
 
         return fwd_problem, fwd_inputs, triangulated_fwd_solutions, sinv_solutions

@@ -384,7 +384,7 @@ def _member_func(x, y):
                 return True
         return False
 
-    if config("member_spec") and x == (0, 0, 0) and y == FullAnswer([]):
+    if config("member_spec")[0] and x == (0, 0, 0) and y == FullAnswer([]):
         #FIXME: automate this by infering proper optional types
         return True
 
