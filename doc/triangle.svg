@@ -1,0 +1,187 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 780" font-family="Georgia, 'Times New Roman', serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 1 1 L 11 6 L 1 11 Z" fill="#3B3128"/>
+    </marker>
+    <marker id="arrow-brass" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 1 1 L 11 6 L 1 11 Z" fill="#C9A227"/>
+    </marker>
+    <!-- kraft case folder -->
+    <g id="folder" stroke="#3B3128" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M -88 -58 L -30 -58 Q -22 -58 -22 -50 L -22 -42 L -88 -42 Z" fill="#CDBA98"/>
+      <rect x="-90" y="-45" width="180" height="110" rx="10" fill="#CDBA98"/>
+      <rect x="-70" y="-30" width="140" height="82" rx="5" fill="#FAF5EA" stroke-width="3.5"/>
+      <g fill="none" stroke-width="3.5">
+        <path d="M -52 -8 L -10 -8"/>
+        <path d="M 0 -8 L 40 -8"/>
+        <path d="M -52 12 L 14 12"/>
+        <path d="M 24 12 L 52 12"/>
+        <path d="M -52 32 L -22 32"/>
+      </g>
+    </g>
+  </defs>
+
+  <!-- ===== edges of the triangle ===== -->
+  <!-- d -> p : sampling -->
+  <path d="M 530 190 L 305 390" fill="none" stroke="#3B3128" stroke-width="4" marker-end="url(#arrow)"/>
+  <!-- d -> d' : dissociative transformation -->
+  <path d="M 668 178 L 742 300" fill="none" stroke="#C9A227" stroke-width="6" marker-end="url(#arrow-brass)"/>
+  <!-- d' -> q : sampling -->
+  <path d="M 838 408 L 905 505" fill="none" stroke="#3B3128" stroke-width="4" marker-end="url(#arrow)"/>
+  <!-- p - q : agreement check -->
+  <path d="M 330 645 L 545 645" fill="none" stroke="#3B3128" stroke-width="4"/>
+  <path d="M 655 645 L 865 645" fill="none" stroke="#3B3128" stroke-width="4"/>
+
+  <!-- ===== vertex: original problem d ===== -->
+  <use href="#folder" x="600" y="140"/>
+  <text x="600" y="52" text-anchor="middle" font-size="30" fill="#3B3128">problem <tspan font-style="italic">d</tspan> under investigation</text>
+
+  <!-- ===== vertex: transformed problem d' ===== -->
+  <g transform="translate(790,355) scale(0.85) rotate(3)">
+    <use href="#folder"/>
+    <!-- brass triangle stamp marking the transformed case -->
+    <path d="M 44 20 L 60 44 L 28 44 Z" fill="#C9A227" stroke="#3B3128" stroke-width="3.5" stroke-linejoin="round"/>
+  </g>
+  <text x="880" y="298" text-anchor="start" font-size="26" fill="#3B3128">unexpected line</text>
+  <text x="880" y="330" text-anchor="start" font-size="26" fill="#3B3128">of inquiry:</text>
+  <text x="880" y="362" text-anchor="start" font-size="26" font-style="italic" fill="#3B3128">d&#8242; = &#964;(d)</text>
+
+  <!-- ===== edge labels ===== -->
+  <text x="390" y="252" text-anchor="end" font-size="24" fill="#3B3128">sample</text>
+  <text x="390" y="282" text-anchor="end" font-size="24" font-style="italic" fill="#3B3128">p &#8764; LLM(&#183; | d)</text>
+
+  <text x="728" y="215" text-anchor="start" font-size="24" fill="#3B3128">dissociative</text>
+  <text x="742" y="245" text-anchor="start" font-size="24" fill="#3B3128">transformation <tspan font-style="italic">&#964;</tspan></text>
+
+  <text x="852" y="470" text-anchor="end" font-size="24" fill="#3B3128">sample</text>
+  <text x="852" y="500" text-anchor="end" font-size="24" font-style="italic" fill="#3B3128">q &#8764; LLM(&#183; | d&#8242;)</text>
+
+  <!-- ===== the innocent suspect: program p ===== -->
+  <svg x="202" y="375" width="96" height="270" viewBox="880 70 210 590">
+    <g transform="translate(980,648)" stroke="#3B3128" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+      <ellipse cx="-26" cy="-8" rx="22" ry="9" fill="#141C30"/>
+      <ellipse cx="26" cy="-8" rx="22" ry="9" fill="#141C30"/>
+      <rect x="-38" y="-198" width="33" height="188" fill="#141C30"/>
+      <rect x="5" y="-198" width="33" height="188" fill="#141C30"/>
+      <path d="M -64,-402 C -72,-330 -76,-250 -72,-195 L 72,-195 C 76,-250 72,-330 64,-402 C 34,-418 -34,-418 -64,-402 Z" fill="#33523E"/>
+      <path d="M -22,-402 L 0,-320 L 22,-402 C 8,-410 -8,-410 -22,-402 Z" fill="#FAF5EA"/>
+      <path d="M -7,-398 L 0,-326 L 7,-398 Z" fill="#7A2E35"/>
+      <rect x="-14" y="-424" width="28" height="30" fill="#EAC9A3"/>
+      <path d="M -58,-404 C -84,-370 -88,-300 -66,-236 C -59,-216 -40,-212 -33,-226 C -49,-258 -55,-330 -47,-398 Z" fill="#33523E"/>
+      <path d="M 58,-404 C 84,-370 88,-300 66,-236 C 59,-216 40,-212 33,-226 C 49,-258 55,-330 47,-398 Z" fill="#33523E"/>
+      <rect x="-48" y="-272" width="96" height="80" rx="6" fill="#FAF5EA"/>
+      <path d="M 0,-258 L 22,-212 L -22,-212 Z" fill="#C9A227"/>
+      <circle cx="-28" cy="-190" r="11" fill="#EAC9A3"/>
+      <circle cx="28" cy="-190" r="11" fill="#EAC9A3"/>
+      <circle cx="-37" cy="-448" r="7" fill="#D9AF85"/>
+      <circle cx="37" cy="-448" r="7" fill="#D9AF85"/>
+      <ellipse cx="0" cy="-452" rx="38" ry="44" fill="#EAC9A3"/>
+      <path d="M -36.2,-458 A 38 44 0 0 1 36.2,-458 L 34.5,-446 L 29.5,-444 L 29,-456 C 27.5,-464 25,-470 20.5,-474.5 C 14.5,-478 10,-476 5.5,-474 C 1,-472.5 -3,-473.5 -7,-476 C -9.5,-477.5 -11.5,-478 -13.5,-477.5 L -15.5,-473.5 C -21,-474.5 -26,-468.5 -29,-461.5 C -29.8,-456 -30,-450 -29.5,-445.5 L -34.5,-444 L -35.8,-452 C -36,-454 -36.2,-456 -36.2,-458 Z" fill="#3B3128"/>
+      <path d="M -14.5,-476.5 C -16.5,-480.5 -18,-484 -18.5,-487.5" fill="none" stroke="#EAC9A3" stroke-width="3"/>
+      <circle cx="-13" cy="-452" r="3.4" fill="#3B3128" stroke="none"/>
+      <circle cx="13" cy="-452" r="3.4" fill="#3B3128" stroke="none"/>
+      <path d="M -20,-464 C -16,-467 -8,-467 -5,-465" fill="none"/>
+      <path d="M 5,-465 C 8,-467 16,-467 20,-464" fill="none"/>
+      <path d="M 0,-446 C 3,-441 3,-437 -1,-435" fill="none"/>
+      <path d="M -9,-420 C -4,-416 4,-416 9,-420" fill="none"/>
+    </g>
+  </svg>
+  <text x="250" y="690" text-anchor="middle" font-size="26" fill="#3B3128">innocent suspect: program <tspan font-style="italic">p</tspan></text>
+
+  <!-- ===== the reliable witness: solution q of d' ===== -->
+  <svg x="866" y="352" width="180" height="307" viewBox="60 20 440 750">
+    <g transform="translate(22,0)" stroke="#3B3128" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+      <g>
+        <path d="M 252 690 L 294 690 L 294 726 Q 294 738 280 738 L 254 738 Q 242 738 242 726 L 242 702 Q 242 692 252 690 Z" fill="#141C30"/>
+        <path d="M 306 690 L 348 690 L 348 702 Q 358 704 358 716 L 358 726 Q 358 738 346 738 L 320 738 Q 306 738 306 726 Z" fill="#141C30"/>
+      </g>
+      <g>
+        <path d="M 262 432 L 338 432 C 350 520 366 616 374 700 L 226 700 C 234 616 250 520 262 432 Z" fill="#33523E"/>
+        <path d="M 288 450 C 284 530 278 610 272 688" fill="none" stroke-width="3"/>
+        <path d="M 312 450 C 316 530 322 610 328 688" fill="none" stroke-width="3"/>
+      </g>
+      <path d="M 287 200 L 313 200 L 313 240 L 287 240 Z" fill="#D9AF85"/>
+      <g>
+        <path d="M 278 254 C 258 254 242 260 240 272 L 249 362 C 251 402 259 428 265 436 L 335 436 C 341 428 349 402 351 362 L 360 272 C 358 260 342 254 322 254 Z" fill="#33523E"/>
+        <path d="M 277 256 L 323 256 L 313 314 L 300 330 L 287 314 Z" fill="#FAF5EA"/>
+        <path d="M 291 254 L 309 254 L 305 266 L 309 316 L 300 332 L 291 316 L 295 266 Z" fill="#7A2E35"/>
+        <path d="M 280 226 Q 280 220 287 220 L 313 220 Q 320 220 320 226 L 320 244 L 306 252 L 300 246 L 294 252 L 280 244 Z" fill="#FAF5EA"/>
+        <circle cx="300" cy="356" r="5" fill="#C9A227" stroke-width="3"/>
+        <circle cx="300" cy="382" r="5" fill="#C9A227" stroke-width="3"/>
+        <circle cx="300" cy="408" r="5" fill="#C9A227" stroke-width="3"/>
+        <path d="M 333 176 C 346 214 350 248 342 280" fill="none" stroke-width="2.5"/>
+        <path d="M 340 272 L 350 290 L 330 290 Z" fill="#C9A227" stroke-width="3"/>
+      </g>
+      <circle cx="300" cy="90" r="26" fill="#CDBA98"/>
+      <g>
+        <ellipse cx="252" cy="164" rx="9" ry="12" fill="#D9AF85" stroke-width="3"/>
+        <ellipse cx="348" cy="164" rx="9" ry="12" fill="#D9AF85" stroke-width="3"/>
+        <ellipse cx="300" cy="158" rx="48" ry="56" fill="#EAC9A3"/>
+        <path d="M 253 156 C 250 112 272 100 300 100 C 328 100 350 112 347 156 C 347 130 330 122 300 122 C 270 122 253 130 253 156 Z" fill="#CDBA98"/>
+        <path d="M 284 103 Q 281 112 280 122" fill="none" stroke-width="3"/>
+        <path d="M 268 142 Q 278 137 288 141" fill="none" stroke-width="3"/>
+        <path d="M 312 141 Q 322 137 332 142" fill="none" stroke-width="3"/>
+        <circle cx="279" cy="163" r="15" fill="#FAF5EA" stroke-width="3.5"/>
+        <circle cx="321" cy="163" r="15" fill="#FAF5EA" stroke-width="3.5"/>
+        <path d="M 293 158 Q 300 151 307 158" fill="none" stroke-width="3.5"/>
+        <circle cx="280" cy="163" r="4" fill="#3B3128" stroke="none"/>
+        <circle cx="320" cy="163" r="4" fill="#3B3128" stroke="none"/>
+        <path d="M 302 172 Q 307 181 299 184" fill="none" stroke-width="3"/>
+        <path d="M 291 197 Q 300 201 309 197" fill="none" stroke-width="3"/>
+      </g>
+      <path d="M 252 258 C 218 264 202 290 200 318 L 195 470 L 233 472 L 239 320 C 241 298 249 284 258 282 Z" fill="#FAF5EA"/>
+      <g>
+        <path d="M 100 424 C 140 402 182 398 210 412 C 238 398 280 402 320 424 L 320 530 C 282 512 240 508 210 520 C 180 508 138 512 100 530 Z" fill="#1F2A44"/>
+        <path d="M 111 432 C 148 414 184 411 210 421 L 210 511 C 184 503 148 506 111 521 Z" fill="#FAF5EA" stroke-width="3.5"/>
+        <path d="M 309 432 C 272 414 236 411 210 421 L 210 511 C 236 503 272 506 309 521 Z" fill="#FAF5EA" stroke-width="3.5"/>
+        <g fill="none" stroke-width="3">
+          <path d="M 120 444 l 4 5 l 7 -10"/>
+          <path d="M 139 442 q 9 -3 18 -1 q 9 2 18 0"/>
+          <path d="M 120 463 l 4 5 l 7 -10"/>
+          <path d="M 139 461 q 9 -3 18 -1 q 9 2 18 0"/>
+          <path d="M 120 482 l 4 5 l 7 -10"/>
+          <path d="M 139 480 q 9 -3 18 -1 q 9 2 18 0"/>
+          <path d="M 120 500 l 4 5 l 7 -10"/>
+          <path d="M 139 499 q 9 -3 18 -1 q 9 2 18 0"/>
+        </g>
+        <g fill="none" stroke-width="3">
+          <path d="M 224 442 l 4 5 l 7 -10"/>
+          <path d="M 243 441 q 9 -2 18 0 q 9 2 18 1"/>
+          <path d="M 224 461 l 4 5 l 7 -10"/>
+          <path d="M 243 460 q 9 -2 18 0 q 9 2 18 1"/>
+          <path d="M 224 480 l 4 5 l 7 -10"/>
+          <path d="M 243 479 q 9 -2 18 0 q 9 2 18 1"/>
+          <path d="M 224 499 l 4 5 l 7 -10"/>
+          <path d="M 243 498 q 9 -2 18 0 q 9 2 18 1"/>
+        </g>
+        <g fill="#EAC9A3" stroke-width="3">
+          <rect x="216" y="494" width="12" height="22" rx="6"/>
+          <rect x="231" y="496" width="12" height="22" rx="6"/>
+          <rect x="246" y="498" width="12" height="22" rx="6"/>
+        </g>
+      </g>
+      <g>
+        <path d="M 366 266 L 416 300 A 15 15 0 0 1 400 324 L 350 290 A 15 15 0 0 1 366 266 Z" fill="#FAF5EA"/>
+        <path d="M 395 311 L 403 199 A 13 13 0 0 1 429 201 L 421 313 A 13 13 0 0 1 395 311 Z" fill="#FAF5EA"/>
+        <rect x="401" y="186" width="30" height="16" rx="4" fill="#FAF5EA"/>
+        <rect x="407" y="104" width="13" height="56" rx="6.5" fill="#EAC9A3" stroke-width="3.5"/>
+        <rect x="398" y="150" width="36" height="38" rx="13" fill="#EAC9A3"/>
+        <path d="M 413 186 L 413 168" fill="none" stroke-width="3"/>
+        <path d="M 423 186 L 423 168" fill="none" stroke-width="3"/>
+      </g>
+    </g>
+  </svg>
+  <text x="956" y="690" text-anchor="middle" font-size="26" fill="#3B3128">reliable witness: <tspan font-style="italic">q</tspan></text>
+
+  <!-- ===== the agreement lens: hyperproperty phi ===== -->
+  <g transform="translate(600,645)">
+    <!-- triangular magnifying lens (Reuleaux-ish) -->
+    <path d="M -7 -42 Q 0 -46 7 -42 Q 24 -30 34 -8 Q 42 10 36 22 Q 31 32 16 34 Q 0 37 -16 34 Q -31 32 -36 22 Q -42 10 -34 -8 Q -24 -30 -7 -42 Z"
+          fill="#FAF5EA" stroke="#C9A227" stroke-width="9"/>
+    <path d="M -7 -42 Q 0 -46 7 -42 Q 24 -30 34 -8 Q 42 10 36 22 Q 31 32 16 34 Q 0 37 -16 34 Q -31 32 -36 22 Q -42 10 -34 -8 Q -24 -30 -7 -42 Z"
+          fill="none" stroke="#3B3128" stroke-width="3.5" stroke-linejoin="round"/>
+    <!-- green check of agreement -->
+    <path d="M -14 -4 L -4 10 L 16 -18" fill="none" stroke="#33523E" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="600" y="730" text-anchor="middle" font-size="26" fill="#3B3128">agreement check: hyperproperty <tspan font-style="italic">&#966;(p, q)</tspan></text>
+</svg>

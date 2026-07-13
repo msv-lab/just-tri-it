@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 70 1120 650" font-family="Georgia, 'Times New Roman', serif">
+  <defs>
+    <!-- ============ THE CLONE SUSPECT (feet at y=0, centered on x=0) ============ -->
+    <g id="clone" stroke="#3B3128" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+      <!-- shoes -->
+      <ellipse cx="-32" cy="-9" rx="27" ry="11" fill="#141C30"/>
+      <ellipse cx="32" cy="-9" rx="27" ry="11" fill="#141C30"/>
+      <!-- trouser legs -->
+      <rect x="-42" y="-115" width="34" height="103" fill="#141C30"/>
+      <rect x="8" y="-115" width="34" height="103" fill="#141C30"/>
+      <!-- trench coat body (hunched shoulders) -->
+      <path d="M -86,-398 C -100,-330 -104,-170 -96,-85 L 96,-85 C 104,-170 100,-330 86,-398 C 52,-424 -52,-424 -86,-398 Z" fill="#7A2E35"/>
+      <!-- coat flap line + buttons -->
+      <path d="M 10,-170 C 11,-140 12,-115 12,-92" fill="none"/>
+      <circle cx="-14" cy="-155" r="5" fill="#C9A227"/>
+      <circle cx="-14" cy="-120" r="5" fill="#C9A227"/>
+      <!-- belt -->
+      <rect x="-102" y="-198" width="204" height="26" rx="6" fill="#7A2E35"/>
+      <rect x="-15" y="-195" width="30" height="20" rx="3" fill="#C9A227"/>
+      <!-- neck -->
+      <rect x="-16" y="-430" width="32" height="36" fill="#EAC9A3"/>
+      <!-- collar lapels (quiet triangles) -->
+      <path d="M -42,-410 L -12,-396 L -38,-366 Z" fill="#7A2E35"/>
+      <path d="M 42,-410 L 12,-396 L 38,-366 Z" fill="#7A2E35"/>
+      <!-- sleeves (bent in, holding card) -->
+      <path d="M -76,-400 C -112,-372 -122,-300 -92,-250 C -80,-231 -56,-229 -48,-244 C -68,-262 -78,-330 -64,-394 Z" fill="#7A2E35"/>
+      <path d="M 76,-400 C 112,-372 122,-300 92,-250 C 80,-231 56,-229 48,-244 C 68,-262 78,-330 64,-394 Z" fill="#7A2E35"/>
+      <!-- the alibi card -->
+      <rect x="-58" y="-302" width="116" height="84" rx="6" fill="#FAF5EA"/>
+      <!-- identical scribbled alibi -->
+      <g fill="none" stroke-width="4">
+        <path d="M -40,-282 L -12,-282"/>
+        <path d="M -2,-282 L 30,-282"/>
+        <path d="M -40,-263 L 8,-263"/>
+        <path d="M 18,-263 L 40,-263"/>
+        <path d="M -40,-244 L -20,-244"/>
+        <path d="M -10,-244 L 14,-244"/>
+      </g>
+      <!-- hands gripping the card -->
+      <circle cx="-36" cy="-216" r="13" fill="#EAC9A3"/>
+      <circle cx="36" cy="-216" r="13" fill="#EAC9A3"/>
+      <!-- ears -->
+      <circle cx="-42" cy="-452" r="8" fill="#D9AF85"/>
+      <circle cx="42" cy="-452" r="8" fill="#D9AF85"/>
+      <!-- head -->
+      <ellipse cx="0" cy="-458" rx="43" ry="47" fill="#EAC9A3"/>
+      <!-- flat cap -->
+      <path d="M -47,-486 C -47,-526 47,-526 47,-486 C 18,-497 -18,-497 -47,-486 Z" fill="#CDBA98"/>
+      <path d="M -47,-486 C -18,-475 18,-475 47,-486 C 18,-496 -18,-496 -47,-486 Z" fill="#CDBA98"/>
+      <circle cx="0" cy="-516" r="4" fill="#CDBA98"/>
+      <!-- shifty sideways-glancing eyes -->
+      <ellipse cx="-15" cy="-456" rx="9.5" ry="6.5" fill="#FAF5EA"/>
+      <ellipse cx="17" cy="-456" rx="9.5" ry="6.5" fill="#FAF5EA"/>
+      <circle cx="-21" cy="-456" r="3.4" fill="#3B3128" stroke="none"/>
+      <circle cx="11" cy="-456" r="3.4" fill="#3B3128" stroke="none"/>
+      <!-- suspicious brows -->
+      <path d="M -25,-470 L -8,-467" fill="none"/>
+      <path d="M 9,-468 L 26,-472" fill="none"/>
+      <!-- nose -->
+      <path d="M 1,-450 C 5,-444 5,-439 -1,-437" fill="none"/>
+      <!-- uneasy mouth, pulled to the glance side -->
+      <path d="M -16,-422 C -8,-426 0,-426 6,-422" fill="none"/>
+    </g>
+  </defs>
+
+  <!-- ============ THE LINEUP ============ -->
+  <use href="#clone" id="suspect-1" transform="translate(190,648)"/>
+  <use href="#clone" id="suspect-2" transform="translate(455,648) scale(1.05)"/>
+  <use href="#clone" id="suspect-3" transform="translate(720,648) scale(0.96)"/>
+
+  <!-- stubble for suspect 2 -->
+  <g transform="translate(455,648) scale(1.05)" fill="#3B3128" stroke="none">
+    <circle cx="-16" cy="-421" r="1.8"/>
+    <circle cx="-9" cy="-417" r="1.8"/>
+    <circle cx="-1" cy="-415" r="1.8"/>
+    <circle cx="8" cy="-417" r="1.8"/>
+    <circle cx="16" cy="-421" r="1.8"/>
+    <circle cx="-21" cy="-427" r="1.8"/>
+    <circle cx="21" cy="-427" r="1.8"/>
+  </g>
+
+  <!-- ============ THE INNOCENT (suspect 4) ============ -->
+  <g id="suspect-4" transform="translate(980,648)" stroke="#3B3128" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+    <!-- shoes -->
+    <ellipse cx="-26" cy="-8" rx="22" ry="9" fill="#141C30"/>
+    <ellipse cx="26" cy="-8" rx="22" ry="9" fill="#141C30"/>
+    <!-- trousers -->
+    <rect x="-38" y="-198" width="33" height="188" fill="#141C30"/>
+    <rect x="5" y="-198" width="33" height="188" fill="#141C30"/>
+    <!-- jacket, upright square shoulders -->
+    <path d="M -64,-402 C -72,-330 -76,-250 -72,-195 L 72,-195 C 76,-250 72,-330 64,-402 C 34,-418 -34,-418 -64,-402 Z" fill="#33523E"/>
+    <!-- cream shirt V -->
+    <path d="M -22,-402 L 0,-320 L 22,-402 C 8,-410 -8,-410 -22,-402 Z" fill="#FAF5EA"/>
+    <!-- neat tie -->
+    <path d="M -7,-398 L 0,-326 L 7,-398 Z" fill="#7A2E35"/>
+    <!-- neck -->
+    <rect x="-14" y="-424" width="28" height="30" fill="#EAC9A3"/>
+    <!-- sleeves, calm, hands folded in front -->
+    <path d="M -58,-404 C -84,-370 -88,-300 -66,-236 C -59,-216 -40,-212 -33,-226 C -49,-258 -55,-330 -47,-398 Z" fill="#33523E"/>
+    <path d="M 58,-404 C 84,-370 88,-300 66,-236 C 59,-216 40,-212 33,-226 C 49,-258 55,-330 47,-398 Z" fill="#33523E"/>
+    <!-- his card: one clean brass triangle -->
+    <rect x="-48" y="-272" width="96" height="80" rx="6" fill="#FAF5EA"/>
+    <path d="M 0,-258 L 22,-212 L -22,-212 Z" fill="#C9A227"/>
+    <!-- hands -->
+    <circle cx="-28" cy="-190" r="11" fill="#EAC9A3"/>
+    <circle cx="28" cy="-190" r="11" fill="#EAC9A3"/>
+    <!-- ears -->
+    <circle cx="-37" cy="-448" r="7" fill="#D9AF85"/>
+    <circle cx="37" cy="-448" r="7" fill="#D9AF85"/>
+    <!-- head -->
+    <ellipse cx="0" cy="-452" rx="38" ry="44" fill="#EAC9A3"/>
+    <!-- neat side-parted hair: hugs skull, scalloped hairline, sideburn tabs -->
+    <path d="M -36.2,-458 A 38 44 0 0 1 36.2,-458 L 34.5,-446 L 29.5,-444 L 29,-456 C 27.5,-464 25,-470 20.5,-474.5 C 14.5,-478 10,-476 5.5,-474 C 1,-472.5 -3,-473.5 -7,-476 C -9.5,-477.5 -11.5,-478 -13.5,-477.5 L -15.5,-473.5 C -21,-474.5 -26,-468.5 -29,-461.5 C -29.8,-456 -30,-450 -29.5,-445.5 L -34.5,-444 L -35.8,-452 C -36,-454 -36.2,-456 -36.2,-458 Z" fill="#3B3128"/>
+    <!-- parting line -->
+    <path d="M -14.5,-476.5 C -16.5,-480.5 -18,-484 -18.5,-487.5" fill="none" stroke="#EAC9A3" stroke-width="3"/>
+    <!-- calm forward eyes -->
+    <circle cx="-13" cy="-452" r="3.4" fill="#3B3128" stroke="none"/>
+    <circle cx="13" cy="-452" r="3.4" fill="#3B3128" stroke="none"/>
+    <!-- gentle brows -->
+    <path d="M -20,-464 C -16,-467 -8,-467 -5,-465" fill="none"/>
+    <path d="M 5,-465 C 8,-467 16,-467 20,-464" fill="none"/>
+    <!-- nose -->
+    <path d="M 0,-446 C 3,-441 3,-437 -1,-435" fill="none"/>
+    <!-- mild honest smile -->
+    <path d="M -9,-420 C -4,-416 4,-416 9,-420" fill="none"/>
+  </g>
+
+  <!-- annotations -->
+  <g stroke="#3B3128" stroke-width="3" stroke-linecap="round">
+    <path d="M 95 674 L 815 674" fill="none"/>
+    <path d="M 95 674 L 95 664" fill="none"/>
+    <path d="M 815 674 L 815 664" fill="none"/>
+    <path d="M 900 674 L 1060 674" fill="none"/>
+    <path d="M 900 674 L 900 664" fill="none"/>
+    <path d="M 1060 674 L 1060 664" fill="none"/>
+  </g>
+  <text x="455" y="710" text-anchor="middle" font-size="32" fill="#7A2E35">incorrect programs &#8212; the same fake alibi</text>
+  <text x="980" y="710" text-anchor="middle" font-size="32" fill="#33523E">correct program</text>
+</svg>
