@@ -32,8 +32,8 @@ Given the problem *d* under investigation, the inspector opens an unexpected lin
 Each requirement plays its own role in the interrogation:
 
 - __Dissociative__: solving τ(*d*) requires a fundamentally different algorithm, so the question comes from an angle wholly unrelated to the suspects' rehearsed alibi — unlike mere paraphrasing, which they withstand. Implemented transformations include partial inversion (swap input and output), answer enumeration (output *all* valid answers), and problem decomposition.
-- __Bijection-inducing__: distinct errors in solutions to *d* map to distinct errors in solutions to *d′*, so even subtle inconsistencies between fabricated stories are detected, and two independent lies rarely match by coincidence.
-- __Correctness-coupling__: the bijection maps correct solutions to correct solutions, so a truthful account is always corroborated by a truthful witness.
+- __Bijection-inducing__: distinct errors in solutions to *d* map to distinct errors in solutions to *d′*, so even subtle inconsistencies in the suspects' stories are detected.
+- __Correctness-coupling__: the bijection maps correct solutions to correct solutions, so a truthful account is corroborated by a truthful witness, while two independent lies rarely match by coincidence.
 
 A correct program's story holds up under any line of questioning; hallucinated programs, like liars caught off guard, betray themselves through contradiction. Under our mathematical model of LLM hallucinations, we prove that agreement with such a triangulated witness yields strictly higher confidence of correctness than plurality voting — the selected program reflects accurate generalization rather than spurious statistical correlations. Detailed illustrations on CodeElo and LiveCodeBench problems, the full theory, and the evaluation are in the [paper](https://arxiv.org/abs/2511.12288).
 
