@@ -57,7 +57,7 @@
   <text x="852" y="500" text-anchor="end" font-size="24" font-style="italic" fill="#3B3128">q &#8764; LLM(&#183; | d&#8242;)</text>
 
   <!-- ===== the innocent suspect: program p ===== -->
-  <svg x="202" y="375" width="96" height="270" viewBox="880 70 210 590">
+  <svg x="196" y="340" width="108" height="305" viewBox="880 70 210 590">
     <g transform="translate(980,648)" stroke="#3B3128" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
       <ellipse cx="-26" cy="-8" rx="22" ry="9" fill="#141C30"/>
       <ellipse cx="26" cy="-8" rx="22" ry="9" fill="#141C30"/>

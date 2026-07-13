@@ -82,7 +82,7 @@
   <text x="720" y="282" text-anchor="start" font-size="24" font-style="italic" fill="#3B3128">q &#8764; LLM(&#183; | d)</text>
 
   <!-- ===== the suspect: program p ===== -->
-  <svg x="200" y="375" width="99" height="270" viewBox="82 70 216 590">
+  <svg x="194" y="340" width="112" height="305" viewBox="82 70 216 590">
     <use href="#clone" transform="translate(190,648)"/>
   </svg>
   <text x="250" y="690" text-anchor="middle" font-size="26" fill="#3B3128">suspect: program <tspan font-style="italic">p</tspan></text>
