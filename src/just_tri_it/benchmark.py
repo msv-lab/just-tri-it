@@ -114,8 +114,8 @@ def main():
         just_tri_it.config.NUM_RIGHT_SAMPLES = args.num_right_samples
     
     model = {
-        "gpt-4o": AI302("gpt-4o", 1.0, max_batch=50),
-        "deepseek-v3": AI302("deepseek-v3.1", 1.0, alias="deepseek-v3"),
+        "gpt-4o": Yunwu("gpt-4o", 1.0, max_batch=50),
+        "deepseek-v3": XMCP("ali/deepseek-v3", 1.0, alias="deepseek-v3"),
         "gemini-2.5-flash": Yunwu("gemini-2.5-flash", 1.0)
     }[args.model]
     # model = XMCP(args.model, 1.0)
