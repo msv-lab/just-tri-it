@@ -1,6 +1,7 @@
 import sys
 import math
 import numbers
+import numpy as np
 from dataclasses import dataclass
 from enum import Enum
 from typing import Union, Set, Dict, List, Callable, Any, TypeVar, Generic, Tuple
@@ -377,11 +378,21 @@ def _member_func(x, y):
     """Check membership, using math.isclose for floats."""
     def in_list(x, y):
         for item in y:
-            if isinstance(x, float) and isinstance(item, float):
-                if math.isclose(x, item):
+            if isinstance(x, np.ndarray) or isinstance(item, np.ndarray):
+                if np.array_equal(x, item):
                     return True
-            elif x == item:
-                return True
+            elif isinstance(x, float) and isinstance(item, float):
+                    if math.isclose(x, item):
+                        return True
+            else:
+                try:
+                    eq = (x == item)
+                    if isinstance(eq, np.ndarray):
+                        eq = np.all(eq)
+                    if eq:
+                        return True
+                except ValueError:
+                    pass        
         return False
 
     if config("member_spec")[0] and x == (0, 0, 0) and y == FullAnswer([]):

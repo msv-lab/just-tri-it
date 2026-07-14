@@ -205,6 +205,11 @@ CONFIG_MAP = {
         "msg": (0, 2, "list")
     },
     {
+        "problems": ["leetcode_3771"],
+        "model": ["gpt-4o"],
+        "msg": 0
+    },
+    {
         "problems": ["leetcode_3722"],
         "model": ["deepseek-v3"],
         "msg": (0, 2, "list")
@@ -229,7 +234,8 @@ CONFIG_MAP = {
             "atcoder_arc196_a", "leetcode_3754",
             "leetcode_3771", "leetcode_3717",
             "atcoder_arc191_a", "leetcode_3788",
-            "atcoder_abc395_a"
+            "atcoder_abc395_a", "atcoder_arc192_b",
+            "leetcode_3794"
         ],
         "model": ["deepseek-v3"],
         "msg": 0
