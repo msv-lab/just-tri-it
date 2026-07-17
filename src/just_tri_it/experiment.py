@@ -177,10 +177,10 @@ def main():
         just_tri_it.config.NUM_RIGHT_SAMPLES = args.num_right_samples
 
     model = {
-        "gpt-4o": Yunwu("gpt-4o", 1.0, max_batch=just_tri_it.config.NUM_LEFT_SAMPLES),
-        "deepseek-v3": XMCP("ali/deepseek-v3", 1.0, alias="deepseek-v3"),
-        "gemini-2.5-flash": Apiyi("gemini-2.5-flash", 1.0)
-    }[args.model]
+        "gpt-4o": lambda: Yunwu("gpt-4o", 1.0, max_batch=just_tri_it.config.NUM_LEFT_SAMPLES),
+        "deepseek-v3": lambda: XMCP("ali/deepseek-v3", 1.0, alias="deepseek-v3"),
+        "gemini-2.5-flash": lambda: Apiyi("gemini-2.5-flash", 1.0)
+    }[args.model]()
     just_tri_it.utils.CURRENT_MODEL = args.model
     
     # model = XMCP(args.model, 1.0)
