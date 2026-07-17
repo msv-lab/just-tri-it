@@ -2,7 +2,9 @@ import os
 import sys
 import time
 import hashlib
+import http.client
 import json
+import random
 from pathlib import Path
 import math
 from collections import deque
@@ -153,28 +155,64 @@ class OpenAICompatibleHTTPModel(_BaseBufferedModel):
             "User-Agent": "Application"
         }
         last_error = None
-        for attempt in range(self.max_retries):
+        retry_after = self.retry_delay
+        attempts = max(self.max_retries, 8)
+        # reseller routing pools misbehave in ways that deserve separate,
+        # generous budgets (verified empirically on yunwu.ai):
+        # - a misconfigured channel rejects API keys with 401 while the same
+        #   key succeeds on healthy channels; the router re-rolls per request,
+        #   so quick retries escape it (identical payloads alternate 200/401)
+        # - "group upstream load is saturated" 429 windows can last tens of
+        #   minutes; dying after a few minutes wastes the whole task
+        auth_rolls = 20
+        rate_rolls = 30
+        attempt = 0
+        while attempt < attempts:
             req = Request(url, data=data, headers=headers, method="POST")
             try:
                 # timeout: a stalled connection must become a retryable error,
-                # not an indefinite hang
-                with urlopen(req, timeout=600) as resp:
+                # not an indefinite hang; under saturation the server queues
+                # requests for minutes before answering (a probe waited 177s
+                # just to receive its 429), so give queued requests room while
+                # still recycling truly dead connections
+                with urlopen(req, timeout=300) as resp:
                     raw = resp.read()
                     return json.loads(raw.decode("utf-8"))
             except HTTPError as e:
                 body = e.read().decode("utf-8", errors="ignore")
                 last_error = RuntimeError(f"HTTPError {e.code} {e.reason}: {body}")
                 last_error.__cause__ = e
+                if e.code == 401 and auth_rolls > 0:
+                    # fast re-roll of the channel lottery; does not consume
+                    # a general attempt
+                    auth_rolls -= 1
+                    print("a", end="", file=sys.stderr, flush=True)
+                    time.sleep(3.0 * (0.75 + random.random() / 2))
+                    continue
+                if e.code == 429 and rate_rolls > 0:
+                    # saturated upstream: wait as instructed (Retry-After) or
+                    # 30-120s with jitter so concurrent workers desynchronize;
+                    # does not consume a general attempt
+                    rate_rolls -= 1
+                    server_delay = e.headers.get("Retry-After") if e.headers else None
+                    if server_delay and server_delay.isdigit():
+                        delay = min(float(server_delay), 300.0)
+                    else:
+                        delay = min(30.0 * 2 ** (30 - rate_rolls - 1), 120.0)
+                    print("r", end="", file=sys.stderr, flush=True)
+                    time.sleep(delay * (0.75 + random.random() / 2))
+                    continue
                 if e.code < 500:
                     raise last_error from e
-            except URLError as e:
-                last_error = RuntimeError(f"URLError: {e.reason}")
+            except (URLError, TimeoutError, ConnectionError, http.client.HTTPException) as e:
+                # includes RemoteDisconnected and friends: the connection layer
+                # failed, which is always worth retrying
+                last_error = RuntimeError(f"{type(e).__name__}: {e}")
                 last_error.__cause__ = e
-            except TimeoutError as e:
-                last_error = RuntimeError("request timed out after 600s")
-                last_error.__cause__ = e
-            if attempt < self.max_retries - 1:
-                time.sleep(self.retry_delay)
+            attempt += 1
+            if attempt < attempts:
+                time.sleep(retry_after * (0.75 + random.random() / 2))
+                retry_after = min(retry_after * 2, 120.0)
         raise last_error
 
     @staticmethod
@@ -358,6 +396,13 @@ class Yunwu(OpenAICompatibleHTTPModel):
     def __init__(self, model_name: str, temperature: float, alias: Optional[str] = None, max_batch: int = 1, max_retries: int = 3, retry_delay: float = 5.0):
         base_url = "https://yunwu.ai/v1"
         api_key = os.environ["YUNWU_API_KEY"]
+        super().__init__(base_url, api_key, model_name, temperature, alias, max_batch, max_retries, retry_delay)
+
+
+class Apiyi(OpenAICompatibleHTTPModel):
+    def __init__(self, model_name: str, temperature: float, alias: Optional[str] = None, max_batch: int = 1, max_retries: int = 3, retry_delay: float = 5.0):
+        base_url = "https://api.apiyi.com/v1"
+        api_key = os.environ["APIYI_API_KEY"]
         super().__init__(base_url, api_key, model_name, temperature, alias, max_batch, max_retries, retry_delay)
 
 
