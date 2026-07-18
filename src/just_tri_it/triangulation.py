@@ -84,6 +84,12 @@ class Triangulator:
         """
         self.model = model
 
+        flag, skipped_modes = config("running_crash")
+        if flag and self.triangulation_mode.value in skipped_modes:
+            print(f"\n[skipping {self.triangulation_mode.value}: configured to crash]",
+                  file=sys.stderr, flush=True)
+            return [], {"method": self.triangulation_mode.value, "right": []}
+
         fwd_inputs = self.generate_inputs(fwd_problem)
         need_timeout_guards = self.triangulation_mode in [TriangulationMode.FWD_SINV, TriangulationMode.ENUM_SINV]
         fwd_solutions = self.sample_solutions(fwd_problem,

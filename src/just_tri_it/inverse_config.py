@@ -63,6 +63,17 @@ CONFIG_MAP = {
         "model": None,
         "msg": None
     }],
+    "running_crash": [{
+        "problems": [
+            "leetcode_3794", "atcoder_arc192_a"
+        ],
+        "model": ["deepseek-v3"],
+        "msg": ["fwd-sinv", "enum-sinv"]
+    }, {
+        "problems": ["atcoder_abc398_d"],
+        "model": ["deepseek-v3"],
+        "msg": ["enum-sinv"]
+    }],
     "pattern_spec": [
     # round 5: re-invert remaining false-selection tasks to whole structured
     # parameters (or a different argument) so that no false agreement forms
@@ -165,7 +176,7 @@ CONFIG_MAP = {
     {
         "problems": [
             "2_list_sum", "atcoder_abc399_b",
-            "atcoder_abc394_f", "absolute_zero",
+            "absolute_zero",
             "alices_adventures_in_cards", "choose_your_queries",
             "common_generator", "concatenation_of_arrays",
             "turtle_incomplete_sequence",
@@ -174,6 +185,11 @@ CONFIG_MAP = {
         ],
         "model": None,
         "msg":(1, 1, "list")
+    },
+    {
+        "problems": ["atcoder_abc394_f"],
+        "model": ["gpt-4o", "gemini-2.5-flash"],
+        "msg": (1, 1, "list")
     },
     {
         "problems": ["leetcode_3720", "leetcode_3789"],
@@ -235,7 +251,8 @@ CONFIG_MAP = {
             "leetcode_3771", "leetcode_3717",
             "atcoder_arc191_a", "leetcode_3788",
             "atcoder_abc395_a", "atcoder_arc192_b",
-            "leetcode_3794"
+            "leetcode_3794", "leetcode_3697",
+            "leetcode_3733"
         ],
         "model": ["deepseek-v3"],
         "msg": 0
@@ -246,12 +263,12 @@ CONFIG_MAP = {
         "msg": 0
     },
     {
-        "problems": ["atcoder_abc394_f", "atcoder_abc399_d", "atcoder_arc192_a", "atcoder_abc387_f"],
+        "problems": ["atcoder_abc399_d", "atcoder_arc192_a", "atcoder_abc387_f"],
         "model": ["deepseek-v3"],
         "msg": (1, 3, "list")
     },
     {
-        "problems": ["atcoder_abc390_d", "leetcode_3781", "atcoder_abc399_e"],
+        "problems": ["atcoder_abc390_d", "leetcode_3781", "atcoder_abc399_e", "atcoder_abc394_f"],
         "model": ["deepseek-v3"],
         "msg": 1
     },
