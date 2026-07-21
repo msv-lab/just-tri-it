@@ -1,10 +1,11 @@
-"""Generate the three JSON reports used by the artifact analysis.
+"""Generate the four JSON reports used by the artifact analysis.
 
 The script deliberately writes only:
 
 * ``incorrect_plurality_entropy_summary.json``
 * ``jti_l2_metrics_dedup.json``
 * ``paired_bootstrap.json``
+* ``prob_correct_under_agreement_paired_bootstrap.json``
 """
 
 import argparse
@@ -35,6 +36,12 @@ JTI_CLUSTER_TARGET_METHODS = (
     "fwd-sinv",
     "enum-sinv",
 )
+AGREEMENT_PAIRED_BOOTSTRAP_TARGETS = (
+    "enum-sinv",
+    "fwd-sinv",
+    "fwd-inv",
+)
+AGREEMENT_PAIRED_BOOTSTRAP_BASELINE = "postcondition"
 INCORRECT_PLURALITY_SELECTOR_ID = "Plurality"
 INCORRECT_PLURALITY_METHOD = "plurality_0.0"
 INCORRECT_PLURALITY_NORMALIZATION = "remaining_group_sizes_renormalized"
@@ -53,7 +60,7 @@ def parse_args():
         "--report",
         type=str,
         required=True,
-        help="Directory in which the three JSON reports are written.",
+        help="Directory in which the four JSON reports are written.",
     )
     return parser.parse_args()
 
@@ -262,6 +269,153 @@ def paired_bootstrap_comparisons(matrix_per_task, target="JUST-TRI-IT"):
         )
         if comparison[CORE_PAIRED_BOOTSTRAP_METRICS[0]]["n"]:
             result[baseline] = comparison
+    return result
+
+
+def agreement_counts_for_task(obj):
+    correct_samples = {
+        program
+        for program, is_correct, _ in obj["sample_correctness"]
+        if is_correct
+    }
+    seen_methods = set()
+    counts_per_method = {}
+
+    for selector_data in obj["selectors"]:
+        if selector_data["outcome"] == "abstained" or "raw_data" not in selector_data:
+            continue
+        raw_data = selector_data["raw_data"]
+        agreement_raw_data = raw_data.get("agreement_raw_data", {})
+        method = agreement_raw_data.get("method")
+        if method is None or method in seen_methods:
+            continue
+
+        seen_methods.add(method)
+        faithful = total = 0
+        for program, witnesses in raw_data.get("agreement", []):
+            witness_count = len(witnesses)
+            total += witness_count
+            if program in correct_samples:
+                faithful += witness_count
+        counts_per_method[method] = (faithful, total)
+
+    return counts_per_method
+
+
+def agreement_counts_by_task(db):
+    return [agreement_counts_for_task(obj) for obj in db.objects]
+
+
+def add_count_pair(target, source):
+    target[0] += source[0]
+    target[1] += source[1]
+
+
+def aggregate_agreement_counts(counts_per_task, method, indices=None):
+    """Aggregate one method's agreement counts over the selected task rows."""
+    total_counts = [0, 0]
+    if indices is None:
+        indices = range(len(counts_per_task))
+    for index in indices:
+        method_counts = counts_per_task[index].get(method)
+        if method_counts is not None:
+            add_count_pair(total_counts, method_counts)
+    return total_counts
+
+
+def agreement_probability(counts):
+    faithful, total = counts
+    return None if total == 0 else faithful / total
+
+
+def agreement_probability_difference(target_counts, baseline_counts):
+    target_estimate = agreement_probability(target_counts)
+    baseline_estimate = agreement_probability(baseline_counts)
+    difference = None
+    if target_estimate is not None and baseline_estimate is not None:
+        difference = target_estimate - baseline_estimate
+    return target_estimate, baseline_estimate, difference
+
+
+def prob_correct_under_agreement_paired_bootstrap_comparison(
+        counts_per_task,
+        target,
+        baseline=AGREEMENT_PAIRED_BOOTSTRAP_BASELINE,
+        n_bootstrap=DEFAULT_BOOTSTRAP_SAMPLES,
+        confidence=DEFAULT_CI_CONFIDENCE,
+        seed=DEFAULT_CI_SEED):
+    # Shared task-level resampling preserves pairing while retaining the full
+    # task pool.  A missing agreement contributes (0, 0), rather than removing
+    # the task from one method's population.
+    n = len(counts_per_task)
+    target_counts = aggregate_agreement_counts(counts_per_task, target)
+    baseline_counts = aggregate_agreement_counts(counts_per_task, baseline)
+    target_estimate, baseline_estimate, difference = agreement_probability_difference(
+        target_counts,
+        baseline_counts,
+    )
+    bootstrap_samples = []
+
+    if n:
+        rng = np.random.default_rng(seed)
+        for _ in range(n_bootstrap):
+            sampled_indices = rng.integers(0, n, size=n)
+            sampled_target = aggregate_agreement_counts(
+                counts_per_task,
+                target,
+                sampled_indices,
+            )
+            sampled_baseline = aggregate_agreement_counts(
+                counts_per_task,
+                baseline,
+                sampled_indices,
+            )
+            _, _, sampled_difference = agreement_probability_difference(
+                sampled_target,
+                sampled_baseline,
+            )
+            if sampled_difference is not None:
+                bootstrap_samples.append(sampled_difference)
+
+    bootstrap = percentile_ci(bootstrap_samples, confidence)
+    return {
+        "measure": "prob_correct_under_agreement",
+        "target": target,
+        "baseline": baseline,
+        "target_estimate": target_estimate,
+        "baseline_estimate": baseline_estimate,
+        "difference": difference,
+        "bootstrap_ci": bootstrap,
+        "ci_excludes_zero": (
+            False if bootstrap is None else bootstrap[0] > 0 or bootstrap[1] < 0
+        ),
+        "n": n,
+    }
+
+
+def prob_correct_under_agreement_paired_bootstrap(
+        db,
+        targets=AGREEMENT_PAIRED_BOOTSTRAP_TARGETS,
+        baseline=AGREEMENT_PAIRED_BOOTSTRAP_BASELINE,
+        n_bootstrap=DEFAULT_BOOTSTRAP_SAMPLES,
+        confidence=DEFAULT_CI_CONFIDENCE,
+        seed=DEFAULT_CI_SEED):
+    counts_per_task = agreement_counts_by_task(db)
+    result = {}
+    for target in targets:
+        comparison = prob_correct_under_agreement_paired_bootstrap_comparison(
+            counts_per_task,
+            target=target,
+            baseline=baseline,
+            n_bootstrap=n_bootstrap,
+            confidence=confidence,
+            seed=seed,
+        )
+        if (
+                comparison["n"]
+                and comparison["target_estimate"] is not None
+                and comparison["baseline_estimate"] is not None):
+            result[target] = comparison
     return result
 
 
@@ -662,6 +816,11 @@ def main():
         report_dir,
         "paired_bootstrap.json",
         paired_bootstrap_comparisons(matrix_per_task),
+    )
+    write_json(
+        report_dir,
+        "prob_correct_under_agreement_paired_bootstrap.json",
+        prob_correct_under_agreement_paired_bootstrap(db),
     )
 
 
